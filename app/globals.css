@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Media-Modern tokens (RGB channels; used by Tailwind rgb(var(--x)) ) */
+    --brand-surface: 248 250 252; /* slate-50 */
+    --brand-surface-2: 241 245 249; /* slate-100 */
+    --brand-dark: 7 12 23; /* near-slate-950 */
+    --brand-ink: 15 23 42; /* slate-900 */
+    --brand-muted: 71 85 105; /* slate-600 */
+    --brand-border: 226 232 240; /* slate-200 */
+    --brand-ring: 14 165 233; /* sky-500 */
+
+    /* Primary CTA (teal-forward) */
+    --brand-primary: 13 148 136; /* teal-600 */
+    --brand-primary-600: 13 148 136; /* teal-600 */
+    --brand-primary-700: 15 118 110; /* teal-700 */
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: rgb(var(--brand-surface));
+    color: rgb(var(--brand-ink));
+  }
+}

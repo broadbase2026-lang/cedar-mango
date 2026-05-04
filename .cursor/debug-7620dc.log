@@ -1,0 +1,2 @@
+{"sessionId":"7620dc","runId":"pre-fix","hypothesisId":"H_mw","location":"middleware.ts:8","message":"middleware entry","data":{"pathname":"/","method":"GET"},"timestamp":1777885896970}
+{"sessionId":"7620dc","runId":"pre-fix","hypothesisId":"H_mw","location":"middleware.ts:23","message":"middleware auth refresh ok","data":{"pathname":"/"},"timestamp":1777885896975}
