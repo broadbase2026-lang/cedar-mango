@@ -3,6 +3,7 @@
 import { applyDevProfileOverrides } from '@/lib/auth/dev-profile-mock';
 import { validateBetaInviteCode } from '@/lib/config/beta';
 import { createClient } from '@/lib/supabase/server';
+import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import {
   dashboardPathForUserType,
   sanitizeInternalNextParam,
@@ -60,7 +61,22 @@ export async function signupAction(
     return { error: 'Choose whether you are signing up as a brand or a journalist.' };
   }
 
-  const supabase = await createClient();
+  if (!getSupabasePublicEnv()) {
+    return {
+      error:
+        'Sign-up is unavailable. Supabase is not configured on this server.',
+    };
+  }
+
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return {
+      error:
+        'Sign-up is unavailable. Supabase is not configured on this server.',
+    };
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -133,7 +149,22 @@ export async function loginAction(
   if (!email) return { error: 'Email is required.' };
   if (!password) return { error: 'Password is required.' };
 
-  const supabase = await createClient();
+  if (!getSupabasePublicEnv()) {
+    return {
+      error:
+        'Sign-in is unavailable. Supabase is not configured on this server.',
+    };
+  }
+
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return {
+      error:
+        'Sign-in is unavailable. Supabase is not configured on this server.',
+    };
+  }
 
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email,
