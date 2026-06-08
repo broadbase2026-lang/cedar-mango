@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { dashboardPathForUserType } from '@/lib/auth/redirects';
 import type { UserType } from '@/types';
+import { JournalistInactiveNotice } from '@/components/journalist/journalist-inactive-notice';
 import { JournalistPortalShell } from '@/components/journalist/journalist-portal-shell';
 import { getJournalistPortalSession } from '@/lib/journalist/session';
 
@@ -14,6 +15,16 @@ export default async function JournalistLayout({ children }: { children: ReactNo
 
   const session = await getJournalistPortalSession();
   if (!session.ok) {
+    if (session.reason === 'inactive') {
+      return (
+        <div data-side="journalist" className="min-h-screen bg-surface-page">
+          <JournalistInactiveNotice
+            inactiveAt={session.inactiveAt ?? null}
+            scheduledDeletionAt={session.scheduledDeletionAt ?? null}
+          />
+        </div>
+      );
+    }
     if (session.reason === 'unauthenticated') {
       redirect(loginHref);
     }

@@ -119,6 +119,11 @@ async function dispatchStripeEvent(
       }
 
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      if (!subscription.metadata?.supabase_user_id) {
+        await stripe.subscriptions.update(subscriptionId, {
+          metadata: { ...subscription.metadata, supabase_user_id: ownerId },
+        });
+      }
       const { error } = await upsertSubscriptionFromStripeSubscription(
         admin,
         ownerId,

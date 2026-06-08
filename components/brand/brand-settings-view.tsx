@@ -90,7 +90,15 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
     router,
   ]);
 
-  const { brand, subscription, profileFullName, avatarUrl, slugLocked } = snapshot;
+  const {
+    brand,
+    subscription,
+    profileFullName,
+    avatarUrl,
+    slugLocked,
+    needsManualAudit,
+    auditFlaggedAt,
+  } = snapshot;
   const hasStripeCustomer = Boolean(subscription?.stripe_customer_id);
   const canManagePortal = hasStripeCustomer && !betaTrialOnly;
   const showSubscribePlans =
@@ -110,6 +118,23 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
         </div>
 
         <div className="space-y-8">
+          {needsManualAudit ? (
+            <div
+              role="status"
+              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            >
+              <p className="font-medium">Account flagged for manual review</p>
+              <p className="mt-1 text-amber-900/90">
+                Your workspace has been marked for a manual account audit
+                {auditFlaggedAt
+                  ? ` (since ${formatDateMedium(auditFlaggedAt)})`
+                  : ''}
+                . You can continue using Broadbase; our team will follow up if
+                needed.
+              </p>
+            </div>
+          ) : null}
+
           <section className={card}>
             <h2 className="text-base font-semibold text-brand-ink">
               Your account

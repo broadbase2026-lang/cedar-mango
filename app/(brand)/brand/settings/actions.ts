@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
+import { recordAgencyNameChange } from '@/lib/brand/agency-audit';
+import { syncBrandMetadataToStripe } from '@/lib/stripe/sync-brand-metadata';
 import { PLAN_LIMITS } from '@/constants/copy';
 
 export type SettingsActionState = {
@@ -137,7 +140,7 @@ export async function saveBrandWorkspace(
 
   const { data: existing } = await supabase
     .from('brands')
-    .select('id, slug')
+    .select('id, slug, name')
     .eq('owner_id', user.id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -182,6 +185,7 @@ export async function saveBrandWorkspace(
   };
 
   if (existing) {
+    const oldName = existing.name;
     const { error } = await supabase
       .from('brands')
       .update(payload)
@@ -193,6 +197,28 @@ export async function saveBrandWorkspace(
         return { error: 'That URL slug is already taken. Try another.' };
       }
       return { error: error.message };
+    }
+
+    if (oldName !== name) {
+      try {
+        const admin = createAdminClient();
+        await recordAgencyNameChange(admin, {
+          brandId: existing.id,
+          ownerId: user.id,
+          oldName,
+          newName: name,
+        });
+        await syncBrandMetadataToStripe(admin, user.id);
+      } catch (err) {
+        console.error('[settings] agency audit / stripe sync failed', err);
+      }
+    } else {
+      try {
+        const admin = createAdminClient();
+        await syncBrandMetadataToStripe(admin, user.id);
+      } catch (err) {
+        console.error('[settings] stripe metadata sync failed', err);
+      }
     }
   } else {
     const { data: subscriptionRow } = await supabase
@@ -247,6 +273,13 @@ export async function saveBrandWorkspace(
         return { error: 'That URL slug is already taken. Try another.' };
       }
       return { error: error.message };
+    }
+
+    try {
+      const admin = createAdminClient();
+      await syncBrandMetadataToStripe(admin, user.id);
+    } catch (err) {
+      console.error('[settings] stripe metadata sync failed', err);
     }
   }
 

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { getJournalistPortalSession } from '@/lib/journalist/session';
+import {
+  getJournalistPortalSession,
+  journalistSessionHttpStatus,
+} from '@/lib/journalist/session';
 import { UpdatePortfolioSettingsSchema } from '@/lib/validations/portfolio';
 import type { JournalistPortfolioSettings } from '@/types';
 
@@ -13,8 +17,8 @@ export async function PATCH(req: Request) {
   const session = await getJournalistPortalSession();
   if (!session.ok) {
     return NextResponse.json(
-      { success: false, error: 'unauthorized' },
-      { status: 401 }
+      { success: false, error: session.reason },
+      { status: journalistSessionHttpStatus(session) }
     );
   }
 
@@ -105,6 +109,8 @@ export async function PATCH(req: Request) {
       { status: 400 }
     );
   }
+
+  revalidatePath(`/journalist/${settings.slug as string}`);
 
   return NextResponse.json({ success: true, data: { settings } });
 }

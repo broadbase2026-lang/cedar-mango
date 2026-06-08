@@ -99,10 +99,14 @@ export async function createCheckoutSession(plan: string): Promise<ApiResult> {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: stripeCustomerId,
+      client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/brand/dashboard?upgrade=success`,
       cancel_url: `${appUrl}/pricing`,
       metadata: { owner_id: user.id, plan: parsed.data },
+      subscription_data: {
+        metadata: { supabase_user_id: user.id },
+      },
     });
 
     if (!session.url) {

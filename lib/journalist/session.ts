@@ -10,10 +10,15 @@ export type JournalistPortalSession =
       avatarUrl: string | null;
       email: string | undefined;
       journalistProfile: { publication: string | null } | null;
+      isInactive: boolean;
+      inactiveAt: string | null;
+      scheduledDeletionAt: string | null;
     }
   | {
       ok: false;
-      reason: 'unauthenticated' | 'brand' | 'forbidden';
+      reason: 'unauthenticated' | 'brand' | 'forbidden' | 'inactive';
+      inactiveAt?: string | null;
+      scheduledDeletionAt?: string | null;
     };
 
 /**
@@ -50,9 +55,26 @@ export async function getJournalistPortalSession(): Promise<JournalistPortalSess
 
   const { data: journalistProfile } = await supabase
     .from('journalist_profiles')
-    .select('publication')
+    .select(
+      'publication, is_inactive, inactive_at, scheduled_deletion_at'
+    )
     .eq('id', user.id)
     .maybeSingle();
+
+  if (journalistProfile?.is_inactive) {
+    return {
+      ok: false,
+      reason: 'inactive',
+      inactiveAt:
+        typeof journalistProfile.inactive_at === 'string'
+          ? journalistProfile.inactive_at
+          : null,
+      scheduledDeletionAt:
+        typeof journalistProfile.scheduled_deletion_at === 'string'
+          ? journalistProfile.scheduled_deletion_at
+          : null,
+    };
+  }
 
   return {
     ok: true,
@@ -62,6 +84,17 @@ export async function getJournalistPortalSession(): Promise<JournalistPortalSess
     avatarUrl: profile.avatar_url ?? null,
     email: user.email,
     journalistProfile: journalistProfile ?? null,
+    isInactive: false,
+    inactiveAt: null,
+    scheduledDeletionAt: null,
   };
+}
+
+/** HTTP status for journalist API routes when session is not ok. */
+export function journalistSessionHttpStatus(
+  session: JournalistPortalSession
+): 401 | 403 {
+  if (session.ok) return 401;
+  return session.reason === 'inactive' ? 403 : 401;
 }
 

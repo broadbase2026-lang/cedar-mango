@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/cron/journalist-deletion",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getJournalistPortalSession } from '@/lib/journalist/session';
+import {
+  getJournalistPortalSession,
+  journalistSessionHttpStatus,
+} from '@/lib/journalist/session';
 
 export const runtime = 'nodejs';
 
@@ -14,8 +17,8 @@ export async function POST(
   const session = await getJournalistPortalSession();
   if (!session.ok) {
     return NextResponse.json(
-      { success: false, error: 'unauthorized' },
-      { status: 401 }
+      { success: false, error: session.reason },
+      { status: journalistSessionHttpStatus(session) }
     );
   }
 

@@ -561,3 +561,32 @@ HAVING COUNT(*) > 1;
 - [ ] Log a publication as journalist against a brand's release → confirm it appears in /(brand)/coverage
 - [ ] Set journalist portfolio to private → confirm article disappears from brand's coverage page
 - [ ] Confirm journalist email and linkedin_url are never visible in brand coverage page (inspect network responses)
+
+## Brand profile governance (agency audit)
+
+### Agency name-change audit
+- [ ] As an agency-plan brand owner, change `brands.name` once in a quarter → save succeeds, no audit banner
+- [ ] Change `brands.name` a second time in the same calendar quarter → save succeeds, settings shows "Account flagged for manual review"
+- [ ] Confirm `brands.needs_manual_audit = true` and `audit_reason = agency_name_change_limit` in Supabase
+- [ ] Confirm Stripe Customer metadata includes `needs_manual_audit: true` (Dashboard → Customers → Metadata)
+- [ ] Non-agency plans can rename freely without audit flag
+
+## Resend hard-bounce automation
+
+### Webhook handler
+- [ ] POST a signed `email.bounced` payload with `bounce.type: Permanent` to `/api/webhooks/resend` → 200 `{ received: true }`
+- [ ] Duplicate `svix-id` → 200 `{ duplicate: true }` (idempotent)
+- [ ] Invalid/missing Svix signature → 400
+- [ ] Soft bounce (`bounce.type: Transient`) → 200 `{ ignored: true }`, journalist unchanged
+
+### Journalist deactivation
+- [ ] After hard bounce on journalist email: `journalist_profiles.is_inactive = true`, `inactive_reason = hard_bounce`
+- [ ] `scheduled_deletion_at` is approximately 90 days after `inactive_at`
+- [ ] `journalist_portfolio_settings.public = false` and `/journalist/[slug]` returns 404
+- [ ] Journalist login shows inactive notice with deletion date (portal blocked)
+- [ ] `PATCH /api/journalist/portfolio/settings` returns 403 for inactive journalist
+
+### 90-day deletion cron
+- [ ] Set `scheduled_deletion_at` in the past for a test inactive journalist
+- [ ] `GET /api/cron/journalist-deletion` with `Authorization: Bearer $CRON_SECRET` → deletes auth user
+- [ ] Confirm cascade removes `profiles`, portfolio settings, and publications

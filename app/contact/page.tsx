@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { TestimonialCarousel } from '@/components/home/testimonial-carousel';
@@ -60,28 +60,7 @@ export default function ContactPage() {
 
   return (
     <main className="min-h-screen bg-brand-surface">
-      <header className="bb-top-nav">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="text-sm font-semibold text-brand-ink">
-              Broadbase
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link
-                href="/login"
-                className="text-sm font-medium text-brand-muted hover:text-brand-ink transition-colors"
-              >
-                Log In
-              </Link>
-              <Link href="/signup">
-                <Button size="sm" variant="accent">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicSiteHeader />
 
       <section className="mx-auto max-w-6xl px-6 py-12 md:py-20">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-14">

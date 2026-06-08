@@ -9,6 +9,8 @@ export type BrandRow = {
   website: string | null;
   logo_url: string | null;
   industry_vertical: string | null;
+  needs_manual_audit: boolean;
+  audit_flagged_at: string | null;
 };
 
 export type SubscriptionRow = {
@@ -25,6 +27,8 @@ export type BrandSettingsSnapshot = {
   subscription: SubscriptionRow | null;
   /** Slug cannot be changed after the brand has a published release. */
   slugLocked: boolean;
+  needsManualAudit: boolean;
+  auditFlaggedAt: string | null;
 };
 
 /**
@@ -43,7 +47,7 @@ export async function loadBrandSettingsSnapshot(
     supabase
       .from('brands')
       .select(
-        'id, name, slug, description, website, logo_url, industry_vertical'
+        'id, name, slug, description, website, logo_url, industry_vertical, needs_manual_audit, audit_flagged_at'
       )
       .eq('owner_id', userId)
       .is('deleted_at', null)
@@ -88,5 +92,8 @@ export async function loadBrandSettingsSnapshot(
       subscription
     ) as SubscriptionRow | null,
     slugLocked,
+    needsManualAudit: Boolean(brand?.needs_manual_audit),
+    auditFlaggedAt:
+      typeof brand?.audit_flagged_at === 'string' ? brand.audit_flagged_at : null,
   };
 }

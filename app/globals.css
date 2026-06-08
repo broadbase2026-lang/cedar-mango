@@ -575,4 +575,48 @@
   .bb-richtext :where(a) {
     @apply text-brand-primary-700 underline decoration-brand-primary-700/30 underline-offset-2 hover:decoration-brand-primary-700/70;
   }
+
+  .legal-prose {
+    @apply text-sm leading-7 text-brand-ink;
+  }
+
+  .legal-prose :where(p) {
+    @apply mb-4 text-brand-muted;
+  }
+
+  .legal-prose :where(p strong:only-child) {
+    @apply text-brand-ink;
+  }
+
+  .legal-prose :where(.legal-section-heading) {
+    @apply mb-4 mt-10 scroll-mt-24 border-t border-brand-border pt-8 font-serif text-xl font-normal text-brand-ink first:mt-0 first:border-t-0 first:pt-0;
+  }
+
+  .legal-prose :where(.legal-section-heading:first-of-type) {
+    @apply mt-0 border-t-0 pt-0;
+  }
+
+  .legal-prose :where(.legal-subsection-heading) {
+    @apply mb-3 mt-6 scroll-mt-24 text-sm font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(.legal-table) {
+    @apply mb-6 w-full border-collapse overflow-hidden rounded-xl border border-brand-border text-sm;
+  }
+
+  .legal-prose :where(.legal-table th) {
+    @apply border-b border-brand-border bg-brand-surface px-4 py-3 text-left font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(.legal-table td) {
+    @apply border-b border-brand-border px-4 py-3 text-brand-muted;
+  }
+
+  .legal-prose :where(.legal-table tr:last-child td) {
+    @apply border-b-0;
+  }
+
+  .legal-prose :where(a) {
+    @apply font-medium text-brand-primary-700 underline decoration-brand-primary-700/30 underline-offset-2 hover:decoration-brand-primary-700/70;
+  }
 }

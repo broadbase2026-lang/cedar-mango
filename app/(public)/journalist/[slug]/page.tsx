@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -129,6 +130,31 @@ async function loadPortfolio(slug: string): Promise<PublicPortfolioData | null> 
     })),
     total_count: publications.length,
   };
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const admin = createAdminClient();
+  const { data: settings } = await admin
+    .from('journalist_portfolio_settings')
+    .select('journalist_id, public')
+    .eq('slug', params.slug)
+    .maybeSingle();
+
+  if (!settings?.public) {
+    return { robots: { index: false, follow: false } };
+  }
+
+  const { data: journalistProfile } = await admin
+    .from('journalist_profiles')
+    .select('is_inactive')
+    .eq('id', settings.journalist_id)
+    .maybeSingle();
+
+  if (journalistProfile?.is_inactive) {
+    return { robots: { index: false, follow: false } };
+  }
+
+  return {};
 }
 
 export default async function JournalistPortfolioPage({ params }: PageProps) {

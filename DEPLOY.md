@@ -20,6 +20,8 @@ Operational steps to deploy Broadbase for an invite-only, trial-only beta on Ver
    supabase db push
    ```
    Or paste each migration SQL in the SQL Editor on a fresh database.
+
+   **Migration 013** requires `010_journalist_portfolio.sql` (and `011_journalist_portfolio_signup.sql` for signup). If `013` was run before `010`, apply `010`/`011` first, then re-run `013` to apply the portfolio RLS hardening (core inactive columns are idempotent).
 3. Verify storage buckets exist:
    - `press-assets-public` (public)
    - `press-assets-private` (private)
@@ -73,7 +75,7 @@ Monitor the Vercel build for Next.js success and `scripts/copy-main-css.mjs` com
 Run on `https://broadbase.app` (see `QA.md` for full checklist):
 
 **Public / auth**
-- [ ] Homepage loads; nav links work (CSP does not break hydration)
+- [x] Homepage loads; nav links work (CSP does not break hydration)
 - [ ] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
 - [ ] `/signup` requires invite code; wrong code rejected
 - [ ] Valid invite signup → email confirmation flow works
@@ -105,9 +107,36 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 
 **Rollback:** Vercel instant rollback to previous deployment.
 
-## 6. Exit criteria (beta → GA)
+## 6. Webhooks & cron (GA)
 
-1. Fix Stripe checkout ↔ webhook owner linking (`client_reference_id` + subscription metadata).
-2. Set `STRIPE_*` env vars; register webhook at `https://broadbase.app/api/webhooks/stripe`.
-3. Set `BETA_TRIAL_ONLY=false`; remove or rotate `BETA_INVITE_CODE`.
-4. Re-enable billing portal in brand settings.
+### Stripe
+
+1. Set `STRIPE_*` env vars (see `.env.local.example`).
+2. Register webhook at `https://broadbase.app/api/webhooks/stripe` for:
+   - `checkout.session.completed`
+   - `customer.subscription.created` / `updated` / `deleted`
+   - `invoice.paid`
+3. Checkout sets `client_reference_id` and `subscription_data.metadata.supabase_user_id` for owner linking.
+4. Brand workspace saves sync audit metadata to Stripe Customer fields: `brand_name`, `needs_manual_audit`, `audit_reason`.
+5. Review flagged agency accounts in Supabase: `SELECT * FROM brands WHERE needs_manual_audit = true;`
+
+### Resend (hard bounces)
+
+1. Set `RESEND_WEBHOOK_SECRET` (Svix signing secret from Resend dashboard).
+2. Register webhook at `https://broadbase.app/api/webhooks/resend` for `email.bounced`.
+3. Permanent/hard bounces set `journalist_profiles.is_inactive = true`, unpublish portfolio (`public = false`), and `scheduled_deletion_at = now() + 90 days`.
+
+### Journalist deletion cron
+
+1. Set `CRON_SECRET` in Vercel (used as `Authorization: Bearer <CRON_SECRET>`).
+2. Vercel cron runs daily at 03:00 UTC: `/api/cron/journalist-deletion`.
+3. Deletes auth users whose `scheduled_deletion_at` has passed (cascades portfolio data).
+
+## 7. Exit criteria (beta → GA)
+
+1. Stripe checkout ↔ webhook owner linking verified (`client_reference_id` + subscription metadata).
+2. Set `STRIPE_*` env vars; register Stripe webhook (see §6).
+3. Set `RESEND_WEBHOOK_SECRET`; register Resend webhook (see §6).
+4. Set `CRON_SECRET`; confirm journalist deletion cron is scheduled.
+5. Set `BETA_TRIAL_ONLY=false`; remove or rotate `BETA_INVITE_CODE`.
+6. Re-enable billing portal in brand settings.

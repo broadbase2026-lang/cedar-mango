@@ -72,7 +72,7 @@ export function PublicSiteFooter() {
               <h4 className="mb-6 text-sm font-semibold text-white">Legal</h4>
               <ul className="space-y-4 text-sm text-white/70">
                 <li>
-                  <Link href="#" className={linkClassName}>
+                  <Link href="/terms" className={linkClassName}>
                     Terms
                   </Link>
                 </li>

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getJournalistPortalSession } from '@/lib/journalist/session';
+import {
+  getJournalistPortalSession,
+  journalistSessionHttpStatus,
+} from '@/lib/journalist/session';
 import { verifyUrlReachable } from '@/lib/journalist/verify-url-reachable';
 import { UpdatePublicationSchema } from '@/lib/validations/portfolio';
 
@@ -18,8 +21,8 @@ export async function PATCH(
   const session = await getJournalistPortalSession();
   if (!session.ok) {
     return NextResponse.json(
-      { success: false, error: 'unauthorized' },
-      { status: 401 }
+      { success: false, error: session.reason },
+      { status: journalistSessionHttpStatus(session) }
     );
   }
 
@@ -90,8 +93,8 @@ export async function DELETE(
   const session = await getJournalistPortalSession();
   if (!session.ok) {
     return NextResponse.json(
-      { success: false, error: 'unauthorized' },
-      { status: 401 }
+      { success: false, error: session.reason },
+      { status: journalistSessionHttpStatus(session) }
     );
   }
 
