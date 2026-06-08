@@ -1,10 +1,13 @@
 'use server';
 
+import { applyDevProfileOverrides } from '@/lib/auth/dev-profile-mock';
+import { validateBetaInviteCode } from '@/lib/config/beta';
 import { createClient } from '@/lib/supabase/server';
 import {
   dashboardPathForUserType,
   sanitizeInternalNextParam,
 } from '@/lib/auth/redirects';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { UserType } from '@/types';
 import { redirect } from 'next/navigation';
 
@@ -19,6 +22,21 @@ function parseUserType(raw: FormDataEntryValue | null): UserType | null {
   return null;
 }
 
+function parseBool(raw: FormDataEntryValue | null): boolean {
+  if (typeof raw !== 'string') return false;
+  return raw.trim().toLowerCase() === 'true';
+}
+
+function slugify(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export async function signupAction(
   _prev: AuthActionState,
   formData: FormData
@@ -27,6 +45,11 @@ export async function signupAction(
   const password = String(formData.get('password') ?? '');
   const fullName = String(formData.get('full_name') ?? '').trim();
   const userType = parseUserType(formData.get('user_type'));
+  const wantsTrial = parseBool(formData.get('trial'));
+  const inviteCode = String(formData.get('invite_code') ?? '').trim();
+
+  const inviteError = validateBetaInviteCode(inviteCode);
+  if (inviteError) return { error: inviteError };
 
   if (!email) return { error: 'Email is required.' };
   if (!password) return { error: 'Password is required.' };
@@ -56,6 +79,44 @@ export async function signupAction(
 
   if (!data.session) {
     return { error: null, needsEmailConfirmation: true };
+  }
+
+  if (userType === 'brand' && wantsTrial) {
+    const ownerId = data.user?.id;
+    if (!ownerId) {
+      redirect('/brand/upload?trial=true');
+    }
+
+    const supabase = await createClient();
+
+    // Create a minimal brand workspace so the user can immediately upload.
+    const baseName = fullName || 'New Brand';
+    const slugBase = slugify(baseName) || `brand-${ownerId.slice(0, 8)}`;
+    const slug = `${slugBase}-${ownerId.slice(0, 6)}`;
+
+    await supabase.from('brands').insert({
+      owner_id: ownerId,
+      name: baseName,
+      slug,
+    });
+
+    // Insert trial subscription row using service role (subscriptions has no client insert policy).
+    try {
+      const admin = createAdminClient();
+      const placeholderCustomerId = `trial_${crypto.randomUUID()}`;
+      await admin.from('subscriptions').insert({
+        owner_id: ownerId,
+        stripe_customer_id: placeholderCustomerId,
+        plan: 'starter',
+        status: 'trialing',
+        trial_mode: true,
+        trial_releases_used: 0,
+      });
+    } catch {
+      // If this fails (e.g. duplicate row), user can still proceed; guards will rely on DB state once present.
+    }
+
+    redirect('/brand/upload?trial=true');
   }
 
   redirect(dashboardPathForUserType(userType));
@@ -91,11 +152,13 @@ export async function loginAction(
     return { error: 'Could not load session after sign-in.' };
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profileRow, error: profileError } = await supabase
     .from('profiles')
     .select('user_type')
     .eq('id', user.id)
     .maybeSingle();
+
+  const profile = applyDevProfileOverrides(user.id, profileRow);
 
   if (profileError) {
     return { error: profileError.message };

@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { signupAction, type AuthActionState } from '@/app/(auth)/actions';
 
 function SubmitButton({ label }: { label: string }) {
@@ -17,12 +18,16 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-export function SignupForm() {
+export function SignupForm(props: { inviteRequired?: boolean }) {
+  const inviteRequired = props.inviteRequired ?? false;
   const initialState: AuthActionState = { error: null };
   const [state, formAction] = useFormState(signupAction, initialState);
+  const searchParams = useSearchParams();
+  const trial = (searchParams?.get('trial') ?? '') === 'true';
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      <input type="hidden" name="trial" value={trial ? 'true' : 'false'} />
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-neutral-800">Account type</legend>
         <p className="text-xs text-neutral-500">
@@ -52,6 +57,26 @@ export function SignupForm() {
           </label>
         </div>
       </fieldset>
+
+      {inviteRequired ? (
+        <div className="space-y-1.5">
+          <label htmlFor="invite_code" className="text-sm font-medium text-neutral-800">
+            Invite code
+          </label>
+          <input
+            id="invite_code"
+            name="invite_code"
+            type="text"
+            autoComplete="off"
+            required
+            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none ring-teal-700 focus:border-teal-700 focus:ring-1"
+            placeholder="Enter your beta invite code"
+          />
+          <p className="text-xs text-neutral-500">
+            Broadbase is invite-only during the beta. Contact us if you need access.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         <label htmlFor="full_name" className="text-sm font-medium text-neutral-800">

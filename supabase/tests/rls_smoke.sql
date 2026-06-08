@@ -31,3 +31,25 @@
 
 -- A duplicate Stripe event ID insert is rejected with unique violation (23505)
 -- INSERT INTO webhook_events (stripe_event_id) VALUES ('evt_test') twice
+
+-- Journalist portfolio RLS smoke tests
+
+-- An unauthenticated caller cannot read a private portfolio
+-- (journalist_portfolio_settings where public = false)
+-- Expected: zero rows returned
+
+-- A journalist cannot read another journalist's
+-- journalist_publications via the owner read policy
+-- Expected: zero rows returned
+
+-- A brand user cannot read journalist_publications for a
+-- journalist whose portfolio is private
+-- Expected: zero rows returned
+
+-- A journalist cannot update another journalist's
+-- journalist_portfolio_settings row
+-- Expected: update rejected by RLS
+
+-- An unauthenticated caller cannot INSERT into
+-- journalist_publications
+-- Expected: insert rejected

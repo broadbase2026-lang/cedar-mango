@@ -13,11 +13,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         type={type}
         className={cn(
-          'flex h-11 w-full rounded-xl bg-white px-4 text-sm text-brand-ink ' +
-            'ring-1 ring-inset ring-brand-border shadow-sm ' +
-            'placeholder:text-brand-muted/80 ' +
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ' +
-            'disabled:cursor-not-allowed disabled:opacity-50',
+          (type === 'file'
+            ? 'flex h-11 w-full cursor-pointer rounded-lg border border-border-default bg-surface-page px-3 py-2 text-sm text-text-primary shadow-sm ' +
+              'file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-text-primary ' +
+              'hover:file:bg-neutral-100 ' +
+              'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent ' +
+              'disabled:cursor-not-allowed disabled:opacity-50 disabled:file:cursor-not-allowed'
+            : 'flex h-11 w-full rounded-lg border border-border-default bg-surface-page px-4 text-sm text-text-primary shadow-sm ' +
+              'placeholder:text-text-disabled ' +
+              'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent ' +
+              'disabled:cursor-not-allowed disabled:opacity-50'),
           className
         )}
         {...props}
@@ -27,4 +32,3 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

@@ -157,10 +157,14 @@ BEGIN
 
   tier_limit := CASE plan_name
     WHEN 'starter' THEN 1
-    WHEN 'pro'     THEN 3
-    WHEN 'agency'  THEN 10
+    WHEN 'pro'     THEN 10
+    WHEN 'agency'  THEN NULL
     ELSE 0
   END;
+
+  IF tier_limit IS NULL THEN
+    RETURN NEW;
+  END IF;
 
   SELECT COUNT(*) INTO current_count
   FROM brands

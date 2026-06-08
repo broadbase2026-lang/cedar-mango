@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'accent' | 'ghost' | 'destructive';
 type ButtonSize = 'sm' | 'md';
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -14,15 +14,17 @@ function cn(...parts: Array<string | undefined | false | null>) {
 
 const base =
   'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface ' +
-  'disabled:opacity-50 disabled:pointer-events-none';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page ' +
+  'disabled:pointer-events-none disabled:opacity-50';
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-primary text-white shadow-media-soft hover:bg-brand-primary-700',
-  secondary:
-    'bg-white text-brand-ink ring-1 ring-inset ring-brand-border hover:bg-brand-surface-2',
-  ghost: 'bg-transparent text-brand-ink hover:bg-brand-surface-2',
+    'bg-primary-base text-text-primary shadow-media-soft hover:bg-primary-hover active:bg-primary-active',
+  accent:
+    'bg-accent text-text-inverse shadow-media-soft hover:bg-accent-hover',
+  ghost:
+    'border border-border-default bg-transparent text-text-primary hover:bg-surface-overlay',
+  destructive: 'bg-error text-text-inverse shadow-media-soft hover:bg-red-600',
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -31,7 +33,7 @@ const sizes: Record<ButtonSize, string> = {
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', type, ...props }, ref) => {
+  ({ className, variant = 'accent', size = 'md', type, ...props }, ref) => {
     return (
       <button
         ref={ref}
@@ -44,4 +46,3 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
-

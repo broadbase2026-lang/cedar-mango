@@ -1,8 +1,27 @@
-export default function JournalistDiscoverPage() {
+import { JournalistDiscoverView } from '@/components/journalist/journalist-discover-view';
+import {
+  loadJournalistDiscoverData,
+  mapDiscoverRowsToFeed,
+} from '@/lib/journalist/discover-data';
+import { getJournalistPortalSession } from '@/lib/journalist/session';
+
+export default async function JournalistDiscoverPage() {
+  const session = await getJournalistPortalSession();
+  if (!session.ok) {
+    // Layout handles redirect; keep component shape simple.
+    return <JournalistDiscoverView userDisplayName={null} />;
+  }
+
+  const discoverData = await loadJournalistDiscoverData(
+    session.supabase,
+    session.user.id
+  );
+  const releases = mapDiscoverRowsToFeed(discoverData.recentReleases);
+
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-xl font-semibold">Discover</h1>
-      <p className="text-neutral-600 mt-2">Batch 4</p>
-    </main>
+    <JournalistDiscoverView
+      userDisplayName={session.displayName}
+      releases={releases}
+    />
   );
 }

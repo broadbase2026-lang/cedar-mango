@@ -8,6 +8,7 @@ import {
 import {
   getGeminiApiKey,
   resolveGeminiModelId,
+  type BroadbaseGenerationConfig,
   type GeminiTier,
 } from './config';
 
@@ -43,11 +44,10 @@ export function tryCreateGoogleGenAI(): GoogleGenerativeAI | null {
   return new GoogleGenerativeAI(apiKey);
 }
 
-export type GetGenerativeModelOptions = Omit<ModelParams, 'model'> & {
+export type GetGenerativeModelOptions = Omit<ModelParams, 'model' | 'generationConfig'> & {
   /** Defaults to flash (latency/cost). Use `pro` for heavier reasoning. */
   tier?: GeminiTier;
-  /** When set, overrides `tier` resolution. */
-  model?: string;
+  generationConfig?: BroadbaseGenerationConfig;
 };
 
 /**
@@ -56,8 +56,8 @@ export type GetGenerativeModelOptions = Omit<ModelParams, 'model'> & {
 export function getGeminiGenerativeModel(
   options: GetGenerativeModelOptions = {}
 ): GenerativeModel {
-  const { tier = 'flash', model: modelOverride, ...modelParams } = options;
-  const modelId = modelOverride ?? resolveGeminiModelId(tier);
+  const { tier = 'flash', ...modelParams } = options;
+  const modelId = resolveGeminiModelId(tier);
   const genAI = createGoogleGenAI();
   return genAI.getGenerativeModel({
     model: modelId,
