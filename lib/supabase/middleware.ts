@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { SupabaseCookieToSet } from '@/lib/supabase/cookie-types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabasePublicEnv } from '@/lib/supabase/env';
 
 type SupabaseMiddlewareClientResult =
   | { supabase: null; response: NextResponse }
@@ -20,28 +21,25 @@ export function createSupabaseMiddlewareClient(
     },
   });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  // In dev / misconfigured environments, allow the app to boot without auth refresh.
-  if (!url || !key) {
+  const env = getSupabasePublicEnv();
+  if (!env) {
     return { supabase: null, response: supabaseResponse };
   }
 
-  const supabase = createServerClient(
-    url,
-    key!,
-    {
+  try {
+    const supabase = createServerClient(env.url, env.key, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: SupabaseCookieToSet[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          try {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+          } catch {
+            // Some Edge runtimes reject mutating request cookies — response cookies still apply.
+          }
           supabaseResponse = NextResponse.next({
             request: {
               headers: request.headers,
@@ -52,8 +50,11 @@ export function createSupabaseMiddlewareClient(
           );
         },
       },
-    }
-  );
+    });
 
-  return { supabase, response: supabaseResponse };
+    return { supabase, response: supabaseResponse };
+  } catch (err) {
+    console.error('[supabase/middleware] failed to create client', err);
+    return { supabase: null, response: supabaseResponse };
+  }
 }
