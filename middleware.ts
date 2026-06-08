@@ -33,24 +33,20 @@ export async function middleware(request: NextRequest) {
 
     const nonceBytes = new Uint8Array(16);
     crypto.getRandomValues(nonceBytes);
-    let nonce = '';
     try {
-      nonce = btoa(
+      const nonce = btoa(
         Array.from(nonceBytes, (b) => String.fromCharCode(b)).join('')
       );
-    } catch {
-      nonce = '';
-    }
-    if (nonce) {
       requestHeaders.set('x-nonce', nonce);
+    } catch {
+      // Nonce is optional; skip if encoding fails.
     }
 
-    const requestWithPath = new NextRequest(request.url, {
-      headers: requestHeaders,
-    });
-
-    const { supabase, response } =
-      createSupabaseMiddlewareClient(requestWithPath);
+    // Use the original request for Supabase cookies — do NOT clone via new NextRequest().
+    const { supabase, response } = createSupabaseMiddlewareClient(
+      request,
+      requestHeaders
+    );
 
     if (supabase) {
       try {
