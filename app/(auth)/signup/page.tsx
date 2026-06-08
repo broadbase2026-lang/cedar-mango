@@ -42,7 +42,11 @@ export default function SignupPage({ searchParams }: SignupPageProps) {
         <SignupForm inviteRequired={Boolean(betaInviteCode)} />
       </div>
       <p className="mt-6 text-center text-xs text-neutral-500">
-        By signing up you agree to our terms and confirm the account type you select is accurate.
+        By signing up you agree to{' '}
+        <Link href="https://broadbase.app/terms" className="text-teal-700 underline">
+          our Terms & Conditions
+        </Link>{' '}
+        and confirm the account type you select is accurate.
       </p>
       <p className="mt-2 text-center text-xs">
         <Link href="/" className="text-teal-700 underline">

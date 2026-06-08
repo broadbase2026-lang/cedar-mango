@@ -1,4 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
+import { normalizeLegalHtml } from '@/lib/legal/normalize-html';
 
 const LEGAL_ALLOWED_TAGS = [
   'p',
@@ -22,12 +23,15 @@ const LEGAL_ALLOWED_TAGS = [
 ];
 
 export function sanitizeLegalHtml(input: string): string {
-  return sanitizeHtml(input ?? '', {
+  const normalized = normalizeLegalHtml(input ?? '');
+
+  return sanitizeHtml(normalized, {
     allowedTags: LEGAL_ALLOWED_TAGS,
     allowedAttributes: {
       a: ['href', 'target', 'rel'],
       h2: ['id', 'class'],
       h3: ['id', 'class'],
+      p: ['class'],
       span: ['class'],
       table: ['class'],
       th: ['class'],

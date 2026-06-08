@@ -584,8 +584,16 @@
     @apply mb-4 text-brand-muted;
   }
 
-  .legal-prose :where(p strong:only-child) {
+  .legal-prose :where(p.legal-callout) {
     @apply text-brand-ink;
+  }
+
+  .legal-prose :where(p.legal-callout strong) {
+    @apply font-semibold;
+  }
+
+  .legal-prose :where(p.legal-definition strong) {
+    @apply font-semibold text-brand-ink;
   }
 
   .legal-prose :where(.legal-section-heading) {
@@ -596,8 +604,48 @@
     @apply mt-0 border-t-0 pt-0;
   }
 
+  .legal-prose :where(.legal-section-number) {
+    @apply text-brand-muted;
+  }
+
   .legal-prose :where(.legal-subsection-heading) {
     @apply mb-3 mt-6 scroll-mt-24 text-sm font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(p.legal-subclause) {
+    @apply text-brand-muted;
+  }
+
+  .legal-prose :where(.legal-subclause-label) {
+    @apply font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(p.legal-subclause strong) {
+    @apply font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(ul, ol) {
+    @apply mb-4 space-y-2 pl-5 text-brand-muted;
+  }
+
+  .legal-prose :where(ul) {
+    @apply list-disc;
+  }
+
+  .legal-prose :where(ol) {
+    @apply list-decimal;
+  }
+
+  .legal-prose :where(li) {
+    @apply leading-7;
+  }
+
+  .legal-prose :where(li > strong:first-child) {
+    @apply font-semibold text-brand-ink;
+  }
+
+  .legal-prose :where(em) {
+    @apply not-italic text-brand-muted;
   }
 
   .legal-prose :where(.legal-table) {
@@ -614,6 +662,14 @@
 
   .legal-prose :where(.legal-table tr:last-child td) {
     @apply border-b-0;
+  }
+
+  .legal-prose :where(.legal-table p) {
+    @apply mb-0;
+  }
+
+  .legal-prose :where(.legal-table th p strong) {
+    @apply font-semibold text-brand-ink;
   }
 
   .legal-prose :where(a) {

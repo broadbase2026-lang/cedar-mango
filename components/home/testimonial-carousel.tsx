@@ -122,17 +122,32 @@ export function TestimonialCarousel({
   const trackRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const rafRef = useRef<number | null>(null);
+  const activeIndexRef = useRef(0);
+  const autoPlayPausedRef = useRef(false);
+  const autoPlayResumeAtRef = useRef(0);
+  const isProgrammaticScrollRef = useRef(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  activeIndexRef.current = activeIndex;
+
+  const AUTO_PLAY_INTERVAL_MS = 5000;
 
   const centerRenderedIndex = useCallback(
     (renderedIndex: number, behavior: ScrollBehavior) => {
-    const track = trackRef.current;
-    const el = cardRefs.current[renderedIndex];
-    if (!track || !el) return;
-    const left =
-      el.offsetLeft + el.offsetWidth / 2 - track.clientWidth / 2;
-    track.scrollTo({ left, behavior });
+      const track = trackRef.current;
+      const el = cardRefs.current[renderedIndex];
+      if (!track || !el) return;
+      const left =
+        el.offsetLeft + el.offsetWidth / 2 - track.clientWidth / 2;
+      isProgrammaticScrollRef.current = true;
+      track.scrollTo({ left, behavior });
+      if (behavior === 'smooth') {
+        window.setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 600);
+      } else {
+        isProgrammaticScrollRef.current = false;
+      }
     },
     [],
   );
@@ -152,11 +167,8 @@ export function TestimonialCarousel({
     // rAF ensures layout is ready for offset measurements.
     const track = trackRef.current;
     if (!track) return;
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    requestAnimationFrame(() => centerLogicalIndex(activeIndex, reduced ? 'auto' : 'auto'));
-  }, [activeIndex, centerLogicalIndex, items.length]);
+    requestAnimationFrame(() => centerLogicalIndex(0, 'auto'));
+  }, [centerLogicalIndex, items.length]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -210,12 +222,19 @@ export function TestimonialCarousel({
       rafRef.current = window.requestAnimationFrame(tick);
     };
 
+    const onScroll = () => {
+      if (!isProgrammaticScrollRef.current) {
+        autoPlayResumeAtRef.current = Date.now() + AUTO_PLAY_INTERVAL_MS * 2;
+      }
+      schedule();
+    };
+
     schedule();
-    track.addEventListener('scroll', schedule, { passive: true });
+    track.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', schedule);
 
     return () => {
-      track.removeEventListener('scroll', schedule);
+      track.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', schedule);
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current);
@@ -230,6 +249,39 @@ export function TestimonialCarousel({
     };
   }, [centerLogicalIndex, items.length, renderedItems]);
 
+  const pauseAutoPlay = useCallback((durationMs = AUTO_PLAY_INTERVAL_MS * 2) => {
+    autoPlayResumeAtRef.current = Date.now() + durationMs;
+  }, []);
+
+  const advance = useCallback(() => {
+    const n = items.length;
+    if (n <= 1) return;
+    const reduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    centerLogicalIndex(
+      (activeIndexRef.current + 1) % n,
+      reduced ? 'auto' : 'smooth',
+    );
+  }, [centerLogicalIndex, items.length]);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+
+    const reduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
+    const id = window.setInterval(() => {
+      if (autoPlayPausedRef.current) return;
+      if (Date.now() < autoPlayResumeAtRef.current) return;
+      advance();
+    }, AUTO_PLAY_INTERVAL_MS);
+
+    return () => window.clearInterval(id);
+  }, [advance, items.length]);
+
   const scrollToIndex = (logicalIndex: number) => {
     const reduced =
       typeof window !== 'undefined' &&
@@ -237,8 +289,14 @@ export function TestimonialCarousel({
     centerLogicalIndex(logicalIndex, reduced ? 'auto' : 'smooth');
   };
 
-  const prev = () => scrollToIndex((activeIndex - 1 + items.length) % items.length);
-  const next = () => scrollToIndex((activeIndex + 1) % items.length);
+  const prev = () => {
+    pauseAutoPlay();
+    scrollToIndex((activeIndex - 1 + items.length) % items.length);
+  };
+  const next = () => {
+    pauseAutoPlay();
+    scrollToIndex((activeIndex + 1) % items.length);
+  };
 
   return (
     <section className={cn('w-full', className)}>
@@ -292,6 +350,20 @@ export function TestimonialCarousel({
           'relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] overflow-visible',
           heading ? 'mt-6' : 'mt-2',
         )}
+        onMouseEnter={() => {
+          autoPlayPausedRef.current = true;
+        }}
+        onMouseLeave={() => {
+          autoPlayPausedRef.current = false;
+        }}
+        onFocusCapture={() => {
+          autoPlayPausedRef.current = true;
+        }}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            autoPlayPausedRef.current = false;
+          }
+        }}
       >
         <div
           aria-hidden="true"
