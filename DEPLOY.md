@@ -28,9 +28,15 @@ Operational steps to deploy Broadbase for an invite-only, trial-only beta on Ver
    - `media-kits-private` (private)
 4. Configure **Authentication → URL Configuration**:
    - **Site URL:** `https://broadbase.app`
-   - **Redirect URLs:** `https://broadbase.app/**`, `https://www.broadbase.app/**`
-5. Configure **Authentication → Providers → Email** (confirmations as desired).
-6. Copy credentials for Vercel:
+   - **Redirect URLs:** `https://broadbase.app/**`, `https://www.broadbase.app/**`, `http://localhost:3000/auth/callback` (local dev)
+5. Configure **Authentication → Providers → Email**:
+   - Enable **Confirm email** (required — without this, signup skips verification and no confirmation email is sent)
+   - Optional: enable **Secure email change** for production
+6. Configure email delivery (required for confirmation emails to arrive):
+   - **Project Settings → Authentication → SMTP Settings** → enable custom SMTP
+   - Example with [Resend SMTP](https://resend.com/docs/send-with-supabase-smtp): host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = verified domain address
+   - Supabase’s built-in mail is rate-limited and often blocked in production
+7. Copy credentials for Vercel:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server only)
@@ -76,8 +82,8 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 
 **Public / auth**
 - [x] Homepage loads; nav links work (CSP does not break hydration)
-- [ ] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
-- [ ] `/signup` requires invite code; wrong code rejected
+- [x] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
+- [x] `/signup` requires invite code; wrong code rejected
 - [ ] Valid invite signup → email confirmation flow works
 - [ ] Login → brand user reaches dashboard or trial upload
 
@@ -86,7 +92,7 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 - [ ] First publish succeeds; second publish blocked
 
 **Journalist**
-- [ ] Signup + login → `/journalist/discover` with real published releases (or mock fallback if none)
+- [x] Signup + login → `/journalist/discover` with real published releases (or mock fallback if none)
 - [ ] Chat widget responds (requires `GEMINI_API_KEY`)
 
 **Storage**
@@ -95,7 +101,7 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 
 **Security**
 - [ ] Dev mock user does not get Enterprise access in production
-- [ ] Unauthenticated `/brand/dashboard` redirects to login
+- [x] Unauthenticated `/brand/dashboard` redirects to login
 
 ## 5. Beta operations
 

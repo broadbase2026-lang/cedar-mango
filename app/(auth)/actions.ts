@@ -1,14 +1,16 @@
 'use server';
 
 import { applyDevProfileOverrides } from '@/lib/auth/dev-profile-mock';
-import { validateBetaInviteCode } from '@/lib/config/beta';
-import { createClient } from '@/lib/supabase/server';
-import { getSupabasePublicEnv } from '@/lib/supabase/env';
+import { isEmailConfirmed } from '@/lib/auth/email-confirmed';
+import { provisionTrialBrandForUser } from '@/lib/auth/provision-trial-brand';
 import {
   dashboardPathForUserType,
   sanitizeInternalNextParam,
 } from '@/lib/auth/redirects';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { validateBetaInviteCode } from '@/lib/config/beta';
+import { getAppUrl } from '@/lib/config/app-url';
+import { createClient } from '@/lib/supabase/server';
+import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import type { UserType } from '@/types';
 import { redirect } from 'next/navigation';
 
@@ -26,16 +28,6 @@ function parseUserType(raw: FormDataEntryValue | null): UserType | null {
 function parseBool(raw: FormDataEntryValue | null): boolean {
   if (typeof raw !== 'string') return false;
   return raw.trim().toLowerCase() === 'true';
-}
-
-function slugify(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
 }
 
 const SIGN_IN_CONFIG_ERROR =
@@ -111,9 +103,11 @@ export async function signupAction(
     email,
     password,
     options: {
+      emailRedirectTo: `${getAppUrl()}/auth/callback`,
       data: {
         user_type: userType,
         ...(fullName ? { full_name: fullName } : {}),
+        ...(wantsTrial ? { wants_trial: true } : {}),
       },
     },
   });
@@ -122,45 +116,20 @@ export async function signupAction(
     return { error: error.message };
   }
 
-  if (!data.session) {
+  const user = data.user;
+  if (!user) {
+    return { error: 'Sign-up did not return a user. Please try again.' };
+  }
+
+  if (!isEmailConfirmed(user)) {
+    if (data.session) {
+      await supabase.auth.signOut();
+    }
     return { error: null, needsEmailConfirmation: true };
   }
 
   if (userType === 'brand' && wantsTrial) {
-    const ownerId = data.user?.id;
-    if (!ownerId) {
-      redirect('/brand/upload?trial=true');
-    }
-
-    const supabase = await createClient();
-
-    // Create a minimal brand workspace so the user can immediately upload.
-    const baseName = fullName || 'New Brand';
-    const slugBase = slugify(baseName) || `brand-${ownerId.slice(0, 8)}`;
-    const slug = `${slugBase}-${ownerId.slice(0, 6)}`;
-
-    await supabase.from('brands').insert({
-      owner_id: ownerId,
-      name: baseName,
-      slug,
-    });
-
-    // Insert trial subscription row using service role (subscriptions has no client insert policy).
-    try {
-      const admin = createAdminClient();
-      const placeholderCustomerId = `trial_${crypto.randomUUID()}`;
-      await admin.from('subscriptions').insert({
-        owner_id: ownerId,
-        stripe_customer_id: placeholderCustomerId,
-        plan: 'starter',
-        status: 'trialing',
-        trial_mode: true,
-        trial_releases_used: 0,
-      });
-    } catch {
-      // If this fails (e.g. duplicate row), user can still proceed; guards will rely on DB state once present.
-    }
-
+    await provisionTrialBrandForUser(user.id, fullName);
     redirect('/brand/upload?trial=true');
   }
 
@@ -199,6 +168,14 @@ export async function loginAction(
 
   if (!user) {
     return { error: 'Could not load session after sign-in.' };
+  }
+
+  if (!isEmailConfirmed(user)) {
+    await supabase.auth.signOut();
+    return {
+      error:
+        'Please confirm your email before signing in. Check your inbox for the confirmation link.',
+    };
   }
 
   const { data: profileRow, error: profileError } = await supabase

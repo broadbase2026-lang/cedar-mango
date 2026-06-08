@@ -19,9 +19,10 @@ function SubmitButton() {
 
 type LoginFormProps = {
   nextPath: string | null;
+  callbackError?: string | null;
 };
 
-export function LoginForm({ nextPath }: LoginFormProps) {
+export function LoginForm({ nextPath, callbackError }: LoginFormProps) {
   const initialState: AuthActionState = { error: null };
   const [state, formAction] = useFormState(loginAction, initialState);
 
@@ -56,6 +57,12 @@ export function LoginForm({ nextPath }: LoginFormProps) {
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none ring-teal-700 focus:border-teal-700 focus:ring-1"
         />
       </div>
+
+      {callbackError ? (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+          {callbackError}
+        </p>
+      ) : null}
 
       {state.error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">

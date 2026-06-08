@@ -25,6 +25,21 @@ export function SignupForm(props: { inviteRequired?: boolean }) {
   const searchParams = useSearchParams();
   const trial = (searchParams?.get('trial') ?? '') === 'true';
 
+  if (state.needsEmailConfirmation) {
+    return (
+      <div className="rounded-md bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <p className="font-medium">Check your email</p>
+        <p className="mt-1">
+          We sent a confirmation link to your address. After you confirm, you can{' '}
+          <Link href="/login" className="font-medium underline">
+            sign in
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="trial" value={trial ? 'true' : 'false'} />
@@ -129,24 +144,18 @@ export function SignupForm(props: { inviteRequired?: boolean }) {
         </p>
       ) : null}
 
-      {state.needsEmailConfirmation ? (
-        <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-900">
-          Check your email for a confirmation link. After you confirm, you can{' '}
-          <Link href="/login" className="font-medium underline">
-            sign in
-          </Link>
-          .
-        </p>
-      ) : null}
+      {state.needsEmailConfirmation ? null : (
+        <>
+          <SubmitButton label="Create account" />
 
-      <SubmitButton label="Create account" />
-
-      <p className="text-center text-sm text-neutral-600">
-        Already have an account?{' '}
-        <Link href="/login" className="font-medium text-teal-700 underline">
-          Log in
-        </Link>
-      </p>
+          <p className="text-center text-sm text-neutral-600">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-teal-700 underline">
+              Log in
+            </Link>
+          </p>
+        </>
+      )}
     </form>
   );
 }
