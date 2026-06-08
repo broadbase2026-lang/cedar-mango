@@ -38,6 +38,46 @@ function slugify(raw: string): string {
     .replace(/^-|-$/g, '');
 }
 
+const SIGN_IN_CONFIG_ERROR =
+  'Sign-in is unavailable. Supabase is not configured on this server.';
+const SIGN_UP_CONFIG_ERROR =
+  'Sign-up is unavailable. Supabase is not configured on this server.';
+
+function isSupabaseConfigError(message: string): boolean {
+  return /Missing NEXT_PUBLIC_SUPABASE|URL and Key are required/i.test(message);
+}
+
+async function createAuthSupabaseClient(
+  context: 'sign-in' | 'sign-up'
+): Promise<
+  { supabase: Awaited<ReturnType<typeof createClient>>; error: null } | { supabase: null; error: string }
+> {
+  const configError =
+    context === 'sign-in' ? SIGN_IN_CONFIG_ERROR : SIGN_UP_CONFIG_ERROR;
+
+  if (!getSupabasePublicEnv()) {
+    return { supabase: null, error: configError };
+  }
+
+  try {
+    const supabase = await createClient();
+    return { supabase, error: null };
+  } catch (err) {
+    console.error('[auth action] createClient failed', err);
+    const message = err instanceof Error ? err.message : String(err);
+    if (isSupabaseConfigError(message)) {
+      return { supabase: null, error: configError };
+    }
+    return {
+      supabase: null,
+      error:
+        context === 'sign-in'
+          ? 'Sign-in could not start. If you just updated env vars, redeploy production and try again.'
+          : 'Sign-up could not start. If you just updated env vars, redeploy production and try again.',
+    };
+  }
+}
+
 export async function signupAction(
   _prev: AuthActionState,
   formData: FormData
@@ -61,22 +101,11 @@ export async function signupAction(
     return { error: 'Choose whether you are signing up as a brand or a journalist.' };
   }
 
-  if (!getSupabasePublicEnv()) {
-    return {
-      error:
-        'Sign-up is unavailable. Supabase is not configured on this server.',
-    };
+  const authClient = await createAuthSupabaseClient('sign-up');
+  if (authClient.error || !authClient.supabase) {
+    return { error: authClient.error ?? SIGN_UP_CONFIG_ERROR };
   }
-
-  let supabase;
-  try {
-    supabase = await createClient();
-  } catch {
-    return {
-      error:
-        'Sign-up is unavailable. Supabase is not configured on this server.',
-    };
-  }
+  const supabase = authClient.supabase;
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -149,22 +178,11 @@ export async function loginAction(
   if (!email) return { error: 'Email is required.' };
   if (!password) return { error: 'Password is required.' };
 
-  if (!getSupabasePublicEnv()) {
-    return {
-      error:
-        'Sign-in is unavailable. Supabase is not configured on this server.',
-    };
+  const authClient = await createAuthSupabaseClient('sign-in');
+  if (authClient.error || !authClient.supabase) {
+    return { error: authClient.error ?? SIGN_IN_CONFIG_ERROR };
   }
-
-  let supabase;
-  try {
-    supabase = await createClient();
-  } catch {
-    return {
-      error:
-        'Sign-in is unavailable. Supabase is not configured on this server.',
-    };
-  }
+  const supabase = authClient.supabase;
 
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email,

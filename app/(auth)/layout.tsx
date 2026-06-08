@@ -6,6 +6,9 @@ import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import { dashboardPathForUserType } from '@/lib/auth/redirects';
 import type { UserType } from '@/types';
 
+/** Always read Supabase env at request time (not from a stale static shell). */
+export const dynamic = 'force-dynamic';
+
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   const env = getSupabasePublicEnv();
 
