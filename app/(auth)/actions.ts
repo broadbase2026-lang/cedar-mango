@@ -7,8 +7,10 @@ import {
   dashboardPathForUserType,
   sanitizeInternalNextParam,
 } from '@/lib/auth/redirects';
+import { signupWithResendConfirmation } from '@/lib/auth/signup-with-resend-confirmation';
 import { validateBetaInviteCode } from '@/lib/config/beta';
 import { getAppUrl } from '@/lib/config/app-url';
+import { getResendEnv, resendNotConfiguredMessage } from '@/lib/email/resend-env';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import type { UserType } from '@/types';
@@ -99,6 +101,32 @@ export async function signupAction(
   }
   const supabase = authClient.supabase;
 
+  if (getResendEnv()) {
+    try {
+      const resendSignup = await signupWithResendConfirmation({
+        email,
+        password,
+        fullName,
+        userType,
+        wantsTrial,
+      });
+
+      if (!resendSignup.ok) {
+        return { error: resendSignup.error };
+      }
+
+      return { error: null, needsEmailConfirmation: true };
+    } catch (err) {
+      console.error('[signupAction] Resend signup failed', err);
+      return {
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Sign-up could not complete. Please try again.',
+      };
+    }
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -115,8 +143,7 @@ export async function signupAction(
   if (error) {
     if (/error sending confirmation email/i.test(error.message)) {
       return {
-        error:
-          'We could not send a confirmation email. In the Supabase dashboard, open Project Settings → Authentication → SMTP, enable custom SMTP (e.g. Resend: smtp.resend.com, user resend, password = your Resend API key), and set the sender to an address on a verified domain.',
+        error: `${resendNotConfiguredMessage()} Supabase SMTP also failed — set Resend env vars on Vercel to send confirmations from the app instead.`,
       };
     }
     return { error: error.message };

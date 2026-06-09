@@ -32,11 +32,11 @@ Operational steps to deploy Broadbase for an invite-only, trial-only beta on Ver
 5. Configure **Authentication → Providers → Email**:
    - Enable **Confirm email** (required — without this, signup skips verification and no confirmation email is sent)
    - Optional: enable **Secure email change** for production
-6. Configure email delivery (required for confirmation emails to arrive):
-   - **Project Settings → Authentication → SMTP Settings** → enable custom SMTP
-   - Example with [Resend SMTP](https://resend.com/docs/send-with-supabase-smtp): host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = verified domain address
-   - Supabase’s built-in mail is rate-limited and often blocked in production
-   - **Troubleshooting “Error sending confirmation email”:** this means Supabase could not send mail. Check (a) custom SMTP is enabled with valid credentials, (b) sender address uses a domain verified in Resend (e.g. `onboarding@broadbase.app`), (c) Resend API key is the SMTP password (not the webhook secret), (d) Auth logs in Supabase dashboard for the underlying SMTP error.
+6. Configure email delivery:
+   - **Recommended:** set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Vercel — the app sends signup confirmation links via Resend (no Supabase SMTP required).
+   - **Optional fallback:** **Project Settings → Authentication → SMTP Settings** → custom SMTP (e.g. Resend SMTP) if you prefer Supabase to send auth mail directly.
+   - Supabase’s built-in mail is rate-limited and often blocked in production.
+   - **Troubleshooting “Error sending confirmation email”:** ensure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` are set on Vercel and the sender domain is verified in Resend; redeploy after adding env vars.
 7. Copy credentials for Vercel:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -58,6 +58,8 @@ Optional: run `supabase/tests/rls_smoke.sql` and `supabase/tests/embargoed_asset
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key |
 | `NEXT_PUBLIC_APP_URL` | `https://broadbase.app` |
+| `RESEND_API_KEY` | Resend API key (signup confirmation emails) |
+| `RESEND_FROM_EMAIL` | Verified sender, e.g. `Broadbase <onboarding@broadbase.app>` |
 | `GEMINI_API_KEY` | Google AI key |
 | `BETA_TRIAL_ONLY` | `true` |
 | `BETA_INVITE_CODE` | Your private invite code |
