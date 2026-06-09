@@ -113,6 +113,12 @@ export async function signupAction(
   });
 
   if (error) {
+    if (/error sending confirmation email/i.test(error.message)) {
+      return {
+        error:
+          'We could not send a confirmation email. In the Supabase dashboard, open Project Settings → Authentication → SMTP, enable custom SMTP (e.g. Resend: smtp.resend.com, user resend, password = your Resend API key), and set the sender to an address on a verified domain.',
+      };
+    }
     return { error: error.message };
   }
 

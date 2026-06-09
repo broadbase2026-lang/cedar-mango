@@ -36,6 +36,7 @@ Operational steps to deploy Broadbase for an invite-only, trial-only beta on Ver
    - **Project Settings → Authentication → SMTP Settings** → enable custom SMTP
    - Example with [Resend SMTP](https://resend.com/docs/send-with-supabase-smtp): host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = verified domain address
    - Supabase’s built-in mail is rate-limited and often blocked in production
+   - **Troubleshooting “Error sending confirmation email”:** this means Supabase could not send mail. Check (a) custom SMTP is enabled with valid credentials, (b) sender address uses a domain verified in Resend (e.g. `onboarding@broadbase.app`), (c) Resend API key is the SMTP password (not the webhook secret), (d) Auth logs in Supabase dashboard for the underlying SMTP error.
 7. Copy credentials for Vercel:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
