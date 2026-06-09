@@ -5,6 +5,7 @@ import { getBrandPortalSession } from '@/lib/brand/session';
 import { NewReleaseForm } from '@/components/brand/new-release-form';
 import { ReleasePublishPanel } from '@/components/brand/release-publish-panel';
 import { ReleaseAiReadinessPanel } from '@/components/brand/release-ai-readiness-panel';
+import { releaseImageFromRow, type ReleaseImageAsset } from '@/lib/brand/release-asset-model';
 import {
   MAX_IMAGES_PER_PRESS_RELEASE,
   MAX_TRIAL_IMAGES_PER_PRESS_RELEASE,
@@ -73,12 +74,41 @@ export default async function NewPressReleasePage({
 
   const isEditing = Boolean(editId && existing?.data);
 
+  const existingImages: ReleaseImageAsset[] = [];
+  if (editId && existing?.data) {
+    const { data: assetRows } = await session.supabase
+      .from('press_assets')
+      .select('id, file_name, file_url, file_size_bytes')
+      .eq('press_release_id', editId)
+      .eq('brand_id', session.brand.id)
+      .eq('file_type', 'image')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    for (const row of assetRows ?? []) {
+      if (row?.id && row.file_name && row.file_url) {
+        existingImages.push(
+          releaseImageFromRow({
+            id: row.id,
+            file_name: row.file_name,
+            file_url: row.file_url,
+            file_size_bytes: row.file_size_bytes,
+          })
+        );
+      }
+    }
+  }
+
+  const savedNotice = first(searchParams?.saved) === 'true';
+
   const form = (
     <NewReleaseForm
       action={editId ? updatePressReleaseAction : createPressReleaseAction}
       brandId={session.brand.id}
       errorCode={errorCode}
       maxPendingImages={maxPendingImages}
+      savedNotice={savedNotice}
+      initialImages={existingImages}
       existing={
         editId && existing?.data
           ? {
@@ -101,7 +131,7 @@ export default async function NewPressReleasePage({
       </h1>
       <p className="mt-1 text-sm text-brand-muted">
         {editId
-          ? 'Update your draft, then manage assets in Media Library.'
+          ? 'Update your draft and attach press images below, then publish when ready.'
           : 'Create a draft release first, then upload assets in Media Library.'}
       </p>
     </div>

@@ -302,7 +302,8 @@ export async function updatePressReleaseAction(formData: FormData) {
     }
 
     revalidatePath('/dashboard/brand');
-    redirect('/dashboard/brand?section=releases');
+    revalidatePath('/brand/releases/new');
+    redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&saved=true`);
   } catch (e) {
     const digest = (e as any)?.digest;
     if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {

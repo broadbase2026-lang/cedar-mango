@@ -3,16 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
+import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
+import { maxImagesForTrial } from '@/lib/brand/pending-release-assets';
 import { createAdminClient } from '@/lib/supabase/admin';
-import {
-  MAX_IMAGES_PER_PRESS_RELEASE,
-  MAX_TRIAL_IMAGES_PER_PRESS_RELEASE,
-} from '@/lib/constants/uploads';
 
 export type MediaActionState = {
   error: string | null;
   success?: boolean;
+  assetId?: string;
 };
 
 const FILE_TYPES = new Set(['image', 'pdf', 'video', 'document']);
@@ -82,17 +80,8 @@ export async function registerPressAsset(input: {
     return { error: 'Only images can be marked as hero assets.' };
   }
 
-  const { data: subscriptionRow } = await admin
-    .from('subscriptions')
-    .select('trial_mode')
-    .eq('owner_id', user.id)
-    .maybeSingle();
-
-  const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
-
-  const imageCap = subscription?.trial_mode
-    ? MAX_TRIAL_IMAGES_PER_PRESS_RELEASE
-    : MAX_IMAGES_PER_PRESS_RELEASE;
+  const payable = await resolvePayableSubscription(admin, user.id);
+  const imageCap = maxImagesForTrial(Boolean(payable?.trialMode));
 
   if (input.fileType === 'image') {
     const { count, error: countErr } = await admin
@@ -109,9 +98,9 @@ export async function registerPressAsset(input: {
     if ((count ?? 0) >= imageCap) {
       return {
         error:
-          imageCap === MAX_TRIAL_IMAGES_PER_PRESS_RELEASE
+          imageCap === maxImagesForTrial(true)
             ? `Free trial allows up to ${imageCap} images per press release. Upgrade to attach more.`
-            : `Maximum ${MAX_IMAGES_PER_PRESS_RELEASE} images per press release.`,
+            : `Maximum ${maxImagesForTrial(false)} images per press release.`,
       };
     }
   }
@@ -127,17 +116,21 @@ export async function registerPressAsset(input: {
 
   // Use service-role for writes: RLS can be flaky in server actions depending on auth cookie
   // propagation. We already verified ownership above, so this stays safe.
-  const { error } = await admin.from('press_assets').insert({
-    brand_id: input.brandId,
-    press_release_id: input.pressReleaseId,
-    file_name: input.fileName,
-    file_url: input.fileUrl,
-    file_type: input.fileType,
-    file_size_bytes: input.fileSizeBytes,
-    caption: input.caption,
-    is_public: input.isPublic,
-    is_hero: input.isHero,
-  });
+  const { data: inserted, error } = await admin
+    .from('press_assets')
+    .insert({
+      brand_id: input.brandId,
+      press_release_id: input.pressReleaseId,
+      file_name: input.fileName,
+      file_url: input.fileUrl,
+      file_type: input.fileType,
+      file_size_bytes: input.fileSizeBytes,
+      caption: input.caption,
+      is_public: input.isPublic,
+      is_hero: input.isHero,
+    })
+    .select('id')
+    .single();
 
   if (error) {
     if (error.code === '23505') {
@@ -151,7 +144,8 @@ export async function registerPressAsset(input: {
 
   revalidatePath('/brand/upload');
   revalidatePath('/dashboard/brand');
-  return { error: null, success: true };
+  revalidatePath('/brand/releases/new');
+  return { error: null, success: true, assetId: inserted?.id };
 }
 
 export async function softDeletePressAsset(input: {

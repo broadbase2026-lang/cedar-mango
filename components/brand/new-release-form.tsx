@@ -16,16 +16,12 @@ import {
 import { ReleaseFileImportDropzone } from '@/components/brand/release-file-import-dropzone';
 import { ReleaseUrlImportField } from '@/components/brand/release-url-import-field';
 import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
-import { registerPressAsset } from '@/app/(brand)/brand/upload/actions';
+import { registerPressAsset, softDeletePressAsset } from '@/app/(brand)/brand/upload/actions';
+import type { ReleaseImageAsset } from '@/lib/brand/release-asset-model';
 
 const STORAGE_KEY = 'bb_release_import_prefill_v1';
 
-type PendingAsset = {
-  path: string;
-  publicUrl: string;
-  fileName: string;
-  fileSizeBytes: number;
-};
+type PendingAsset = ReleaseImageAsset;
 
 type Prefill = {
   title: string;
@@ -89,12 +85,16 @@ export function NewReleaseForm({
   brandId,
   errorCode,
   maxPendingImages = MAX_IMAGES_PER_PRESS_RELEASE,
+  initialImages = [],
+  savedNotice = false,
   existing,
 }: {
   action: (formData: FormData) => Promise<void>;
   brandId: string;
   errorCode?: string | null;
   maxPendingImages?: number;
+  initialImages?: ReleaseImageAsset[];
+  savedNotice?: boolean;
   existing?: ExistingRelease | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -107,7 +107,7 @@ export function NewReleaseForm({
   const [editorSeed, setEditorSeed] = useState(0);
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [summaryErr, setSummaryErr] = useState<string | null>(null);
-  const [pendingAssets, setPendingAssets] = useState<PendingAsset[]>([]);
+  const [pendingAssets, setPendingAssets] = useState<PendingAsset[]>(initialImages);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageErr, setImageErr] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -127,6 +127,12 @@ export function NewReleaseForm({
   useEffect(() => {
     pendingAssetsRef.current = pendingAssets;
   }, [pendingAssets]);
+
+  useEffect(() => {
+    if (!existing?.id) return;
+    setPendingAssets(initialImages);
+    pendingAssetsRef.current = initialImages;
+  }, [existing?.id, initialImages]);
 
   useEffect(() => {
     if (!existing?.id) return;
@@ -315,6 +321,9 @@ export function NewReleaseForm({
               setImageErr(reg.error);
               break;
             }
+            if (reg.assetId) {
+              row.id = reg.assetId;
+            }
           }
 
           acc = [...acc, row];
@@ -330,9 +339,25 @@ export function NewReleaseForm({
     [brandId, maxPendingImages, existing?.id]
   );
 
-  const removePendingAsset = useCallback((path: string) => {
-    setPendingAssets((prev) => prev.filter((a) => a.path !== path));
-  }, []);
+  const removePendingAsset = useCallback(
+    (asset: PendingAsset) => {
+      void (async () => {
+        if (asset.id && existing?.id) {
+          const res = await softDeletePressAsset({
+            brandId,
+            assetId: asset.id,
+          });
+          if (res.error) {
+            setImageErr(res.error);
+            return;
+          }
+        }
+        setPendingAssets((prev) => prev.filter((a) => a.path !== asset.path));
+        setImageErr(null);
+      })();
+    },
+    [brandId, existing?.id]
+  );
 
   return (
     <form
@@ -340,6 +365,15 @@ export function NewReleaseForm({
       action={action}
       className="rounded-xl border border-brand-border bg-white p-6 shadow-sm space-y-4"
     >
+      {savedNotice ? (
+        <div
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+          role="status"
+        >
+          Draft saved.
+        </div>
+      ) : null}
+
       {errorMessage && (
         <div
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -537,7 +571,7 @@ export function NewReleaseForm({
                 <button
                   type="button"
                   className="shrink-0 rounded-md px-2 py-1 text-xs text-brand-muted ring-1 ring-inset ring-brand-border hover:bg-white"
-                  onClick={() => removePendingAsset(a.path)}
+                  onClick={() => removePendingAsset(a)}
                   aria-label={`Remove ${a.fileName}`}
                 >
                   Remove
