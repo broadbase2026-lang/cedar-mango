@@ -97,7 +97,7 @@ export function JournalistChatWidget() {
             </button>
           </div>
 
-          <div ref={listRef} className="max-h-[360px] overflow-y-auto p-3 text-sm">
+          <div ref={listRef} data-lenis-prevent className="max-h-[360px] overflow-y-auto overscroll-contain p-3 text-sm">
             <div className="space-y-3">
               {messages.map((m) => {
                 const textPart = m.parts.find((p: any) => p.type === 'text') as any;

@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { logoutAction } from '@/lib/auth/logout';
 
 const NAV_ITEMS: ReadonlyArray<{
@@ -288,6 +289,7 @@ export function JournalistPortalShell({
         </header>
         <div className="bb-portal-children">{children}</div>
       </div>
+      <JournalistChatWidget />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 import { TypingSearchPlaceholder } from '@/components/home/typing-search-placeholder';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
@@ -520,8 +519,6 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
           ) : null}
         </AnimatePresence>
       </Dialog.Root>
-
-      <JournalistChatWidget />
     </main>
   );
 }
