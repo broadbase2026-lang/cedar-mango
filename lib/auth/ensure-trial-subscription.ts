@@ -8,6 +8,7 @@ export type PayableSubscriptionRow = {
   status: string;
   trial_mode: boolean | null;
   trial_releases_used?: number | null;
+  releases_published_this_period?: number | null;
 };
 
 const PAYABLE_FILTER = 'trial_mode.eq.true,status.in.(active,trialing,past_due)';
@@ -19,7 +20,7 @@ export async function findPayableSubscription(
 ): Promise<PayableSubscriptionRow | null> {
   const { data, error } = await admin
     .from('subscriptions')
-    .select('plan, status, trial_mode, trial_releases_used')
+    .select('plan, status, trial_mode, trial_releases_used, releases_published_this_period')
     .eq('owner_id', ownerId)
     .or(PAYABLE_FILTER)
     .order('updated_at', { ascending: false })

@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
-import { getBrandAccessState } from '@/lib/utils/trialGuard';
+import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ERROR_MESSAGES, PLAN_LIMITS, TRIAL_LIMIT_COPY } from '@/constants/copy';
 
@@ -73,21 +72,14 @@ export async function publishRelease(
     return { ok: false, message: 'Server misconfigured.' };
   }
 
-  const { data: subscriptionRow } = await admin
-    .from('subscriptions')
-    .select(
-      'trial_mode, trial_releases_used, status, plan, releases_published_this_period'
-    )
-    .eq('owner_id', user.id)
-    .maybeSingle();
+  const subscription = await resolvePayableSubscription(admin, user.id);
 
-  const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
+  if (!subscription) {
+    return { ok: false, message: 'You need an active subscription to publish.' };
+  }
 
-  const trialMode = Boolean(subscription?.trial_mode);
-  const releasesUsed =
-    typeof subscription?.trial_releases_used === 'number'
-      ? subscription.trial_releases_used
-      : 0;
+  const { trialMode, releasesUsed, plan: subPlan, releasesPublishedThisPeriod } =
+    subscription;
 
   if (trialMode && releasesUsed >= 1) {
     return {
@@ -95,13 +87,6 @@ export async function publishRelease(
       message: TRIAL_LIMIT_COPY.errors.releaseLimit,
       redirectTo: '/pricing?reason=release-limit',
     };
-  }
-
-  const subStatus = subscription?.status;
-  const subPlan = subscription?.plan as 'starter' | 'pro' | 'agency' | undefined;
-  const hasActiveOrTrialing = subStatus === 'active' || subStatus === 'trialing';
-  if (!hasActiveOrTrialing || !subPlan) {
-    return { ok: false, message: 'You need an active subscription to publish.' };
   }
 
   if (embargoUntilUtc && subPlan === 'starter') {
@@ -116,10 +101,7 @@ export async function publishRelease(
   }
 
   const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
-  const publishedThisPeriod =
-    typeof subscription?.releases_published_this_period === 'number'
-      ? subscription.releases_published_this_period
-      : 0;
+  const publishedThisPeriod = releasesPublishedThisPeriod;
 
   if (typeof tierLimit === 'number' && publishedThisPeriod >= tierLimit) {
     return { ok: false, message: ERROR_MESSAGES.publishLimitReached };

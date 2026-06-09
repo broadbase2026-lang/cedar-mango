@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
+import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
 import { ERROR_MESSAGES, PLAN_LIMITS } from '@/constants/copy';
 
 type ApiResult =
@@ -79,21 +79,14 @@ export async function POST(req: Request) {
     return json({ success: false, error: 'forbidden' }, 403);
   }
 
-  const { data: subscriptionRow } = await admin
-    .from('subscriptions')
-    .select(
-      'trial_mode, trial_releases_used, status, plan, releases_published_this_period'
-    )
-    .eq('owner_id', user.id)
-    .maybeSingle();
+  const subscription = await resolvePayableSubscription(admin, user.id);
 
-  const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
+  if (!subscription) {
+    return json({ success: false, error: 'subscription_required' }, 403);
+  }
 
-  const trialMode = Boolean(subscription?.trial_mode);
-  const releasesUsed =
-    typeof subscription?.trial_releases_used === 'number'
-      ? subscription.trial_releases_used
-      : 0;
+  const { trialMode, releasesUsed, plan: subPlan, releasesPublishedThisPeriod } =
+    subscription;
 
   if (trialMode && releasesUsed >= 1) {
     return json(
@@ -104,14 +97,6 @@ export async function POST(req: Request) {
       },
       200
     );
-  }
-
-  // Must have an active or trialing subscription before checking publish limits.
-  const subStatus = subscription?.status;
-  const subPlan = subscription?.plan as 'starter' | 'pro' | 'agency' | undefined;
-  const hasActiveOrTrialing = subStatus === 'active' || subStatus === 'trialing';
-  if (!hasActiveOrTrialing || !subPlan) {
-    return json({ success: false, error: 'subscription_required' }, 403);
   }
 
   // Embargo scheduling is not available on Solo (starter).
@@ -134,10 +119,7 @@ export async function POST(req: Request) {
 
   // Monthly publish-limit enforcement (application-layer only).
   const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
-  const publishedThisPeriod =
-    typeof subscription?.releases_published_this_period === 'number'
-      ? subscription.releases_published_this_period
-      : 0;
+  const publishedThisPeriod = releasesPublishedThisPeriod;
 
   if (typeof tierLimit === 'number' && publishedThisPeriod >= tierLimit) {
     return NextResponse.json(
