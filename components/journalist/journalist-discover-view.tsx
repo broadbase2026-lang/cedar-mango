@@ -10,6 +10,7 @@ import { JournalistChatWidget } from '@/components/journalist/journalist-chat-wi
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 import { TypingSearchPlaceholder } from '@/components/home/typing-search-placeholder';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
+import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 import { pressReleasesMock, type PressReleaseMock } from '@/lib/journalist/mockData';
 import { formatMonthDayShort } from '@/lib/utils/dates';
 
@@ -195,14 +196,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
     });
   }, [mounted, curated, visibleCount]);
 
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+  useLenisScrollLock(open);
 
   function onRefresh() {
     setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
@@ -406,13 +400,14 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                   className="fixed inset-0 z-40 bg-black/40"
                 />
               </Dialog.Overlay>
-              <Dialog.Content asChild>
+              <Dialog.Content asChild onOpenAutoFocus={(e) => e.preventDefault()}>
                 <motion.div
+                  data-lenis-prevent
                   initial={{ x: 40, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 40, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-                  className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[520px] flex-col border-l border-brand-border bg-white shadow-media-soft"
+                  className="fixed inset-y-0 right-0 z-50 flex h-dvh max-h-dvh w-full max-w-[520px] flex-col border-l border-brand-border bg-white shadow-media-soft"
                 >
                   <div className="shrink-0 border-b border-brand-border bg-white/90 p-4 backdrop-blur">
                     <div className="flex items-start justify-between gap-3">
@@ -449,7 +444,10 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                     </div>
                   </div>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+                  <div
+                    data-lenis-prevent
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-4"
+                  >
                     {selected ? (
                       <>
                         <div className="overflow-hidden rounded-2xl bg-brand-surface-2">

@@ -1,17 +1,54 @@
-// components/smooth-scroll-provider.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 
+type LenisControl = {
+  stop: () => void;
+  start: () => void;
+};
+
+const LenisContext = createContext<LenisControl | null>(null);
+
+export function useLenisControl(): LenisControl | null {
+  return useContext(LenisContext);
+}
+
+/** Pause Lenis while `locked` is true (e.g. modal open). Restores on cleanup. */
+export function useLenisScrollLock(locked: boolean) {
+  const lenis = useLenisControl();
+
+  useEffect(() => {
+    if (!locked || !lenis) return;
+    lenis.stop();
+    return () => {
+      lenis.start();
+    };
+  }, [locked, lenis]);
+}
+
 export function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
+  const lenisRef = useRef<Lenis | null>(null);
+
+  const control = useMemo<LenisControl>(
+    () => ({
+      stop: () => {
+        lenisRef.current?.stop();
+      },
+      start: () => {
+        lenisRef.current?.start();
+      },
+    }),
+    []
+  );
+
   useEffect(() => {
     const lenis = new Lenis({
-      // optional tuning
       duration: 1.2,
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
 
     function raf(time: number) {
       lenis.raf(time);
@@ -22,8 +59,9 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
 
     return () => {
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
 
-  return <>{children}</>;
+  return <LenisContext.Provider value={control}>{children}</LenisContext.Provider>;
 }
