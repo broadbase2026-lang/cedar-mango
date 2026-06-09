@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sanitizeFilename } from '@/lib/utils/sanitizeFilename';
-import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
+import { resolveUploadSubscription } from '@/lib/brand/upload-subscription';
 import { ERROR_MESSAGES, PLAN_LIMITS } from '@/constants/copy';
 import { MAX_IMAGE_UPLOAD_BYTES } from '@/lib/constants/uploads';
+import { isImageFile } from '@/lib/utils/image-file';
 
 export const runtime = 'nodejs';
 
@@ -31,12 +32,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing file.' }, { status: 400 });
   }
 
-  const maxBytes = file.type.startsWith('image/')
-    ? MAX_IMAGE_UPLOAD_BYTES
-    : 25 * 1024 * 1024;
+  const imageUpload = isImageFile(file);
+  const maxBytes = imageUpload ? MAX_IMAGE_UPLOAD_BYTES : 25 * 1024 * 1024;
 
   if (file.size > maxBytes) {
-    const label = file.type.startsWith('image/')
+    const label = imageUpload
       ? `${MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024)}MB`
       : '25MB';
     return NextResponse.json(
@@ -67,51 +67,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // Storage limit check (application-layer).
-  // Align with billing reality: past_due customers still have a plan and should manage drafts/assets.
-  const { data: subRow, error: subReadErr } = await admin
-    .from('subscriptions')
-    .select('plan, status')
-    .eq('owner_id', user.id)
-    .in('status', ['active', 'trialing', 'past_due'])
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const sub = applyDevSubscriptionOverrides(user.id, subRow);
-
-  if (subReadErr) {
-    return NextResponse.json(
-      { error: subReadErr.message },
-      { status: 500 }
-    );
+  const subGate = await resolveUploadSubscription(admin, user.id);
+  if (!subGate.ok) {
+    return NextResponse.json({ error: subGate.error }, { status: 403 });
   }
-
-  const subStatus = sub?.status;
-  const hasBillableSubscription =
-    subStatus === 'active' ||
-    subStatus === 'trialing' ||
-    subStatus === 'past_due';
-  if (!hasBillableSubscription) {
-    return NextResponse.json(
-      { error: 'You need an active subscription to upload assets.' },
-      { status: 403 }
-    );
-  }
-
-  const planRaw = sub?.plan as 'starter' | 'pro' | 'agency' | null | undefined;
-  // Rows may omit `plan` (e.g. trial placeholder or incomplete sync); trialing accounts still need uploads.
-  const plan =
-    planRaw ??
-    (subStatus === 'trialing' || subStatus === 'past_due'
-      ? ('starter' as const)
-      : undefined);
-  if (!plan) {
-    return NextResponse.json(
-      { error: 'You need an active subscription to upload assets.' },
-      { status: 403 }
-    );
-  }
+  const { plan } = subGate;
 
   const allowance = PLAN_LIMITS[plan]?.storageBytes ?? null;
   if (typeof allowance === 'number') {

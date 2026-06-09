@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RichTextEditor } from '@/components/rich-text/rich-text-editor';
 import { compressImageForUpload } from '@/lib/utils/compressImage';
+import { isImageFile } from '@/lib/utils/image-file';
 import {
   MAX_IMAGES_PER_PRESS_RELEASE,
   MAX_IMAGE_UPLOAD_BYTES,
@@ -252,7 +253,7 @@ export function NewReleaseForm({
 
   const processImageFiles = useCallback(
     async (files: FileList | File[]) => {
-      const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      const list = Array.from(files).filter(isImageFile);
       if (list.length === 0) {
         setImageErr('Drop image files only (JPEG, PNG, WebP, etc.).');
         return;

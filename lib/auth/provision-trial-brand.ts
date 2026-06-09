@@ -49,7 +49,7 @@ export async function provisionTrialBrandForUser(
   try {
     const admin = createAdminClient();
     const placeholderCustomerId = `trial_${crypto.randomUUID()}`;
-    await admin.from('subscriptions').insert({
+    const { error } = await admin.from('subscriptions').insert({
       owner_id: ownerId,
       stripe_customer_id: placeholderCustomerId,
       plan: 'starter',
@@ -57,7 +57,10 @@ export async function provisionTrialBrandForUser(
       trial_mode: true,
       trial_releases_used: 0,
     });
-  } catch {
-    // Duplicate or transient failure — upload guards rely on DB state once present.
+    if (error) {
+      console.error('[provisionTrialBrandForUser] subscription insert failed', error);
+    }
+  } catch (err) {
+    console.error('[provisionTrialBrandForUser] subscription insert threw', err);
   }
 }

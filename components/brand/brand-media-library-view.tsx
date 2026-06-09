@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useTransition } from 'react';
+import { compressImageForUpload } from '@/lib/utils/compressImage';
+import { isImageFile } from '@/lib/utils/image-file';
 import { sanitizeFilename } from '@/lib/utils/sanitizeFilename';
 import {
   MAX_IMAGES_PER_PRESS_RELEASE,
@@ -27,8 +29,8 @@ import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzon
 const BUCKET = 'press-assets-public';
 
 function fileTypeFromFile(file: File): 'image' | 'pdf' | 'video' | 'document' {
+  if (isImageFile(file)) return 'image';
   const t = file.type;
-  if (t.startsWith('image/')) return 'image';
   if (t === 'application/pdf') return 'pdf';
   if (t.startsWith('video/')) return 'video';
   return 'document';
@@ -131,11 +133,13 @@ export function BrandMediaLibraryView({
     try {
       // Upload via server route (service-role) to avoid Storage RLS edge cases in dev.
       // Still uses brandId + ownership checks server-side.
-      const safeName = sanitizeFilename(file.name);
+      const prepared =
+        ft === 'image' ? await compressImageForUpload(file) : file;
+      const safeName = sanitizeFilename(prepared.name);
       void safeName; // keep lint happy (filename used server-side too)
       const fd = new FormData();
       fd.set('brandId', brandId);
-      fd.set('file', file);
+      fd.set('file', prepared);
 
       const uploadRes = await fetch(
         '/api/storage/press-assets-public/upload',
@@ -159,10 +163,10 @@ export function BrandMediaLibraryView({
       const res = await registerPressAsset({
         brandId,
         pressReleaseId: releaseId,
-        fileName: file.name,
+        fileName: prepared.name,
         fileUrl,
         fileType: ft,
-        fileSizeBytes: file.size,
+        fileSizeBytes: prepared.size,
         caption: caption.trim() || null,
         isPublic: true,
         isHero,

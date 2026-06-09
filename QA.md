@@ -135,6 +135,8 @@
 
 ## Database state — trial verification queries
 
+If `trial_mode` does not exist on `subscriptions`, apply `supabase/migrations/007_trial_mode.sql` in the Supabase SQL Editor (or `supabase db push`).
+
 Run these after a full trial → upgrade flow to verify data integrity:
 
 ```sql

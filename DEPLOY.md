@@ -87,11 +87,12 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 - [x] Homepage loads; nav links work (CSP does not break hydration)
 - [x] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
 - [x] `/signup` requires invite code; wrong code rejected
-- [ ] Valid invite signup → email confirmation flow works
+- [x] Valid invite signup → email confirmation flow works
 - [ ] Login → brand user reaches dashboard or trial upload
 
 **Brand trial**
 - [ ] Trial subscription row created (`plan=starter`, `status=trialing`, `trial_mode=true`)
+  - Verify in Supabase **SQL Editor** (see `QA.md`); if `trial_mode` column is missing, apply `supabase/migrations/007_trial_mode.sql` (or run `supabase db push` against the linked project).
 - [ ] First publish succeeds; second publish blocked
 
 **Journalist**
