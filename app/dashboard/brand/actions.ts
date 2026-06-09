@@ -38,6 +38,7 @@ export async function publishRelease(
   | { ok: true }
   | { ok: false; message: string; redirectTo?: string }
 > {
+  try {
   const supabase = await createClient();
   const {
     data: { user },
@@ -141,21 +142,40 @@ export async function publishRelease(
   }
 
   if (trialMode) {
-    await admin
+    const { error: trialCounterErr } = await admin
       .from('subscriptions')
       .update({ trial_releases_used: releasesUsed + 1 })
       .eq('owner_id', user.id);
+    if (trialCounterErr) {
+      console.error('[publishRelease] trial_releases_used update', trialCounterErr);
+    }
   }
 
   if (typeof tierLimit === 'number') {
-    await admin
+    const { error: periodCounterErr } = await admin
       .from('subscriptions')
       .update({ releases_published_this_period: publishedThisPeriod + 1 })
       .eq('owner_id', user.id);
+    if (periodCounterErr) {
+      console.error(
+        '[publishRelease] releases_published_this_period update',
+        periodCounterErr
+      );
+    }
   }
 
   revalidatePath('/dashboard/brand');
   return { ok: true };
+  } catch (err) {
+    console.error('[publishRelease] unhandled exception', err);
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : 'Publish failed. Try again.',
+    };
+  }
 }
 
 export async function unpublishReleaseToDraft(

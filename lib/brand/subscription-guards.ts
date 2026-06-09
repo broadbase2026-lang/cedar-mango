@@ -65,50 +65,63 @@ export async function resolvePayableSubscription(
   admin: SupabaseClient,
   ownerId: string
 ): Promise<ResolvedPayableSubscription | null> {
-  let row: PayableSubscriptionRow | null = await findPayableSubscription(
-    admin,
-    ownerId
-  );
+  try {
+    let row: PayableSubscriptionRow | null = await findPayableSubscription(
+      admin,
+      ownerId
+    );
 
-  if (!row) {
-    row = await ensureTrialSubscriptionForOwner(admin, ownerId);
-  }
+    if (!row) {
+      row = await ensureTrialSubscriptionForOwner(admin, ownerId);
+    }
 
-  const sub = applyDevSubscriptionOverrides(ownerId, row);
-  if (sub) {
-    const trialMode = Boolean(sub.trial_mode);
-    const status = sub.status;
-    const canUse =
-      trialMode ||
-      status === 'active' ||
-      status === 'trialing' ||
-      status === 'past_due';
+    const sub = applyDevSubscriptionOverrides(ownerId, row);
+    if (sub) {
+      const status = sub.status;
+      const trialMode = Boolean(sub.trial_mode) || status === 'trialing';
+      const canUse =
+        trialMode ||
+        status === 'active' ||
+        status === 'trialing' ||
+        status === 'past_due';
 
-    const plan = planFromRow(sub);
-    if (canUse && plan) {
+      const plan = planFromRow(sub);
+      if (canUse && plan) {
+        return {
+          trialMode,
+          releasesUsed:
+            typeof sub.trial_releases_used === 'number'
+              ? sub.trial_releases_used
+              : 0,
+          plan,
+          releasesPublishedThisPeriod:
+            typeof sub.releases_published_this_period === 'number'
+              ? sub.releases_published_this_period
+              : 0,
+        };
+      }
+    }
+
+    if (isBetaTrialOnly && (await brandOwnerHasWorkspace(admin, ownerId))) {
       return {
-        trialMode,
-        releasesUsed:
-          typeof sub.trial_releases_used === 'number'
-            ? sub.trial_releases_used
-            : 0,
-        plan,
-        releasesPublishedThisPeriod:
-          typeof sub.releases_published_this_period === 'number'
-            ? sub.releases_published_this_period
-            : 0,
+        trialMode: true,
+        releasesUsed: 0,
+        plan: 'starter',
+        releasesPublishedThisPeriod: 0,
       };
     }
-  }
 
-  if (isBetaTrialOnly && (await brandOwnerHasWorkspace(admin, ownerId))) {
-    return {
-      trialMode: true,
-      releasesUsed: 0,
-      plan: 'starter',
-      releasesPublishedThisPeriod: 0,
-    };
+    return null;
+  } catch (err) {
+    console.error('[resolvePayableSubscription] failed', err);
+    if (isBetaTrialOnly && (await brandOwnerHasWorkspace(admin, ownerId))) {
+      return {
+        trialMode: true,
+        releasesUsed: 0,
+        plan: 'starter',
+        releasesPublishedThisPeriod: 0,
+      };
+    }
+    return null;
   }
-
-  return null;
 }
