@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { FolderRow } from '@/lib/journalist/discover-data';
 import type { JournalistReleaseDetail } from '@/lib/journalist/release-data';
 import { toggleSaveReleaseToFolder } from '@/lib/journalist/actions';
+import { pickHeroAsset } from '@/lib/press-assets/pick-hero-asset';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { formatDateLong } from '@/lib/utils/dates';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
@@ -13,7 +14,7 @@ type Props = {
 };
 
 export function JournalistReleaseView({ release, folders, publicationNameSuggestions }: Props) {
-  const hero = release.assets.find((a) => a.is_hero) ?? null;
+  const hero = pickHeroAsset(release.assets);
 
   return (
     <main className="bb-dash-main">
@@ -82,20 +83,26 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
           </div>
         </div>
 
-        {hero ? (
-          <div className="mt-6 overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={hero.file_url} alt={hero.caption ?? ''} className="h-[320px] w-full object-cover" />
-          </div>
-        ) : null}
-
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_minmax(280px,360px)]">
-          <article className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
-            {release.summary ? (
-              <p className="text-sm font-medium text-brand-ink">{release.summary}</p>
+          <div className="space-y-6">
+            {hero ? (
+              <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={hero.file_url}
+                  alt={hero.caption ?? hero.file_name}
+                  className="aspect-[16/9] w-full object-cover"
+                />
+              </div>
             ) : null}
-            <RichTextRender html={release.body} className="mt-4 bb-richtext" />
-          </article>
+
+            <article className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
+              {release.summary ? (
+                <p className="text-sm font-medium text-brand-ink">{release.summary}</p>
+              ) : null}
+              <RichTextRender html={release.body} className="mt-4 bb-richtext" />
+            </article>
+          </div>
 
           <aside className="space-y-4">
             <div className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">

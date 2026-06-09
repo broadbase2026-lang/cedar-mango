@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PressReleaseMock } from '@/lib/journalist/mockData';
+import { pickHeroAssetUrl } from '@/lib/press-assets/pick-hero-asset';
 
 export type DiscoverReleaseAssetRow = {
   id: string;
@@ -149,18 +150,11 @@ export async function loadJournalistDiscoverData(
       const list = assetsByReleaseId.get(row.press_release_id) ?? [];
       list.push(asset);
       assetsByReleaseId.set(row.press_release_id, list);
-
-      if (!heroMap.has(row.press_release_id)) {
-        if (row.is_hero || row.file_type === 'image') {
-          heroMap.set(row.press_release_id, row.file_url);
-        }
-      }
     }
 
     for (const releaseId of recentReleaseIds) {
-      if (heroMap.has(releaseId)) continue;
-      const first = assetsByReleaseId.get(releaseId)?.[0];
-      if (first?.file_url) heroMap.set(releaseId, first.file_url);
+      const url = pickHeroAssetUrl(assetsByReleaseId.get(releaseId) ?? []);
+      if (url) heroMap.set(releaseId, url);
     }
   }
 
