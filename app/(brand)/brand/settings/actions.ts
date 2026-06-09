@@ -8,6 +8,10 @@ import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { recordAgencyNameChange } from '@/lib/brand/agency-audit';
 import { syncBrandMetadataToStripe } from '@/lib/stripe/sync-brand-metadata';
 import { PLAN_LIMITS } from '@/constants/copy';
+import {
+  BRAND_SLUG_RE,
+  generateUniqueBrandSlug,
+} from '@/lib/utils/generateSlug';
 
 export type SettingsActionState = {
   error: string | null;
@@ -62,8 +66,6 @@ function normalizeSlug(raw: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
-
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 async function slugIsLocked(
   supabase: SupabaseClient,
@@ -134,16 +136,22 @@ export async function saveBrandWorkspace(
     return { error: 'Brand name is required.' };
   }
 
-  if (!verticalRaw || !VERTICALS.has(verticalRaw)) {
-    return { error: 'Choose a valid industry vertical.' };
-  }
-
   const { data: existing } = await supabase
     .from('brands')
     .select('id, slug, name')
     .eq('owner_id', user.id)
     .is('deleted_at', null)
     .maybeSingle();
+
+  const isFirstSetup = !existing;
+
+  if (isFirstSetup && !websiteRaw) {
+    return { error: 'Website is required.' };
+  }
+
+  if (!verticalRaw || !VERTICALS.has(verticalRaw)) {
+    return { error: 'Choose a valid industry vertical.' };
+  }
 
   let locked = false;
   if (existing) {
@@ -152,22 +160,14 @@ export async function saveBrandWorkspace(
       slug = existing.slug;
     }
   } else {
-    if (!slug) {
-      return { error: 'URL slug is required for a new brand.' };
-    }
-    if (!SLUG_RE.test(slug)) {
-      return {
-        error:
-          'Slug may only use lowercase letters, numbers, and single hyphens (e.g. acme-hospitality).',
-      };
-    }
+    slug = await generateUniqueBrandSlug(supabase, name, user.id);
   }
 
   if (existing && !locked) {
     if (!slug) {
       return { error: 'URL slug is required.' };
     }
-    if (!SLUG_RE.test(slug)) {
+    if (!BRAND_SLUG_RE.test(slug)) {
       return {
         error:
           'Slug may only use lowercase letters, numbers, and single hyphens (e.g. acme-hospitality).',

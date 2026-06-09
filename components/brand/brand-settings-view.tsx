@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormState } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProfilePhotoUploader } from '@/components/profile/profile-photo-uploader';
 import { formatDateMedium } from '@/lib/utils/dates';
+import { slugify } from '@/lib/utils/generateSlug';
 
 const VERTICAL_OPTIONS: { value: string; label: string }[] = [
   { value: 'fnb', label: 'F&B' },
@@ -99,6 +100,10 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
     needsManualAudit,
     auditFlaggedAt,
   } = snapshot;
+  const isFirstSetup = !brand;
+  const [brandName, setBrandName] = useState(brand?.name ?? '');
+  const slugPreview = slugify(brandName) || 'your-brand';
+
   const hasStripeCustomer = Boolean(subscription?.stripe_customer_id);
   const canManagePortal = hasStripeCustomer && !betaTrialOnly;
   const showSubscribePlans =
@@ -188,9 +193,11 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
             </h2>
             <p className={help}>
               Used for your newsroom URL and discovery.{' '}
-              {slugLocked
-                ? 'Your slug is locked because you have published releases.'
-                : 'Choose a unique slug before you publish.'}
+              {isFirstSetup
+                ? 'Your newsroom URL is generated from your brand name.'
+                : slugLocked
+                  ? 'Your slug is locked because you have published releases.'
+                  : 'Choose a unique slug before you publish.'}
             </p>
             <form action={brandAction} className="space-y-4 pt-2">
               <div className={inputFrame}>
@@ -200,29 +207,37 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
                 <Input
                   id="name"
                   name="name"
-                  defaultValue={brand?.name ?? ''}
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
                   required
                   placeholder="Acme Hospitality"
                 />
+                {isFirstSetup ? (
+                  <p className={help}>
+                    Newsroom URL:{' '}
+                    <span className="font-mono text-xs">/newsroom/{slugPreview}</span>
+                  </p>
+                ) : null}
               </div>
-              <div className={inputFrame}>
-                <label htmlFor="slug" className={fieldLabel}>
-                  URL slug
-                </label>
-                <Input
-                  id="slug"
-                  name="slug"
-                  defaultValue={brand?.slug ?? ''}
-                  required={!brand}
-                  disabled={slugLocked}
-                  placeholder="acme-hospitality"
-                  className={slugLocked ? 'opacity-80' : ''}
-                />
-                <p className={help}>
-                  Shown as <span className="font-mono text-xs">/newsroom/[slug]</span>
-                  . Lowercase, hyphens only.
-                </p>
-              </div>
+              {!isFirstSetup ? (
+                <div className={inputFrame}>
+                  <label htmlFor="slug" className={fieldLabel}>
+                    URL slug
+                  </label>
+                  <Input
+                    id="slug"
+                    name="slug"
+                    defaultValue={brand?.slug ?? ''}
+                    disabled={slugLocked}
+                    placeholder="acme-hospitality"
+                    className={slugLocked ? 'opacity-80' : ''}
+                  />
+                  <p className={help}>
+                    Shown as <span className="font-mono text-xs">/newsroom/[slug]</span>
+                    . Lowercase, hyphens only.
+                  </p>
+                </div>
+              ) : null}
               <div className={inputFrame}>
                 <label htmlFor="industry_vertical" className={fieldLabel}>
                   Industry vertical
@@ -276,6 +291,7 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
                   name="website"
                   type="url"
                   defaultValue={brand?.website ?? ''}
+                  required={isFirstSetup}
                   placeholder="https://example.com"
                 />
               </div>

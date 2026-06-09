@@ -138,6 +138,21 @@ export function SignupForm(props: { inviteRequired?: boolean }) {
         <p className="text-xs text-neutral-500">At least 6 characters (Supabase minimum).</p>
       </div>
 
+      <div className="space-y-1.5">
+        <label htmlFor="password_verify" className="text-sm font-medium text-neutral-800">
+          Verify password
+        </label>
+        <input
+          id="password_verify"
+          name="password_verify"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={6}
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none ring-teal-700 focus:border-teal-700 focus:ring-1"
+        />
+      </div>
+
       {state.error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
           {state.error}

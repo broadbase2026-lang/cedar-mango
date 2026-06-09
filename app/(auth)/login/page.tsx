@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { APP_NAME } from '@/constants/copy';
@@ -25,9 +26,16 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <>
-      <p className="text-center text-xs font-medium uppercase tracking-wide text-teal-700">
-        {APP_NAME}
-      </p>
+      <Link href="/" className="mx-auto flex justify-center">
+        <Image
+          src="/broadbase-logo.png"
+          alt={APP_NAME}
+          width={141}
+          height={25}
+          className="h-7 w-auto"
+          priority
+        />
+      </Link>
       <h1 className="mt-2 text-center text-xl font-semibold text-neutral-900">Log in</h1>
       <p className="mt-1 text-center text-sm text-neutral-600">
         Use the email and password for your brand or journalist account.

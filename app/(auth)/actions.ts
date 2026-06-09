@@ -78,6 +78,7 @@ export async function signupAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
+  const passwordVerify = String(formData.get('password_verify') ?? '');
   const fullName = String(formData.get('full_name') ?? '').trim();
   const userType = parseUserType(formData.get('user_type'));
   const wantsTrial = parseBool(formData.get('trial'));
@@ -90,6 +91,9 @@ export async function signupAction(
   if (!password) return { error: 'Password is required.' };
   if (password.length < 6) {
     return { error: 'Password must be at least 6 characters.' };
+  }
+  if (password !== passwordVerify) {
+    return { error: 'Passwords do not match.' };
   }
   if (!userType) {
     return { error: 'Choose whether you are signing up as a brand or a journalist.' };

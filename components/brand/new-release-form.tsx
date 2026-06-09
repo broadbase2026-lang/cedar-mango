@@ -7,6 +7,14 @@ import {
   MAX_IMAGES_PER_PRESS_RELEASE,
   MAX_IMAGE_UPLOAD_BYTES,
 } from '@/lib/constants/uploads';
+import {
+  importReleaseFromFile,
+  importReleaseFromUrl,
+  type ReleaseImportResult,
+} from '@/components/brand/release-import-client';
+import { ReleaseFileImportDropzone } from '@/components/brand/release-file-import-dropzone';
+import { ReleaseUrlImportField } from '@/components/brand/release-url-import-field';
+import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
 
 const STORAGE_KEY = 'bb_release_import_prefill_v1';
 
@@ -19,6 +27,7 @@ type PendingAsset = {
 
 type Prefill = {
   title: string;
+  summary: string | null;
   bodyHtml: string;
   industry_vertical: string | null;
   tags: string[];
@@ -39,6 +48,8 @@ function safeParsePrefill(raw: string | null): Prefill | null {
     const j = JSON.parse(raw) as Partial<Prefill>;
     const title = typeof j.title === 'string' ? j.title.trim() : '';
     const bodyHtml = typeof j.bodyHtml === 'string' ? j.bodyHtml : '';
+    const summary =
+      typeof j.summary === 'string' && j.summary.trim() ? j.summary.trim() : null;
     const industry_vertical =
       typeof j.industry_vertical === 'string' && j.industry_vertical.trim()
         ? j.industry_vertical.trim()
@@ -50,7 +61,7 @@ function safeParsePrefill(raw: string | null): Prefill | null {
           .slice(0, 12)
       : [];
     if (!title && !bodyHtml) return null;
-    return { title, bodyHtml, industry_vertical, tags };
+    return { title, summary, bodyHtml, industry_vertical, tags };
   } catch {
     return null;
   }
@@ -98,7 +109,18 @@ export function NewReleaseForm({
   const [imageBusy, setImageBusy] = useState(false);
   const [imageErr, setImageErr] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importErr, setImportErr] = useState<string | null>(null);
   const pendingAssetsRef = useRef<PendingAsset[]>([]);
+
+  const applyImportResult = useCallback((result: ReleaseImportResult) => {
+    setTitle(result.title || '');
+    setSummary(result.summary || '');
+    setBodyHtml(result.bodyHtml || '');
+    setVertical(result.industry_vertical ?? '');
+    setTags(result.tags.join(','));
+    setEditorSeed((x) => x + 1);
+  }, []);
 
   useEffect(() => {
     pendingAssetsRef.current = pendingAssets;
@@ -129,11 +151,50 @@ export function NewReleaseForm({
     // Do NOT remove here. In React 18 dev (Strict Mode), components can mount twice,
     // which would clear the prefill before the "real" mount reads it, leaving fields blank.
     setTitle(prefill.title || '');
+    setSummary(prefill.summary || '');
     setBodyHtml(prefill.bodyHtml || '');
     setVertical(prefill.industry_vertical ?? '');
     setTags(prefill.tags.join(','));
     setEditorSeed((x) => x + 1); // forces TipTap to re-init with imported HTML
   }, [existing?.id]);
+
+  const onImportFromUrl = useCallback(
+    async (url: string) => {
+      setImportErr(null);
+      setImportBusy(true);
+      try {
+        const result = await importReleaseFromUrl(url);
+        applyImportResult(result);
+      } catch (e) {
+        setImportErr(e instanceof Error ? e.message : 'Import failed.');
+      } finally {
+        setImportBusy(false);
+      }
+    },
+    [applyImportResult]
+  );
+
+  const onImportFromFile = useCallback(
+    async (file: File) => {
+      setImportErr(null);
+      const validationError = validateReleaseImportFile(file);
+      if (validationError) {
+        setImportErr(validationError);
+        return;
+      }
+
+      setImportBusy(true);
+      try {
+        const result = await importReleaseFromFile(file);
+        applyImportResult(result);
+      } catch (e) {
+        setImportErr(e instanceof Error ? e.message : 'Import failed.');
+      } finally {
+        setImportBusy(false);
+      }
+    },
+    [applyImportResult]
+  );
 
   const errorMessage = useMemo(() => {
     if (!errorCode) return null;
@@ -266,6 +327,36 @@ export function NewReleaseForm({
           {errorMessage}
         </div>
       )}
+
+      {!existing?.id ? (
+        <div className="rounded-xl border border-brand-border bg-brand-surface-2/40 p-4 space-y-4">
+          <div>
+            <div className="text-sm font-semibold text-brand-ink">
+              Import a press release (AI)
+            </div>
+            <p className="mt-1 text-xs text-brand-muted">
+              Drop a file or paste a URL. Gemini fills title, summary or subhead, body,
+              vertical, and tags below.
+            </p>
+          </div>
+
+          <ReleaseFileImportDropzone
+            pending={importBusy}
+            onFile={onImportFromFile}
+          />
+
+          <div>
+            <p className="mb-2 text-xs text-brand-muted">Or import from a web page URL</p>
+            <ReleaseUrlImportField pending={importBusy} onImport={onImportFromUrl} />
+          </div>
+
+          {importErr ? (
+            <p className="text-xs text-red-600" role="alert">
+              {importErr}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-1">
         <label

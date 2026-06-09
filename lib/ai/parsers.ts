@@ -75,6 +75,7 @@ export function parsePressReleaseReadinessJson(
 const importResultSchema = z
   .object({
     title: z.string().optional(),
+    summary: z.string().nullable().optional(),
     bodyHtml: z.string().optional(),
     bodyHtmlBase64: z.string().optional(),
     industry_vertical: z
@@ -104,6 +105,7 @@ const importResultSchema = z
 
 export type ImportResult = {
   title: string;
+  summary: string | null;
   bodyHtml: string;
   industry_vertical:
     | 'fnb'
@@ -118,6 +120,7 @@ export type ImportResult = {
 
 export function parsePressReleaseImportJson(raw: string): {
   title: string;
+  summary: string | null;
   bodyHtmlRaw: string;
   industry_vertical:
     | 'fnb'
@@ -147,8 +150,14 @@ export function parsePressReleaseImportJson(raw: string): {
         .slice(0, 12)
     : [];
 
+  const summary =
+    typeof parsed.summary === 'string' && parsed.summary.trim()
+      ? parsed.summary.trim()
+      : null;
+
   return {
     title,
+    summary,
     bodyHtmlRaw,
     industry_vertical: parsed.industry_vertical ?? null,
     tags,

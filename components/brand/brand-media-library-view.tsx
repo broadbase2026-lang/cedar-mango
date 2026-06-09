@@ -22,6 +22,7 @@ import type {
 } from '@/lib/brand/media-library-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzone';
 
 const BUCKET = 'press-assets-public';
 
@@ -264,14 +265,18 @@ export function BrandMediaLibraryView({
           </Link>
         </div>
 
+        <div className="mb-6">
+          <ReleaseImportDropzone />
+        </div>
+
         {releases.length === 0 ? (
           <section className={card}>
             <h2 className="text-base font-semibold text-brand-ink">
-              Create a release first
+              Or create a release manually
             </h2>
             <p className={help}>
-              Assets must be linked to a press release. Add a draft or published
-              release from the dashboard, then return here to upload files.
+              Assets must be linked to a press release. Import from a file or URL above,
+              or start a blank draft and return here to upload media.
             </p>
             <Link href="/brand/releases/new">
               <Button type="button" size="sm" variant="ghost">

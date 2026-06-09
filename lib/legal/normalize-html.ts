@@ -53,5 +53,10 @@ export function normalizeLegalHtml(html: string): string {
       `${liContent}</li><p class="legal-subclause"><span class="legal-subclause-label">(${letter})</span> <strong>${label}:</strong> ${body.trim()}</p>`,
   );
 
+  out = out.replace(
+    /<li><strong>\(([a-z])\)\s*<\/strong>/gi,
+    '<li>($1) ',
+  );
+
   return out;
 }

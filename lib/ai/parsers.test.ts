@@ -22,6 +22,7 @@ describe('parsePressReleaseImportJson', () => {
     const raw = '{ "title": "  T  ", "bodyHtml": "<p>Hello</p>", "industry_vertical": "travel", "tags": [" foo ", ""] }';
     expect(parsePressReleaseImportJson(raw)).toEqual({
       title: 'T',
+      summary: null,
       bodyHtmlRaw: '<p>Hello</p>',
       industry_vertical: 'travel',
       tags: ['foo'],
@@ -34,6 +35,7 @@ describe('parsePressReleaseImportJson', () => {
     const raw = `{ "title": "X", "bodyHtmlBase64": "${b64}", "industry_vertical": null, "tags": [] }`;
     expect(parsePressReleaseImportJson(raw)).toEqual({
       title: 'X',
+      summary: null,
       bodyHtmlRaw: html,
       industry_vertical: null,
       tags: [],
