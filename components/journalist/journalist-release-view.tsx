@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { FolderRow } from '@/lib/journalist/discover-data';
 import type { JournalistReleaseDetail } from '@/lib/journalist/release-data';
 import { toggleSaveReleaseToFolder } from '@/lib/journalist/actions';
+import { BrandPublisherProfile } from '@/components/journalist/brand-publisher-profile';
 import { pickHeroAsset } from '@/lib/press-assets/pick-hero-asset';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { formatDateLong } from '@/lib/utils/dates';
@@ -105,6 +106,16 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
           </div>
 
           <aside className="space-y-4">
+            {release.brand ? (
+              <BrandPublisherProfile
+                name={release.brand.name}
+                slug={release.brand.slug}
+                logoUrl={release.brand.logo_url}
+                website={release.brand.website}
+                recentReleases={release.brandRecentReleases}
+              />
+            ) : null}
+
             <div className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                 Assets
@@ -129,22 +140,6 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
                 )}
               </div>
             </div>
-
-            {release.brand?.website ? (
-              <div className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">
-                <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                  Brand
-                </div>
-                <a
-                  href={release.brand.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 block text-sm font-medium text-brand-primary-700 hover:underline"
-                >
-                  {release.brand.website}
-                </a>
-              </div>
-            ) : null}
           </aside>
         </div>
       </div>

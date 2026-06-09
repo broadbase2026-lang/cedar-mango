@@ -10,6 +10,13 @@ export type JournalistReleaseAsset = {
   created_at: string;
 };
 
+export type BrandRecentRelease = {
+  id: string;
+  title: string;
+  slug: string;
+  published_at: string | null;
+};
+
 export type JournalistReleaseDetail = {
   id: string;
   title: string;
@@ -20,6 +27,7 @@ export type JournalistReleaseDetail = {
   industry_vertical: string | null;
   tags: string[];
   brand: { id: string; name: string; slug: string; logo_url: string | null; website: string | null } | null;
+  brandRecentReleases: BrandRecentRelease[];
   assets: JournalistReleaseAsset[];
   saved_folder_ids: string[];
 };
@@ -39,7 +47,10 @@ export async function loadJournalistReleaseBySlug(input: {
 
   if (!pr) return null;
 
-  const [{ data: brand }, { data: assets }, { data: saves }] = await Promise.all([
+  const nowIso = new Date().toISOString();
+
+  const [{ data: brand }, { data: assets }, { data: saves }, { data: brandRecentRows }] =
+    await Promise.all([
     pr.brand_id
       ? supabase
           .from('brands')
@@ -61,6 +72,18 @@ export async function loadJournalistReleaseBySlug(input: {
       .eq('journalist_id', journalistId)
       .eq('press_release_id', pr.id)
       .limit(500),
+    pr.brand_id
+      ? supabase
+          .from('press_releases')
+          .select('id, title, slug, published_at')
+          .eq('brand_id', pr.brand_id)
+          .eq('status', 'published')
+          .is('deleted_at', null)
+          .neq('id', pr.id)
+          .or(`embargo_until.is.null,embargo_until.lte.${nowIso}`)
+          .order('published_at', { ascending: false, nullsFirst: false })
+          .limit(5)
+      : Promise.resolve({ data: [] } as any),
   ]);
 
   return {
@@ -81,6 +104,17 @@ export async function loadJournalistReleaseBySlug(input: {
           website: brand.website ?? null,
         }
       : null,
+    brandRecentReleases: ((brandRecentRows ?? []) as Array<{
+      id: string;
+      title: string;
+      slug: string;
+      published_at: string | null;
+    }>).map((row) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      published_at: row.published_at ?? null,
+    })),
     assets: (assets ?? []) as JournalistReleaseAsset[],
     saved_folder_ids: (saves ?? []).map((s) => s.folder_id),
   };
