@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw, X } from 'lucide-react';
@@ -8,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 import { TypingSearchPlaceholder } from '@/components/home/typing-search-placeholder';
+import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { pressReleasesMock, type PressReleaseMock } from '@/lib/journalist/mockData';
 import { formatMonthDayShort } from '@/lib/utils/dates';
 
@@ -192,6 +194,15 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
       return next;
     });
   }, [mounted, curated, visibleCount]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   function onRefresh() {
     setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
@@ -401,9 +412,9 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 40, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-                  className="fixed inset-y-0 right-0 z-50 w-full max-w-[520px] overflow-y-auto border-l border-brand-border bg-white shadow-media-soft"
+                  className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[520px] flex-col border-l border-brand-border bg-white shadow-media-soft"
                 >
-                  <div className="sticky top-0 z-10 border-b border-brand-border bg-white/90 p-4 backdrop-blur">
+                  <div className="shrink-0 border-b border-brand-border bg-white/90 p-4 backdrop-blur">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -438,24 +449,28 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                     </div>
                   </div>
 
-                  <div className="p-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
                     {selected ? (
                       <>
                         <div className="overflow-hidden rounded-2xl bg-brand-surface-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={selected.heroImageUrl} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={selected.heroImageUrl}
+                            alt=""
+                            className="aspect-[4/3] w-full object-cover"
+                          />
                         </div>
 
-                        <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
-                          <div className="text-sm font-semibold text-brand-ink">Summary</div>
-                          <div className="mt-1 text-sm text-brand-muted">{selected.summary}</div>
-                        </div>
+                        {selected.summary ? (
+                          <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
+                            <div className="text-sm font-semibold text-brand-ink">Summary</div>
+                            <div className="mt-1 text-sm text-brand-muted">{selected.summary}</div>
+                          </div>
+                        ) : null}
 
                         <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
                           <div className="text-sm font-semibold text-brand-ink">Body</div>
-                          <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-ink/90">
-                            {selected.body}
-                          </div>
+                          <RichTextRender html={selected.body} className="mt-2 bb-richtext text-sm leading-relaxed text-brand-ink/90" />
                         </div>
 
                         <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
@@ -466,21 +481,33 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                             </div>
                           </div>
                           <div className="mt-3 space-y-2">
-                            {selected.mediaAssets.map((a) => (
-                              <a
-                                key={a.href}
-                                href={a.href}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-medium text-brand-primary-700 hover:bg-brand-surface"
+                            {selected.mediaAssets.length === 0 ? (
+                              <p className="text-sm text-brand-muted">No assets attached.</p>
+                            ) : (
+                              selected.mediaAssets.map((a) => (
+                                <a
+                                  key={a.href}
+                                  href={a.href}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-medium text-brand-primary-700 hover:bg-brand-surface"
+                                >
+                                  {a.label}
+                                </a>
+                              ))
+                            )}
+                          </div>
+                          {selected.slug ? (
+                            <div className="mt-4 border-t border-brand-border/70 pt-3">
+                              <Link
+                                href={`/journalist/release/${selected.slug}`}
+                                prefetch={false}
+                                className="text-sm font-medium text-brand-primary-700 hover:underline"
                               >
-                                {a.label}
-                              </a>
-                            ))}
-                          </div>
-                          <div className="mt-3 text-[11px] text-brand-muted">
-                            Tip: This is mock data; wire these links to your storage/CDN later.
-                          </div>
+                                Open full release page →
+                              </Link>
+                            </div>
+                          ) : null}
                         </div>
                       </>
                     ) : (

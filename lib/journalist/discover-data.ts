@@ -1,11 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PressReleaseMock } from '@/lib/journalist/mockData';
 
+export type DiscoverReleaseAssetRow = {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  is_hero: boolean;
+};
+
 export type DiscoverReleaseRow = {
   id: string;
   title: string;
   slug: string;
   summary: string | null;
+  body: string | null;
   published_at: string | null;
   industry_vertical: string | null;
   brand: {
@@ -15,6 +24,7 @@ export type DiscoverReleaseRow = {
     logo_url: string | null;
   } | null;
   hero_image_url: string | null;
+  assets: DiscoverReleaseAssetRow[];
   saved: boolean;
   saved_folder_ids: string[];
 };
@@ -80,7 +90,7 @@ export async function loadJournalistDiscoverData(
   ] = await Promise.all([
     supabase
       .from('press_releases')
-      .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
+      .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(20),
     supabase
@@ -115,17 +125,42 @@ export async function loadJournalistDiscoverData(
   const recentReleaseIds = recentRaw.map((r) => r.id);
 
   const heroMap = new Map<string, string>();
+  const assetsByReleaseId = new Map<string, DiscoverReleaseAssetRow[]>();
   if (recentReleaseIds.length > 0) {
-    const { data: heroRows } = await supabase
+    const { data: assetRows } = await supabase
       .from('press_assets')
-      .select('press_release_id, file_url')
+      .select('id, press_release_id, file_name, file_url, file_type, is_hero')
       .in('press_release_id', recentReleaseIds)
-      .eq('is_hero', true)
-      .is('deleted_at', null);
-    for (const row of heroRows ?? []) {
-      if (row.press_release_id && row.file_url && !heroMap.has(row.press_release_id)) {
-        heroMap.set(row.press_release_id, row.file_url);
+      .is('deleted_at', null)
+      .order('is_hero', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    for (const row of assetRows ?? []) {
+      if (!row.press_release_id || !row.file_url) continue;
+
+      const asset: DiscoverReleaseAssetRow = {
+        id: row.id,
+        file_name: row.file_name,
+        file_url: row.file_url,
+        file_type: row.file_type,
+        is_hero: Boolean(row.is_hero),
+      };
+
+      const list = assetsByReleaseId.get(row.press_release_id) ?? [];
+      list.push(asset);
+      assetsByReleaseId.set(row.press_release_id, list);
+
+      if (!heroMap.has(row.press_release_id)) {
+        if (row.is_hero || row.file_type === 'image') {
+          heroMap.set(row.press_release_id, row.file_url);
+        }
       }
+    }
+
+    for (const releaseId of recentReleaseIds) {
+      if (heroMap.has(releaseId)) continue;
+      const first = assetsByReleaseId.get(releaseId)?.[0];
+      if (first?.file_url) heroMap.set(releaseId, first.file_url);
     }
   }
 
@@ -167,10 +202,12 @@ export async function loadJournalistDiscoverData(
     title: r.title,
     slug: r.slug,
     summary: r.summary ?? null,
+    body: r.body ?? null,
     published_at: r.published_at ?? null,
     industry_vertical: r.industry_vertical ?? null,
     brand: r.brand_id ? brandMap.get(r.brand_id) ?? null : null,
     hero_image_url: heroMap.get(r.id) ?? null,
+    assets: assetsByReleaseId.get(r.id) ?? [],
     saved: savedReleaseIds.has(r.id),
     saved_folder_ids: savedFolderIdsByReleaseId.get(r.id) ?? [],
   }));
@@ -258,6 +295,7 @@ export function mapDiscoverRowsToFeed(rows: DiscoverReleaseRow[]): PressReleaseM
 
     return {
       id: row.id,
+      slug: row.slug,
       title: row.title,
       vertical,
       region: 'APAC',
@@ -266,10 +304,13 @@ export function mapDiscoverRowsToFeed(rows: DiscoverReleaseRow[]): PressReleaseM
         row.hero_image_url ??
         `https://picsum.photos/seed/${encodeURIComponent(row.id)}/1200/1400`,
       summary: row.summary ?? '',
-      body: row.summary ?? '',
+      body: row.body?.trim() ? row.body : (row.summary ?? ''),
       publishedAt: row.published_at ?? new Date().toISOString(),
       engagement: { pastReads: 0, pastSaves: row.saved ? 1 : 0 },
-      mediaAssets: [],
+      mediaAssets: row.assets.map((a) => ({
+        label: a.file_name,
+        href: a.file_url,
+      })),
       imageCrop: imageCropFromId(row.id),
     };
   });

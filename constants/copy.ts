@@ -162,6 +162,8 @@ export const TRIAL_LIMIT_COPY = {
   },
   errors: {
     releaseLimit: 'Free trial limit reached. Upgrade to publish more press releases.',
+    createDraftLimit:
+      "You're on a free trial, which includes one press release. Upgrade to a paid plan to create more drafts and publish additional releases.",
   },
 } as const;
 

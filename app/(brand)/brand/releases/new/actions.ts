@@ -5,6 +5,11 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
+import {
+  isTrialReleaseLimitError,
+  TRIAL_RELEASE_LIMIT_ERROR_CODE,
+} from '@/lib/brand/trial-release-limit';
 import {
   attachPendingAssetsToRelease,
   maxImagesForTrial,
@@ -98,15 +103,24 @@ export async function createPressReleaseAction(formData: FormData) {
       redirect('/brand/releases/new?error=create_failed');
     }
 
-    const { data: subscriptionRow } = await admin
-      .from('subscriptions')
-      .select('trial_mode')
-      .eq('owner_id', user.id)
-      .maybeSingle();
+    const payable = await resolvePayableSubscription(admin, user.id);
+    const maxImages = maxImagesForTrial(Boolean(payable?.trialMode));
 
-    const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
+    if (payable?.trialMode) {
+      if (payable.releasesUsed >= 1) {
+        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
+      }
 
-    const maxImages = maxImagesForTrial(Boolean(subscription?.trial_mode));
+      const { count: releaseCount, error: countErr } = await admin
+        .from('press_releases')
+        .select('id', { count: 'exact', head: true })
+        .eq('brand_id', brand.id)
+        .is('deleted_at', null);
+
+      if (!countErr && (releaseCount ?? 0) >= 1) {
+        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
+      }
+    }
 
     const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
     if (pendingAssets === 'invalid') {
@@ -132,6 +146,10 @@ export async function createPressReleaseAction(formData: FormData) {
       .maybeSingle();
 
     if (error || !created?.id) {
+      if (isTrialReleaseLimitError(error?.message)) {
+        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
+      }
+      console.error('[createPressReleaseAction] press_releases insert', error);
       redirect('/brand/releases/new?error=create_failed');
     }
 

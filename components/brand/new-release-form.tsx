@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RichTextEditor } from '@/components/rich-text/rich-text-editor';
 import { compressImageForUpload } from '@/lib/utils/compressImage';
@@ -18,6 +19,8 @@ import { ReleaseUrlImportField } from '@/components/brand/release-url-import-fie
 import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
 import { registerPressAsset, softDeletePressAsset } from '@/app/(brand)/brand/upload/actions';
 import type { ReleaseImageAsset } from '@/lib/brand/release-asset-model';
+import { TRIAL_LIMIT_COPY } from '@/constants/copy';
+import { TRIAL_RELEASE_LIMIT_ERROR_CODE } from '@/lib/brand/trial-release-limit';
 
 const STORAGE_KEY = 'bb_release_import_prefill_v1';
 
@@ -212,6 +215,9 @@ export function NewReleaseForm({
       return 'Body is too long (max 500,000 characters).';
     if (errorCode === 'summary_too_long') return 'Summary must be ≤ 280 characters.';
     if (errorCode === 'invalid_rich_text') return 'Body content was invalid. Try again.';
+    if (errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE) {
+      return TRIAL_LIMIT_COPY.errors.createDraftLimit;
+    }
     if (errorCode === 'create_failed') return 'Could not create the draft. Try again.';
     if (errorCode === 'invalid_pending_assets')
       return 'Uploaded images could not be attached. Remove images and try again.';
@@ -379,7 +385,17 @@ export function NewReleaseForm({
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="status"
         >
-          {errorMessage}
+          <p>{errorMessage}</p>
+          {errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE ? (
+            <p className="mt-2">
+              <Link
+                href="/pricing?reason=release-limit"
+                className="font-medium text-brand-primary-700 underline-offset-2 hover:underline"
+              >
+                View pricing and upgrade
+              </Link>
+            </p>
+          ) : null}
         </div>
       )}
 

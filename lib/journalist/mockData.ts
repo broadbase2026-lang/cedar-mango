@@ -2,6 +2,7 @@ export type PressReleaseVertical = 'F&B' | 'Travel' | 'Culture';
 
 export type PressReleaseMock = {
   id: string;
+  slug?: string;
   title: string;
   vertical: PressReleaseVertical;
   region: 'SG' | 'HK' | 'JP' | 'AU' | 'SEA' | 'APAC' | 'US' | 'EU';

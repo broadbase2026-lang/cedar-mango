@@ -88,16 +88,16 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 - [x] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
 - [x] `/signup` requires invite code; wrong code rejected
 - [x] Valid invite signup → email confirmation flow works
-- [ ] Login → brand user reaches dashboard or trial upload
+- [x] Login → brand user reaches dashboard or trial upload
 
 **Brand trial**
-- [ ] Trial subscription row created (`plan=starter`, `status=trialing`, `trial_mode=true`)
+- [x] Trial subscription row created (`plan=starter`, `status=trialing`, `trial_mode=true`)
   - Verify in Supabase **SQL Editor** (see `QA.md`); if `trial_mode` column is missing, apply `supabase/migrations/007_trial_mode.sql` (or run `supabase db push` against the linked project).
-- [ ] First publish succeeds; second publish blocked
+- [x] First publish succeeds; second publish blocked
 
 **Journalist**
 - [x] Signup + login → `/journalist/discover` with real published releases (or mock fallback if none)
-- [ ] Chat widget responds (requires `GEMINI_API_KEY`)
+- [x] Chat widget responds (requires `GEMINI_API_KEY`)
 
 **Storage**
 - [ ] Avatar upload works
