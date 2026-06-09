@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { ensureTrialSubscriptionForOwner } from '@/lib/auth/ensure-trial-subscription';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -38,29 +39,10 @@ export async function provisionTrialBrandForUser(
     });
   }
 
-  const { data: existingSub } = await supabase
-    .from('subscriptions')
-    .select('id')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
-
-  if (existingSub) return;
-
   try {
     const admin = createAdminClient();
-    const placeholderCustomerId = `trial_${crypto.randomUUID()}`;
-    const { error } = await admin.from('subscriptions').insert({
-      owner_id: ownerId,
-      stripe_customer_id: placeholderCustomerId,
-      plan: 'starter',
-      status: 'trialing',
-      trial_mode: true,
-      trial_releases_used: 0,
-    });
-    if (error) {
-      console.error('[provisionTrialBrandForUser] subscription insert failed', error);
-    }
+    await ensureTrialSubscriptionForOwner(admin, ownerId);
   } catch (err) {
-    console.error('[provisionTrialBrandForUser] subscription insert threw', err);
+    console.error('[provisionTrialBrandForUser] ensure trial subscription failed', err);
   }
 }
