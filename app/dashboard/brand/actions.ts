@@ -109,10 +109,9 @@ export async function publishRelease(
   }
 
   // Gate: must have at least 1 (non-deleted) asset attached.
-  // This query is RLS-scoped, so it only counts assets for releases the current brand owns.
-  const assetsCountRes = await supabase
+  const assetsCountRes = await admin
     .from('press_assets')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('press_release_id', releaseId)
     .is('deleted_at', null);
 
@@ -120,7 +119,7 @@ export async function publishRelease(
     return {
       ok: false,
       message:
-        'Add at least 1 asset in Media Library before publishing this release.',
+        'Add at least 1 press image on the draft (Press images section) or in Media Library before publishing.',
     };
   }
 

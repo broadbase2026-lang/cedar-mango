@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/server';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
-  MAX_IMAGES_PER_PRESS_RELEASE,
-  MAX_IMAGE_UPLOAD_BYTES,
-  MAX_TRIAL_IMAGES_PER_PRESS_RELEASE,
-} from '@/lib/constants/uploads';
+  attachPendingAssetsToRelease,
+  maxImagesForTrial,
+  parsePendingReleaseAssets,
+} from '@/lib/brand/pending-release-assets';
 import { richTextToPlainText, sanitizeRichTextHtml } from '@/lib/rich-text/sanitize';
 
 export type CreateReleaseState = { error: string | null };
@@ -27,50 +27,6 @@ function slugify(raw: string): string {
 
 function uniqueSuffix(): string {
   return Math.random().toString(36).slice(2, 8);
-}
-
-type PendingAsset = {
-  path: string;
-  publicUrl: string;
-  fileName: string;
-  fileSizeBytes: number;
-};
-
-function parsePendingAssets(
-  raw: string,
-  brandId: string,
-  maxImages: number
-): PendingAsset[] | 'invalid' {
-  const t = raw.trim();
-  if (!t) return [];
-
-  try {
-    const j = JSON.parse(t) as unknown;
-    if (!Array.isArray(j)) return 'invalid';
-    if (j.length > maxImages) return 'invalid';
-
-    const out: PendingAsset[] = [];
-    for (const item of j) {
-      if (!item || typeof item !== 'object') continue;
-      const o = item as Record<string, unknown>;
-      const path = typeof o.path === 'string' ? o.path.trim() : '';
-      const publicUrl = typeof o.publicUrl === 'string' ? o.publicUrl.trim() : '';
-      const fileName = typeof o.fileName === 'string' ? o.fileName.trim() : '';
-      const fileSizeBytes =
-        typeof o.fileSizeBytes === 'number' && Number.isFinite(o.fileSizeBytes)
-          ? Math.round(o.fileSizeBytes)
-          : 0;
-      if (!path || !publicUrl || !fileName) continue;
-      const prefix = `${brandId}/`;
-      if (!path.startsWith(prefix) || path.includes('..')) continue;
-      if (fileSizeBytes > MAX_IMAGE_UPLOAD_BYTES) return 'invalid';
-      out.push({ path, publicUrl, fileName, fileSizeBytes });
-      if (out.length > maxImages) return 'invalid';
-    }
-    return out;
-  } catch {
-    return 'invalid';
-  }
 }
 
 export async function createPressReleaseAction(formData: FormData) {
@@ -150,11 +106,9 @@ export async function createPressReleaseAction(formData: FormData) {
 
     const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
 
-    const maxImages = subscription?.trial_mode
-      ? MAX_TRIAL_IMAGES_PER_PRESS_RELEASE
-      : MAX_IMAGES_PER_PRESS_RELEASE;
+    const maxImages = maxImagesForTrial(Boolean(subscription?.trial_mode));
 
-    const pendingAssets = parsePendingAssets(pendingRaw, brand.id, maxImages);
+    const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
     if (pendingAssets === 'invalid') {
       redirect('/brand/releases/new?error=invalid_pending_assets');
     }
@@ -182,29 +136,18 @@ export async function createPressReleaseAction(formData: FormData) {
     }
 
     if (pendingAssets.length > 0) {
-      try {
-        const rows = pendingAssets.map((a) => ({
-          brand_id: brand.id,
-          press_release_id: created.id,
-          file_name: a.fileName,
-          file_url: a.publicUrl,
-          file_type: 'image' as const,
-          file_size_bytes: a.fileSizeBytes || null,
-          caption: null as string | null,
-          is_public: true,
-          is_hero: false,
-        }));
-        const { error: assetErr } = await admin.from('press_assets').insert(rows);
-        if (assetErr) {
-          console.error('[createPressReleaseAction] press_assets insert', assetErr);
-          redirect('/brand/releases/new?error=assets_failed');
-        }
-        revalidatePath('/dashboard/brand');
-        revalidatePath('/brand/upload');
-      } catch (e) {
-        console.error('[createPressReleaseAction] pending assets', e);
+      const { error: assetErr } = await attachPendingAssetsToRelease(
+        admin,
+        brand.id,
+        created.id,
+        pendingAssets
+      );
+      if (assetErr) {
+        console.error('[createPressReleaseAction] press_assets insert', assetErr);
         redirect('/brand/releases/new?error=assets_failed');
       }
+      revalidatePath('/dashboard/brand');
+      revalidatePath('/brand/upload');
     }
 
     redirect('/dashboard/brand?section=releases');
@@ -269,6 +212,8 @@ export async function updatePressReleaseAction(formData: FormData) {
       redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=summary_too_long`);
     }
 
+    const pendingRaw = String(formData.get('pending_assets') ?? '');
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -303,6 +248,26 @@ export async function updatePressReleaseAction(formData: FormData) {
       redirect('/dashboard/brand?section=releases');
     }
 
+    let admin;
+    try {
+      admin = createAdminClient();
+    } catch {
+      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=create_failed`);
+    }
+
+    const { data: subscriptionRow } = await admin
+      .from('subscriptions')
+      .select('trial_mode')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
+    const maxImages = maxImagesForTrial(Boolean(subscription?.trial_mode));
+    const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
+    if (pendingAssets === 'invalid') {
+      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=invalid_pending_assets`);
+    }
+
     const { error } = await supabase
       .from('press_releases')
       .update({
@@ -320,6 +285,20 @@ export async function updatePressReleaseAction(formData: FormData) {
     if (error) {
       console.error('[updatePressReleaseAction] update failed', error);
       redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=create_failed`);
+    }
+
+    if (pendingAssets.length > 0) {
+      const { error: assetErr } = await attachPendingAssetsToRelease(
+        admin,
+        brand.id,
+        releaseId,
+        pendingAssets
+      );
+      if (assetErr) {
+        console.error('[updatePressReleaseAction] press_assets insert', assetErr);
+        redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=assets_failed`);
+      }
+      revalidatePath('/brand/upload');
     }
 
     revalidatePath('/dashboard/brand');

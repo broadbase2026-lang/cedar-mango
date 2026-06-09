@@ -16,6 +16,7 @@ import {
 import { ReleaseFileImportDropzone } from '@/components/brand/release-file-import-dropzone';
 import { ReleaseUrlImportField } from '@/components/brand/release-url-import-field';
 import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
+import { registerPressAsset } from '@/app/(brand)/brand/upload/actions';
 
 const STORAGE_KEY = 'bb_release_import_prefill_v1';
 
@@ -209,7 +210,7 @@ export function NewReleaseForm({
     if (errorCode === 'invalid_pending_assets')
       return 'Uploaded images could not be attached. Remove images and try again.';
     if (errorCode === 'assets_failed')
-      return 'Draft may have been created, but linking images failed. Add them from Media Library.';
+      return 'Draft was saved, but linking images failed. Save again or add them from Media Library.';
     return 'Something went wrong. Try again.';
   }, [errorCode]);
 
@@ -297,6 +298,25 @@ export function NewReleaseForm({
             fileName: prepared.name,
             fileSizeBytes: json.size ?? prepared.size,
           };
+
+          if (existing?.id) {
+            const reg = await registerPressAsset({
+              brandId,
+              pressReleaseId: existing.id,
+              fileName: row.fileName,
+              fileUrl: row.publicUrl,
+              fileType: 'image',
+              fileSizeBytes: row.fileSizeBytes,
+              caption: null,
+              isPublic: true,
+              isHero: false,
+            });
+            if (reg.error) {
+              setImageErr(reg.error);
+              break;
+            }
+          }
+
           acc = [...acc, row];
           pendingAssetsRef.current = acc;
           setPendingAssets(acc);
@@ -307,7 +327,7 @@ export function NewReleaseForm({
         setImageBusy(false);
       }
     },
-    [brandId, maxPendingImages]
+    [brandId, maxPendingImages, existing?.id]
   );
 
   const removePendingAsset = useCallback((path: string) => {
