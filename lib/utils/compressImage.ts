@@ -1,3 +1,28 @@
+/** Formats we skip — browser canvas cannot decode or should not re-encode these. */
+const SKIP_COMPRESS_TYPES = new Set([
+  'image/svg+xml',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+  'image/tiff',
+  'image/bmp',
+]);
+
+const SKIP_COMPRESS_EXT = /\.(svg|gif|heic|heif|avif|tiff?|bmp)$/i;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('Failed to read image.'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -8,26 +33,34 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
+function shouldCompressInBrowser(file: File): boolean {
+  const t = file.type.toLowerCase();
+  if (SKIP_COMPRESS_EXT.test(file.name)) return false;
+  if (!t.startsWith('image/')) return false;
+  if (SKIP_COMPRESS_TYPES.has(t)) return false;
+  return true;
+}
+
 /**
- * Resize and JPEG-compress raster images in the browser. SVG and GIF are returned unchanged.
+ * Resize and JPEG-compress raster images in the browser. Unsupported or
+ * undecodable formats are returned unchanged. On any processing error, returns
+ * the original file so upload can still proceed.
  */
 export async function compressImageForUpload(
   file: File,
   options?: { maxEdge?: number; quality?: number }
 ): Promise<File> {
+  if (!shouldCompressInBrowser(file)) {
+    return file;
+  }
+
   const maxEdge = options?.maxEdge ?? 2048;
   const quality = options?.quality ?? 0.82;
 
-  if (!file.type.startsWith('image/')) {
-    return file;
-  }
-  if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
-    return file;
-  }
-
-  const url = URL.createObjectURL(file);
   try {
-    const img = await loadImage(url);
+    // data: URLs work under production CSP (img-src allows data:); blob: may be blocked.
+    const dataUrl = await readFileAsDataUrl(file);
+    const img = await loadImage(dataUrl);
     const { naturalWidth: width, naturalHeight: height } = img;
     if (!width || !height) return file;
 
@@ -52,7 +85,7 @@ export async function compressImageForUpload(
 
     const base = file.name.replace(/\.[^.]+$/, '') || 'image';
     return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
-  } finally {
-    URL.revokeObjectURL(url);
+  } catch {
+    return file;
   }
 }

@@ -7,7 +7,7 @@ function applyProductionCsp(response: NextResponse) {
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
+    "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co https://api.stripe.com",
     "frame-ancestors 'none'",
