@@ -64,15 +64,33 @@ export async function POST(request: Request) {
     // Check two conditions:
     // 1. An invitation exists matching invited_user_id or invited_email
     // 2. The invitation has not been revoked (revoked_at IS NULL)
-    const { data: invitation, error: invError } = await supabase
-      .from('asset_invitations')
-      .select('embargo_until')
-      .eq('asset_id', assetId)
-      .or(
-        `invited_user_id.eq.${user.id},invited_email.eq.${user.email}`
-      )
-      .is('revoked_at', null)
-      .single();
+    //
+    // Match by user id first, then fall back to email. We avoid building
+    // an `.or()` filter string from user.email — interpolating untrusted
+    // values into PostgREST filter syntax risks filter injection. Each
+    // value is bound via `.eq()` instead.
+    const baseQuery = () =>
+      supabase
+        .from('asset_invitations')
+        .select('embargo_until')
+        .eq('asset_id', assetId)
+        .is('revoked_at', null);
+
+    let invitation: { embargo_until: string | null } | null = null;
+    let invError: { message: string } | null = null;
+
+    const byUser = await baseQuery().eq('invited_user_id', user.id).maybeSingle();
+    if (byUser.error) {
+      invError = byUser.error;
+    } else if (byUser.data) {
+      invitation = byUser.data;
+    } else if (user.email) {
+      const byEmail = await baseQuery()
+        .eq('invited_email', user.email)
+        .maybeSingle();
+      invitation = byEmail.data ?? null;
+      invError = byEmail.error ?? null;
+    }
 
     if (invError || !invitation) {
       // Intentionally generic: do not reveal whether asset exists or

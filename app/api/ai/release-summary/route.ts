@@ -14,8 +14,11 @@ import {
 } from '@/lib/ai/gemini-errors';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { aiRateLimitMessage, enforceAiRateLimit } from '@/lib/ai/rate-limit';
 
 const BODY_PLAIN_MAX = 14_000;
+const SUMMARY_HOURLY_LIMIT = 30;
 
 export async function POST(req: Request) {
   try {
@@ -30,6 +33,24 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ ok: false, error: 'Not signed in.' }, { status: 401 });
+    }
+
+    try {
+      const admin = createAdminClient();
+      const rl = await enforceAiRateLimit(
+        admin,
+        user.id,
+        'release-summary',
+        SUMMARY_HOURLY_LIMIT
+      );
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { ok: false, error: aiRateLimitMessage(SUMMARY_HOURLY_LIMIT) },
+          { status: 429 }
+        );
+      }
+    } catch {
+      // Admin client unavailable — proceed without throttling (fail open).
     }
 
     const title = String(body.title ?? '').trim();

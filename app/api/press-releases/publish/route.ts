@@ -133,7 +133,11 @@ export async function POST(req: Request) {
   }
 
   const now = new Date().toISOString();
-  const updatePayload: Record<string, any> = {
+  const updatePayload: {
+    status: 'published';
+    published_at: string;
+    embargo_until?: string;
+  } = {
     status: 'published',
     published_at: now,
   };

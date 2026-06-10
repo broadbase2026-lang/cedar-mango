@@ -16,6 +16,10 @@ import { normalizeReleaseImportResult } from '@/lib/ai/release-import-normalize'
 import { RELEASE_IMPORT_SYSTEM } from '@/lib/ai/release-import-prompt';
 import { classifyReleaseImportFile } from '@/lib/brand/release-import-files';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { aiRateLimitMessage, enforceAiRateLimit } from '@/lib/ai/rate-limit';
+
+const IMPORT_HOURLY_LIMIT = 15;
 
 function stripCodeFences(raw: string): string {
   const s = raw.trim();
@@ -130,6 +134,24 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ ok: false, error: 'Not signed in.' }, { status: 401 });
+    }
+
+    try {
+      const admin = createAdminClient();
+      const rl = await enforceAiRateLimit(
+        admin,
+        user.id,
+        'release-import',
+        IMPORT_HOURLY_LIMIT
+      );
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { ok: false, error: aiRateLimitMessage(IMPORT_HOURLY_LIMIT) },
+          { status: 429 }
+        );
+      }
+    } catch {
+      // Admin client unavailable — proceed without throttling (fail open).
     }
 
     const form = await req.formData();

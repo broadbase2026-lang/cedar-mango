@@ -22,7 +22,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
       <div className="bb-dash-inner">
         <div className="bb-dash-eyebrow">
           <div>
-            <h2 className="bb-dash-section-title">{release.title}</h2>
+            <h2 className="font-serif text-2xl font-semibold leading-8 text-brand-ink">{release.title}</h2>
             <p className="bb-dash-section-desc">
               {release.brand ? (
                 <>
