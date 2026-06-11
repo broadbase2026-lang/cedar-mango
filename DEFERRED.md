@@ -13,3 +13,7 @@
 - Per-brand storage metering dashboard for brand users (show used vs allocated storage with a progress bar in /(brand)/settings)
 - Storage overage billing for Enterprise accounts exceeding 100GB (requires Stripe metered billing integration)
 - Embargo lift notification: send a Resend email to the brand owner when embargo_until passes, confirming the release is now publicly visible. Requires a scheduled job or webhook-triggered check.
+- GEO: Vector embedding pipeline (pgvector) for semantic LLM retrieval across press release content — deferred to post-MVP (see existing entry)
+- GEO: Per-brand llms.txt sub-pages at /newsroom/[brand-slug]/llms.txt listing only that brand's releases — deferred until brand tier adoption warrants it
+- GEO: Structured data testing via Google Rich Results API as a CI step
+- GEO: JSON feed versioning (api/v2) if schema changes are needed post-launch

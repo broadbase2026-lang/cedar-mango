@@ -14,7 +14,7 @@ export default async function NewsroomPage({ params }: PageProps) {
 
   const { data: brand } = await admin
     .from('brands')
-    .select('id, name, slug, logo_url, website, description')
+    .select('id, name, slug, logo_url, website, description, created_at')
     .eq('slug', slug)
     .is('deleted_at', null)
     .maybeSingle();
@@ -28,9 +28,11 @@ export default async function NewsroomPage({ params }: PageProps) {
   }
 
   const nowIso = new Date().toISOString();
-  const { data: releases } = await admin
+  const { data: releases, count: releasesCount } = await admin
     .from('press_releases')
-    .select('id, title, slug, summary, published_at, embargo_until')
+    .select('id, title, slug, summary, published_at, embargo_until, industry_vertical', {
+      count: 'exact',
+    })
     .eq('brand_id', brand.id)
     .eq('status', 'published')
     .is('deleted_at', null)
@@ -43,8 +45,33 @@ export default async function NewsroomPage({ params }: PageProps) {
     noStore();
   }
 
+  const knowsAbout = Array.from(
+    new Set(
+      (releases ?? [])
+        .map((r) => r.industry_vertical)
+        .filter((v): v is string => Boolean(v)),
+    ),
+  );
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsMediaOrganization',
+    name: brand.name,
+    url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/newsroom/${brand.slug}`,
+    logo: brand.logo_url ?? undefined,
+    description: brand.description ?? undefined,
+    sameAs: brand.website ? [brand.website] : [],
+    foundingDate: brand.created_at ? brand.created_at.split('T')[0] : undefined,
+    numberOfItems: releasesCount ?? (releases ?? []).length,
+    knowsAbout,
+  };
+
   return (
     <main className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-neutral-900">{brand.name}</h1>

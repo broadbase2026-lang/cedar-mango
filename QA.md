@@ -592,3 +592,30 @@ HAVING COUNT(*) > 1;
 - [ ] Set `scheduled_deletion_at` in the past for a test inactive journalist
 - [ ] `GET /api/cron/journalist-deletion` with `Authorization: Bearer $CRON_SECRET` → deletes auth user
 - [ ] Confirm cascade removes `profiles`, portfolio settings, and publications
+
+## GEO (Generative Engine Optimisation)
+- [ ] Fetch `/robots.txt` → confirm GPTBot, ClaudeBot, PerplexityBot are listed as allowed
+- [ ] Fetch `/llms.txt` → confirm machine-readable endpoint URLs are present and correct
+- [ ] Fetch `/sitemap.xml` → confirm published release slugs appear; confirm embargoed and deleted slugs are absent
+- [ ] Fetch `/api/v1/releases` → confirm response matches schema; confirm `body` field is absent from all release objects
+- [ ] Fetch `/api/v1/releases/[slug]` for a valid slug → confirm 200 with correct shape
+- [ ] Fetch `/api/v1/releases/[slug]` for an embargoed slug → confirm 404
+- [ ] Fetch `/rss.xml` → confirm valid RSS 2.0; confirm `<item>` count ≤ 50
+- [ ] Publish a release → confirm `geo_readiness_score` is written to the DB row
+- [ ] On a release missing summary → confirm GEO score tips array contains the summary tip
+- [ ] Inspect `/release/[slug]` page source → confirm speakable cssSelector targets are present in the HTML (`.release-summary`, `.release-headline`)
+- [ ] Inspect `/release/[slug]` JSON-LD → confirm `dateModified`, `about`, `mentions`, `wordCount` are present
+- [ ] Confirm `/api/v1/releases` returns 200 with no auth header (unauthenticated GET)
+- [ ] Confirm `geo_readiness_score = null` for a release published before migration 016 (`016_geo_readiness_score.sql`) → confirm 'Not scored' state renders on analytics page
+
+### GEO page
+- [ ] Visit `/geo` as an unauthenticated user → confirm page loads, no redirect
+- [ ] Confirm page title is 'Generative Engine Optimisation for Press Releases | Broadbase'
+- [ ] Confirm og:title and og:description meta tags are present in page source
+- [ ] Confirm canonical URL is set to `{APP_URL}/geo`
+- [ ] Confirm `data-side="brand"` is on the outer wrapper (inspect element)
+- [ ] Click 'See how releases are scored' hero CTA → confirm scroll to `#scoring`
+- [ ] Click 'Create a free account' CTA → confirm navigation to `/signup`
+- [ ] Confirm ScoringSection criteria count matches the exported `GEO_SCORE_CRITERIA` array length in `lib/utils/geoScore.ts`
+- [ ] Confirm no inline hex values in page source (grep for `#[0-9a-fA-F]{3,6}` in `app/(public)/geo/page.tsx` — must return zero matches)
+- [ ] Confirm page renders correctly at 375px mobile width (no horizontal overflow)

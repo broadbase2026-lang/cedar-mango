@@ -8,6 +8,7 @@ export type DashboardReleaseRow = {
   viewsCount: number;
   sparkline: number[];
   embargoUntil: string | null;
+  geoReadinessScore: number | null;
 };
 
 export type DraftSummary = {
@@ -143,7 +144,7 @@ export async function loadBrandDashboardData(
     supabase
       .from('press_releases')
       .select(
-        'id, title, status, industry_vertical, views_count, ai_readiness_score, embargo_until'
+        'id, title, status, industry_vertical, views_count, ai_readiness_score, geo_readiness_score, embargo_until'
       )
       .eq('brand_id', brandId)
       .is('deleted_at', null)
@@ -184,6 +185,8 @@ export async function loadBrandDashboardData(
     viewsCount: r.views_count ?? 0,
     sparkline: sparkMap[r.id] ?? [0, 0, 0, 0, 0, 0, 0],
     embargoUntil: (r as any).embargo_until ?? null,
+    geoReadinessScore:
+      typeof r.geo_readiness_score === 'number' ? r.geo_readiness_score : null,
   }));
 
   const drafts: DraftSummary[] = rawReleases

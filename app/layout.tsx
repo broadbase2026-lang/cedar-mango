@@ -28,9 +28,30 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const websiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Broadbase',
+    url: appUrl,
+    description: 'Pull-based press release discovery for APAC lifestyle media.',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${appUrl}/release?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <html lang="en" className={`${inter.variable} ${radley.variable}`}>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
         {/*
           Production only: mirrors the built Tailwind bundle to /bb-globals.css (see
           scripts/copy-main-css.mjs). Next 14.2.x can mis-link layout CSS for some routes.

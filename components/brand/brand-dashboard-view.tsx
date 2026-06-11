@@ -9,6 +9,7 @@ import {
   unpublishReleaseToDraft,
 } from '@/app/dashboard/brand/actions';
 import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzone';
+import { GeoScoreBadge } from '@/components/brand/geo-score-badge';
 import type {
   BrandDashboardData,
   DraftSummary,
@@ -462,6 +463,7 @@ export function BrandDashboardView({
                       <th className="bb-dash-th">Title</th>
                       <th className="bb-dash-th">Status</th>
                       <th className="bb-dash-th">Vertical</th>
+                      <th className="bb-dash-th">GEO Score</th>
                       <th className="bb-dash-th">Engagement</th>
                       <th className="bb-dash-th-actions">Actions</th>
                     </tr>
@@ -502,6 +504,9 @@ export function BrandDashboardView({
                         </td>
                         <td className="bb-dash-td-muted">
                           {row.verticalLabel}
+                        </td>
+                        <td className="bb-dash-td-muted">
+                          <GeoScoreBadge score={row.geoReadinessScore} />
                         </td>
                         <td className="bb-dash-td-muted">
                           <div className="bb-dash-engagement">

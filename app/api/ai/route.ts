@@ -13,6 +13,7 @@ import {
   isGeminiUnsupportedLocationError,
 } from '@/lib/ai/gemini-errors';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
+import { calculateGeoReadinessScore } from '@/lib/utils/geoScore';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { createClient } from '@/lib/supabase/server';
 import { ERROR_MESSAGES } from '@/constants/copy';
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
 
     const releaseRes = await supabase
       .from('press_releases')
-      .select('id, title, summary, body, tags, industry_vertical, status')
+      .select('id, brand_id, title, summary, body, tags, industry_vertical, status')
       .eq('id', pressReleaseId)
       .is('deleted_at', null)
       .maybeSingle();
@@ -140,9 +141,44 @@ export async function POST(req: Request) {
     const text = result.response.text();
     const readiness: PressReleaseReadinessResult = parsePressReleaseReadinessJson(text);
 
+    // GEO readiness sub-score. Hero asset (first WHERE is_hero = true, may be
+    // null) and brand website come from separate reads; the score itself is
+    // written in the same update call as ai_readiness_score below.
+    const heroRes = await supabase
+      .from('press_assets')
+      .select('caption')
+      .eq('press_release_id', pressReleaseId)
+      .eq('is_hero', true)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    const brandRes = pr.brand_id
+      ? await supabase
+          .from('brands')
+          .select('website')
+          .eq('id', pr.brand_id)
+          .maybeSingle()
+      : null;
+
+    const tags = Array.isArray(pr.tags)
+      ? pr.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [];
+
+    const geo = calculateGeoReadinessScore({
+      title: pr.title,
+      summary: pr.summary,
+      body: bodyText,
+      tags,
+      heroAsset: heroRes.data ? { caption: heroRes.data.caption } : null,
+      brandWebsite: brandRes?.data?.website ?? null,
+    });
+
     const updateRes = await supabase
       .from('press_releases')
-      .update({ ai_readiness_score: readiness.score })
+      .update({
+        ai_readiness_score: readiness.score,
+        geo_readiness_score: geo.score,
+      })
       .eq('id', pressReleaseId)
       .is('deleted_at', null);
 
