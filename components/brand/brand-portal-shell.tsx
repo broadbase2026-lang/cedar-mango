@@ -14,7 +14,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
 import { logoutAction } from '@/lib/auth/logout';
+
+const PORTAL_SIDEBAR_ID = 'brand-portal-sidebar';
 
 /** Stable URLs — avoid `#hash` links (App Router soft navigations can race RSC + look blank). */
 const NAV_ITEMS: ReadonlyArray<{
@@ -173,6 +176,15 @@ export function BrandPortalShell({
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileSidebarOpen]);
+
   const showSidebarBrandText =
     !desktopSidebarCollapsed || mobileSidebarOpen;
 
@@ -191,6 +203,7 @@ export function BrandPortalShell({
       ) : null}
 
       <aside
+        id={PORTAL_SIDEBAR_ID}
         className={
           'bb-portal-sidebar ' +
           (mobileSidebarOpen ? 'bb-portal-sidebar--open' : '')
@@ -208,7 +221,7 @@ export function BrandPortalShell({
             <button
               type="button"
               onClick={() => setDesktopSidebarCollapsed((v) => !v)}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-default bg-white/60 text-text-primary transition hover:bg-white"
+              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-default bg-white/60 text-text-primary transition hover:bg-white sm:inline-flex"
               aria-pressed={desktopSidebarCollapsed}
               aria-label={
                 desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
@@ -236,7 +249,15 @@ export function BrandPortalShell({
           </Suspense>
         </nav>
 
-        <div className="mt-auto px-2 pb-4">
+        <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
+          <Link
+            href="/brand/releases/new"
+            prefetch={false}
+            className="bb-btn-primary-md w-full no-underline sm:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          >
+            Quick Upload
+          </Link>
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}
@@ -249,22 +270,19 @@ export function BrandPortalShell({
 
       <div className="bb-portal-main">
         <header className="bb-portal-header">
+          <PortalHamburgerButton
+            open={mobileSidebarOpen}
+            controlsId={PORTAL_SIDEBAR_ID}
+            onToggle={() => setMobileSidebarOpen((open) => !open)}
+          />
           <div className="bb-portal-header-title">
             <h1 className="bb-portal-header-heading">{brandName}</h1>
           </div>
           <div className="bb-portal-header-actions">
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="inline-flex h-10 items-center rounded-lg border border-brand-border bg-white px-3 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface sm:hidden"
-              aria-label="Open menu"
-            >
-              Menu
-            </button>
             <Link
               href="/brand/releases/new"
               prefetch={false}
-              className="bb-btn-primary-md no-underline"
+              className="bb-btn-primary-md hidden no-underline sm:inline-flex"
             >
               Quick Upload
             </Link>
@@ -272,7 +290,7 @@ export function BrandPortalShell({
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="bb-portal-profile-trigger"
+                className="bb-portal-profile-trigger max-sm:max-w-none max-sm:gap-0 max-sm:px-2"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
               >
@@ -290,8 +308,10 @@ export function BrandPortalShell({
                     {display.slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                <span className="bb-portal-profile-label">{display}</span>
-                <span className="bb-portal-profile-caret" aria-hidden>
+                <span className="bb-portal-profile-label max-sm:hidden">
+                  {display}
+                </span>
+                <span className="bb-portal-profile-caret max-sm:hidden" aria-hidden>
                   ▾
                 </span>
               </button>

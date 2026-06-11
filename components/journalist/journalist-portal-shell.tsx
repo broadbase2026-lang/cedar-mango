@@ -13,7 +13,10 @@ import {
 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
+import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
 import { logoutAction } from '@/lib/auth/logout';
+
+const PORTAL_SIDEBAR_ID = 'journalist-portal-sidebar';
 
 const NAV_ITEMS: ReadonlyArray<{
   label: string;
@@ -127,11 +130,21 @@ export function JournalistPortalShell({
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileSidebarOpen]);
+
   return (
     <div className={'bb-portal ' + (desktopSidebarCollapsed ? 'bb-portal--sidebar-collapsed' : '')}>
       {mobileSidebarOpen ? <div className="bb-portal-overlay" onClick={() => setMobileSidebarOpen(false)} /> : null}
 
       <aside
+        id={PORTAL_SIDEBAR_ID}
         className={'bb-portal-sidebar ' + (mobileSidebarOpen ? 'bb-portal-sidebar--open' : '')}
         aria-label="Primary"
       >
@@ -146,7 +159,7 @@ export function JournalistPortalShell({
             <button
               type="button"
               onClick={() => setDesktopSidebarCollapsed((v) => !v)}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-default bg-white/60 text-text-primary transition hover:bg-white"
+              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-default bg-white/60 text-text-primary transition hover:bg-white sm:inline-flex"
               aria-pressed={desktopSidebarCollapsed}
               aria-label={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               title={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -205,18 +218,15 @@ export function JournalistPortalShell({
 
       <div className="bb-portal-main">
         <header className="bb-portal-header">
+          <PortalHamburgerButton
+            open={mobileSidebarOpen}
+            controlsId={PORTAL_SIDEBAR_ID}
+            onToggle={() => setMobileSidebarOpen((open) => !open)}
+          />
           <div className="bb-portal-header-title">
             <h1 className="bb-portal-header-heading">{title}</h1>
           </div>
           <div className="bb-portal-header-actions">
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="inline-flex h-10 items-center rounded-lg border border-brand-border bg-white px-3 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface sm:hidden"
-              aria-label="Open menu"
-            >
-              Menu
-            </button>
             <form
               className="hidden sm:flex items-center"
               onSubmit={(e) => {
@@ -237,14 +247,11 @@ export function JournalistPortalShell({
                 </button>
               </div>
             </form>
-            <Link href="/journalist/search" prefetch={false} className="sm:hidden bb-btn-primary-md no-underline">
-              Search
-            </Link>
             <div className="bb-portal-profile" ref={menuRef}>
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="bb-portal-profile-trigger"
+                className="bb-portal-profile-trigger max-sm:max-w-none max-sm:gap-0 max-sm:px-2"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
               >
@@ -262,8 +269,10 @@ export function JournalistPortalShell({
                     {display.slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                <span className="bb-portal-profile-label">{display}</span>
-                <span className="bb-portal-profile-caret" aria-hidden>
+                <span className="bb-portal-profile-label max-sm:hidden">
+                  {display}
+                </span>
+                <span className="bb-portal-profile-caret max-sm:hidden" aria-hidden>
                   ▾
                 </span>
               </button>

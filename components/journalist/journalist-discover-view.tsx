@@ -283,20 +283,20 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                 <input
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder=""
+                  placeholder="Search releases…"
                   aria-label="Search press releases"
-                  className="h-14 w-full rounded-none bg-transparent px-5 text-base text-brand-ink outline-none placeholder:text-brand-muted/80"
+                  className="h-14 w-full rounded-none bg-transparent px-5 text-base text-brand-ink outline-none placeholder:text-brand-muted/80 sm:placeholder:text-transparent"
                 />
                 {searchText.trim().length ? null : (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex h-14 items-center px-5 text-base text-brand-muted/80">
-                      <TypingSearchPlaceholder
-                        terms={[
-                          'luxury hotel openings in Singapore...',
-                          'new bars in Tokyo...',
-                          'upcoming art exhibitions in Hong Kong...',
-                        ]}
-                      />
-                    </div>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 hidden h-14 items-center px-5 text-base text-brand-muted/80 sm:flex">
+                    <TypingSearchPlaceholder
+                      terms={[
+                        'luxury hotel openings in Singapore...',
+                        'new bars in Tokyo...',
+                        'upcoming art exhibitions in Hong Kong...',
+                      ]}
+                    />
+                  </div>
                 )}
                 </div>
                 <button
