@@ -17,7 +17,7 @@ const headingFontClassName = 'font-heading';
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      <PublicSiteHeader scrollNavColor />
+      <PublicSiteHeader />
 
       <HomeAudienceHero
         radleyClassName={headingFontClassName}

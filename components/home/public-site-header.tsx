@@ -29,16 +29,10 @@ function interpolateHexColor(from: string, to: string, t: number): string {
   return `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
 }
 
-type PublicSiteHeaderProps = {
-  scrollNavColor?: boolean;
-};
-
-export function PublicSiteHeader({ scrollNavColor = false }: PublicSiteHeaderProps) {
+export function PublicSiteHeader() {
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!scrollNavColor) return;
-
     const reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
@@ -80,7 +74,7 @@ export function PublicSiteHeader({ scrollNavColor = false }: PublicSiteHeaderPro
       }
       headerRef.current?.style.removeProperty('--bb-top-nav');
     };
-  }, [scrollNavColor]);
+  }, []);
 
   return (
     <header ref={headerRef} className="bb-top-nav">
