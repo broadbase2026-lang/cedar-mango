@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useRef } from 'react';
+import { Menu, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { APP_NAME } from '@/constants/copy';
-import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { GeoNavLink } from '@/components/home/geo-nav-link';
 import { PricingNavLink } from '@/components/home/pricing-nav-link';
+import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 
 const NAV_COLOR_START = '#ffb81a';
 const NAV_COLOR_END = '#EF5301';
@@ -31,6 +34,20 @@ function interpolateHexColor(from: string, to: string, t: number): string {
 
 export function PublicSiteHeader() {
   const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  useLenisScrollLock(menuOpen);
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+
+  useEffect(() => {
+    closeMenu();
+  }, [pathname, closeMenu]);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia(
@@ -66,50 +83,119 @@ export function PublicSiteHeader() {
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
 
+    const headerEl = headerRef.current;
+
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
       if (frameId !== 0) {
         window.cancelAnimationFrame(frameId);
       }
-      headerRef.current?.style.removeProperty('--bb-top-nav');
+      headerEl?.style.removeProperty('--bb-top-nav');
     };
   }, []);
 
-  return (
-    <header ref={headerRef} className="bb-top-nav">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center text-brand-ink">
-              <Image
-                src="/broadbase-logo.png"
-                alt={APP_NAME}
-                width={141}
-                height={25}
-                className="h-7 w-auto"
-                priority
-              />
-            </Link>
-            <GeoNavLink />
-          </div>
+  useEffect(() => {
+    if (!menuOpen) return;
 
-          <div className="flex items-center gap-6">
-            <PricingNavLink />
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMenu();
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      drawerRef.current?.querySelector<HTMLElement>('a, button')?.focus();
+    }, 0);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [menuOpen, closeMenu]);
+
+  return (
+    <header ref={headerRef} className="bb-top-nav relative z-30">
+      <div className="bb-container">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex shrink-0 items-center text-brand-ink">
+            <Image
+              src="/broadbase-logo.png"
+              alt={APP_NAME}
+              width={141}
+              height={25}
+              className="h-7 w-auto"
+              priority
+            />
+          </Link>
+
+          <nav
+            className="hidden items-center gap-6 md:flex"
+            aria-label="Main"
+          >
+            <div className="flex items-center gap-8">
+              <GeoNavLink />
+              <PricingNavLink />
+            </div>
+            <Link href="/login" className="bb-nav-link">
+              Log In
+            </Link>
+            <ButtonLink href="/signup" size="sm" variant="accent">
+              Get Started
+            </ButtonLink>
+          </nav>
+
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-brand-ink transition-colors hover:bg-brand-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="public-site-mobile-nav"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? (
+              <X size={22} strokeWidth={2} aria-hidden />
+            ) : (
+              <Menu size={22} strokeWidth={2} aria-hidden />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {menuOpen ? (
+        <div
+          id="public-site-mobile-nav"
+          ref={drawerRef}
+          className="border-t border-brand-ink/10 md:hidden"
+          style={{ backgroundColor: 'var(--bb-top-nav)' }}
+        >
+          <nav className="bb-container flex flex-col py-2" aria-label="Mobile">
+            <GeoNavLink className="w-full border-b border-brand-ink/10 px-0" />
+            <PricingNavLink className="w-full border-b border-brand-ink/10 px-0" />
             <Link
               href="/login"
-              className="text-sm font-medium text-brand-muted hover:text-brand-ink transition-colors"
+              className="bb-nav-link w-full border-b border-brand-ink/10 px-0"
+              onClick={closeMenu}
             >
               Log In
             </Link>
-            <Link href="/signup">
-              <Button size="sm" variant="accent">
+            <div className="pt-4 pb-2">
+              <ButtonLink
+                href="/signup"
+                variant="accent"
+                size="md"
+                className="w-full"
+                onClick={closeMenu}
+              >
                 Get Started
-              </Button>
-            </Link>
-          </div>
+              </ButtonLink>
+            </div>
+          </nav>
         </div>
-      </div>
+      ) : null}
     </header>
   );
 }

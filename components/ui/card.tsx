@@ -31,7 +31,7 @@ export function CardTitle(props: React.HTMLAttributes<HTMLHeadingElement>) {
   const { className, ...rest } = props;
   return (
     <h2
-      className={cn('font-heading text-lg text-text-primary', className)}
+      className={cn('font-heading text-xl text-text-primary', className)}
       {...rest}
     />
   );

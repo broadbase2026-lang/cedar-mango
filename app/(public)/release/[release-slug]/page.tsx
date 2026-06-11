@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { PublicSiteHeader } from '@/components/home/public-site-header';
+import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
 
@@ -81,33 +83,35 @@ export default async function ReleasePage({ params }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-surface-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mx-auto max-w-4xl px-6 py-10">
+      <PublicSiteHeader />
+      <div className="bb-container max-w-4xl py-10">
         <div className="mb-6">
-          <h1 className="release-headline text-3xl font-semibold text-neutral-900">
+          <h1 className="release-headline font-heading text-3xl font-normal text-text-primary">
             {release.title}
           </h1>
           {release.brand ? (
-            <p className="mt-2 text-sm text-neutral-600">
+            <p className="mt-2 text-sm text-text-secondary">
               {release.brand.name} · Published{' '}
               {release.published_at ? new Date(release.published_at).toLocaleDateString() : '—'}
             </p>
           ) : null}
           {release.summary ? (
-            <p className="release-summary mt-4 text-base text-neutral-800">
+            <p className="release-summary mt-4 text-base text-text-primary">
               {release.summary}
             </p>
           ) : null}
         </div>
 
-        <article className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <article className="rounded-2xl border border-border-default bg-white p-6 shadow-sm">
           <RichTextRender html={release.body} className="bb-richtext" />
         </article>
       </div>
+      <PublicSiteFooter />
     </main>
   );
 }

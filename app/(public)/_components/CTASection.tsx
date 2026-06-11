@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ButtonLink } from '@/components/ui/button';
 
 const HEADLINE = 'Ready to get your story discovered?';
 
@@ -11,9 +11,6 @@ const BRAND_CTA = {
   href: '/signup?role=brand',
   label: "I'm a Brand or Agency",
 } as const;
-
-const ctaBaseClassName =
-  'inline-flex h-12 items-center justify-center rounded-lg px-8 text-base font-medium transition-all duration-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bb-top-nav)]';
 
 function ArrowRightIcon() {
   return (
@@ -36,28 +33,32 @@ function ArrowRightIcon() {
 
 export function CTASection() {
   return (
-    <section className="relative w-full bg-[var(--bb-top-nav)] px-4 py-16 text-brand-ink sm:px-8 sm:py-24 lg:px-16">
-      <div className="mx-auto max-w-4xl">
-        <h2 className="mb-12 text-center font-serif text-4xl font-normal sm:mb-16 sm:text-5xl">
+    <section className="relative w-full bg-[var(--bb-top-nav)] py-16 text-brand-ink md:py-20">
+      <div className="bb-container max-w-4xl">
+        <h2 className="mb-12 text-center font-heading text-4xl font-normal md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
 
         <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
-          <Link
+          <ButtonLink
             href={JOURNALIST_CTA.href}
-            className={`${ctaBaseClassName} bg-accent text-text-inverse shadow-media-soft hover:bg-accent-hover`}
+            variant="accent"
+            size="lg"
+            className="hover:shadow-lg focus-visible:ring-offset-[var(--bb-top-nav)]"
           >
             {JOURNALIST_CTA.label}
             <ArrowRightIcon />
-          </Link>
+          </ButtonLink>
 
-          <Link
+          <ButtonLink
             href={BRAND_CTA.href}
-            className={`${ctaBaseClassName} border border-brand-ink bg-transparent text-brand-ink hover:bg-brand-ink/10`}
+            variant="ghost"
+            size="lg"
+            className="border-brand-ink hover:bg-brand-ink/10 focus-visible:ring-offset-[var(--bb-top-nav)]"
           >
             {BRAND_CTA.label}
             <ArrowRightIcon />
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     </section>

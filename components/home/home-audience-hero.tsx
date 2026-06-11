@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { APP_NAME } from '@/constants/copy';
 import { Button } from '@/components/ui/button';
+import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 
 const STORAGE_KEY = 'bb_home_audience';
 
@@ -74,15 +75,21 @@ export function HomeAudienceHero({
   const [overlayClosing, setOverlayClosing] = useState(false);
 
   const overlayTimerRef = useRef<number | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const [parallaxY, setParallaxY] = useState(0);
 
+  const showOverlay = overlayVisible;
+
+  useLenisScrollLock(showOverlay && !overlayClosing);
+
   useEffect(() => {
     try {
-      // Always show the audience overlay on each homepage load.
-      // We still write the choice to localStorage for potential future use,
-      // but we intentionally do not read it to skip the overlay.
-      localStorage.removeItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === 'journalist' || stored === 'brand') {
+        setAudience(stored);
+        setOverlayVisible(false);
+      }
     } finally {
       setReady(true);
     }
@@ -200,7 +207,13 @@ export function HomeAudienceHero({
     [audience, persistChoice],
   );
 
-  const showOverlay = overlayVisible;
+  useEffect(() => {
+    if (!showOverlay || overlayClosing) return;
+    const id = window.requestAnimationFrame(() => {
+      overlayRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [showOverlay, overlayClosing]);
 
   const trackOffsetClassName = bothPreview
     ? '-translate-x-[25%] motion-reduce:-translate-x-[25%]'
@@ -220,6 +233,7 @@ export function HomeAudienceHero({
     >
       {showOverlay ? (
         <div
+          ref={overlayRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="home-audience-heading"

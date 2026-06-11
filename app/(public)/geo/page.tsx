@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
+import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { GEO_PAGE } from '@/constants/copy';
 import { GEO_SCORE_CRITERIA } from '@/lib/utils/geoScore';
@@ -43,16 +43,12 @@ function HeroSection() {
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-4">
-        <Link href="/signup">
-          <Button variant="accent" size="md">
-            {GEO_PAGE.HERO_CTA_PRIMARY}
-          </Button>
-        </Link>
-        <Link href="#scoring">
-          <Button variant="ghost" size="md">
-            {GEO_PAGE.HERO_CTA_SECONDARY}
-          </Button>
-        </Link>
+        <ButtonLink href="/signup" variant="accent" size="md">
+          {GEO_PAGE.HERO_CTA_PRIMARY}
+        </ButtonLink>
+        <ButtonLink href="#scoring" variant="ghost" size="md">
+          {GEO_PAGE.HERO_CTA_SECONDARY}
+        </ButtonLink>
       </div>
 
       <div className="mt-12 border-t border-border-default" />
@@ -328,7 +324,10 @@ const SCORE_BANDS = [
 
 function ScoringSection() {
   return (
-    <section id="scoring" className="mx-auto max-w-5xl px-6 py-16">
+    <section
+      id="scoring"
+      className="mx-auto max-w-5xl scroll-mt-20 px-6 py-16"
+    >
       <h2 className="font-heading text-3xl font-normal">
         {GEO_PAGE.SCORING_HEADING}
       </h2>
@@ -422,7 +421,7 @@ function BenefitsSection() {
 
       <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2">
         <Card className="rounded-xl p-8 shadow-media-soft">
-          <div className="mb-6 h-1 rounded-full bg-primary-base" />
+          <div className="mb-6 h-1 rounded-full bg-accent/40" />
           <h3 className="font-heading text-xl font-normal">
             {GEO_PAGE.BENEFITS_BRAND_LABEL}
           </h3>
@@ -471,16 +470,12 @@ function CtaSection() {
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-4">
-        <Link href="/signup">
-          <Button variant="accent" size="md">
-            {GEO_PAGE.CTA_PRIMARY}
-          </Button>
-        </Link>
-        <Link href="/pricing">
-          <Button variant="ghost" size="md">
-            {GEO_PAGE.CTA_SECONDARY}
-          </Button>
-        </Link>
+        <ButtonLink href="/signup" variant="accent" size="md">
+          {GEO_PAGE.CTA_PRIMARY}
+        </ButtonLink>
+        <ButtonLink href="/pricing" variant="ghost" size="md">
+          {GEO_PAGE.CTA_SECONDARY}
+        </ButtonLink>
       </div>
 
       <p className="mt-4 font-sans text-xs text-text-secondary">
@@ -494,7 +489,7 @@ function CtaSection() {
 
 export default function GeoPage() {
   return (
-    <div data-side="brand" className="min-h-screen bg-surface-page">
+    <div className="min-h-screen bg-surface-page">
       <PublicSiteHeader />
       <HeroSection />
       <ShiftSection />
@@ -503,6 +498,7 @@ export default function GeoPage() {
       <ScoringSection />
       <BenefitsSection />
       <CtaSection />
+      <PublicSiteFooter />
     </div>
   );
 }

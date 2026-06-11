@@ -134,13 +134,13 @@ function BadgeCheckIcon() {
 
 export function HomeMarketingModule() {
   return (
-    <section className="w-full bg-surface-page px-4 py-16 sm:px-8 sm:py-24 lg:px-16">
-      <div className="mx-auto max-w-6xl">
+    <section className="w-full bg-surface-page py-16 md:py-20">
+      <div className="bb-container">
         <div className="mb-12 text-center">
-          <h2 className="font-serif text-4xl font-normal text-text-primary sm:text-5xl">
+          <h2 className="font-heading text-4xl font-normal text-text-primary md:text-5xl">
             {HEADLINE}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-text-secondary sm:text-xl">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-text-secondary">
             {SUBHEADING}
           </p>
         </div>

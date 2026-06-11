@@ -30,12 +30,12 @@ export function HomeSocialProofRow({
         className,
       )}
     >
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <h2 className="text-center text-[1.5rem] font-normal leading-tight text-brand-muted">
+      <div className="bb-container py-10">
+        <p className="text-center text-xs font-medium uppercase tracking-wide text-brand-muted">
           {heading}
-        </h2>
+        </p>
 
-        <div className="mt-6 flex w-full flex-nowrap items-center justify-evenly gap-6">
+        <div className="mt-6 grid grid-cols-2 items-center justify-items-center gap-6 sm:flex sm:flex-wrap sm:justify-evenly">
           {logos.map((logo) => (
             <Image
               key={logo.name}
@@ -45,7 +45,7 @@ export function HomeSocialProofRow({
               height={logo.height}
               className={cn(
                 'w-auto shrink-0 object-contain',
-                logo.imageClassName ?? 'h-20',
+                logo.imageClassName ?? 'h-10 sm:h-14',
               )}
             />
           ))}

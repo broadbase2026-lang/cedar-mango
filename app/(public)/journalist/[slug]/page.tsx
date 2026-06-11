@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { PublicSiteHeader } from '@/components/home/public-site-header';
+import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import type {
@@ -194,7 +196,8 @@ export default async function JournalistPortfolioPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <PublicSiteHeader />
+      <div className="bb-container max-w-3xl py-12">
         <header className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           {profile.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -210,7 +213,7 @@ export default async function JournalistPortfolioPage({ params }: PageProps) {
           )}
 
           <div className="space-y-2">
-            <h1 className="font-heading text-3xl font-bold text-text-primary">
+            <h1 className="font-heading text-3xl font-normal text-text-primary">
               {displayName}
             </h1>
             {profile.publication ? (
@@ -256,7 +259,7 @@ export default async function JournalistPortfolioPage({ params }: PageProps) {
           ) : (
             publications.map((article) => (
               <Card key={article.id}>
-                <h2 className="text-lg text-text-primary">
+                <h2 className="font-heading text-xl text-text-primary">
                   <a
                     href={article.article_url}
                     target="_blank"
@@ -283,6 +286,7 @@ export default async function JournalistPortfolioPage({ params }: PageProps) {
           )}
         </section>
       </div>
+      <PublicSiteFooter />
     </main>
   );
 }

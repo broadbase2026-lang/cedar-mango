@@ -123,13 +123,13 @@ function TrendingChartIcon() {
 
 export function ProcessFlow() {
   return (
-    <section className="w-full bg-neutral-900 px-4 py-16 sm:px-8 sm:py-20 lg:px-16">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="mb-16 text-center font-serif text-4xl font-normal text-white sm:mb-20 sm:text-5xl">
+    <section className="w-full bg-brand-dark py-16 md:py-20">
+      <div className="bb-container">
+        <h2 className="mb-12 text-center font-heading text-4xl font-normal text-white md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
 
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 lg:gap-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:gap-12">
           {PROCESS_STEPS.map((step) => (
             <div
               key={step.title}
@@ -138,7 +138,7 @@ export function ProcessFlow() {
               <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-neutral-800">
                 {step.icon}
               </div>
-              <h3 className="font-serif text-2xl text-white">{step.title}</h3>
+              <h3 className="font-heading text-2xl text-white">{step.title}</h3>
               <p className="max-w-xs text-sm leading-relaxed text-neutral-400 sm:text-base">
                 {step.description}
               </p>

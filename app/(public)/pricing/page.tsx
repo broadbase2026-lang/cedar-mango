@@ -1,8 +1,15 @@
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { isBetaTrialOnly } from '@/lib/config/beta';
 import { PRICING_COPY } from '@/constants/copy';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
+import { PublicSiteFooter } from '@/components/home/public-site-footer';
+import { ButtonLink } from '@/components/ui/button';
+import {
+  pricingAccentCtaClass,
+  pricingAccentCtaInlineClass,
+  pricingDisabledCtaClass,
+  pricingDisabledCtaInlineClass,
+} from './pricing-cta-styles';
 import type { PricingPlan } from './actions';
 import {
   createCheckoutSessionAndRedirect,
@@ -37,29 +44,31 @@ function TierCard(props: {
   return (
     <section
       className={[
-        'relative flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-6',
-        props.badge ? 'shadow-xl lg:scale-105' : 'shadow-sm',
+        'relative flex h-full flex-col rounded-2xl border border-border-default bg-white p-6',
+        props.badge
+          ? 'shadow-media-soft ring-2 ring-accent'
+          : 'shadow-sm',
       ].join(' ')}
     >
       {props.badge ? (
         <div className="absolute right-4 top-4">
-          <span className="inline-flex items-center rounded-full bg-[#1D9E75] px-3 py-1 text-xs font-semibold text-white">
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-semibold text-text-inverse">
             {props.badge}
           </span>
         </div>
       ) : null}
 
       <div>
-        <h2 className="text-lg text-neutral-900">{props.name}</h2>
+        <h2 className="font-heading text-xl text-text-primary">{props.name}</h2>
         <div className="mt-3">
-          <div className="text-3xl font-semibold tracking-tight text-neutral-900">
+          <div className="text-3xl font-semibold tracking-tight text-text-primary">
             {props.price}
           </div>
-          <div className="mt-1 text-sm text-neutral-600">{props.cadence}</div>
+          <div className="mt-1 text-sm text-text-secondary">{props.cadence}</div>
         </div>
       </div>
 
-      <ul className="mt-6 space-y-3 text-sm text-neutral-800">
+      <ul className="mt-6 space-y-3 text-sm text-text-primary">
         {props.features.map((feature) => (
           <li key={feature} className="flex gap-3">
             <CheckIcon />
@@ -134,7 +143,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
       return (
         <button
           type="button"
-          className="w-full cursor-not-allowed rounded-xl bg-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-600"
+          className={pricingDisabledCtaClass}
           disabled
           title="Paid plans are not available during beta"
         >
@@ -145,12 +154,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
     if (!user) {
       return (
-        <Link
-          href={`/signup?plan=${plan}`}
-          className="block w-full rounded-xl bg-[#1D9E75] px-4 py-3 text-center text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
-        >
+        <ButtonLink href={`/signup?plan=${plan}`} className={pricingAccentCtaClass}>
           Get Started
-        </Link>
+        </ButtonLink>
       );
     }
 
@@ -158,7 +164,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
       return (
         <button
           type="button"
-          className="w-full cursor-not-allowed rounded-xl bg-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-600"
+          className={pricingDisabledCtaClass}
           disabled
           title="Subscription not available for journalist accounts"
         >
@@ -169,12 +175,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
     if (!isBrand) {
       return (
-        <Link
-          href="/login"
-          className="block w-full rounded-xl bg-[#1D9E75] px-4 py-3 text-center text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
-        >
+        <ButtonLink href="/login" className={pricingAccentCtaClass}>
           Sign in
-        </Link>
+        </ButtonLink>
       );
     }
 
@@ -183,7 +186,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
         <form action={createCheckoutSessionAndRedirect.bind(null, plan)}>
           <button
             type="submit"
-            className="w-full rounded-xl bg-[#1D9E75] px-4 py-3 text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
+            className={pricingAccentCtaClass}
           >
             Get Started
           </button>
@@ -195,7 +198,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
       return (
         <button
           type="button"
-          className="w-full cursor-not-allowed rounded-xl bg-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-600"
+          className={pricingDisabledCtaClass}
           disabled
         >
           Current Plan
@@ -208,7 +211,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
         <form action={createCheckoutSessionAndRedirect.bind(null, plan)}>
           <button
             type="submit"
-            className="w-full rounded-xl bg-[#1D9E75] px-4 py-3 text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
+            className={pricingAccentCtaClass}
           >
             Upgrade
           </button>
@@ -219,7 +222,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
     return (
       <button
         type="button"
-        className="w-full cursor-not-allowed rounded-xl bg-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-600"
+        className={pricingDisabledCtaClass}
         disabled
       >
         Get Started
@@ -228,24 +231,20 @@ export default async function PricingPage({ searchParams }: PageProps) {
   }
 
   const startTrialCta = !user ? (
-    <Link href="/signup?trial=true" className="inline-flex">
-      <span className="inline-flex items-center justify-center rounded-xl bg-[#1D9E75] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2">
-        {PRICING_COPY.trial.cta}
-      </span>
-    </Link>
+    <ButtonLink href="/signup?trial=true" className={pricingAccentCtaInlineClass}>
+      {PRICING_COPY.trial.cta}
+    </ButtonLink>
   ) : isBrand ? (
     subscription?.trial_mode ? (
-      <Link href="/brand/upload?trial=true" className="inline-flex">
-        <span className="inline-flex items-center justify-center rounded-xl bg-[#1D9E75] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2">
-          Continue Trial
-        </span>
-      </Link>
+      <ButtonLink
+        href="/brand/upload?trial=true"
+        className={pricingAccentCtaInlineClass}
+      >
+        Continue Trial
+      </ButtonLink>
     ) : (
       <form action={startFreeTrialAndRedirect}>
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-xl bg-[#1D9E75] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
-        >
+        <button type="submit" className={pricingAccentCtaInlineClass}>
           {PRICING_COPY.trial.cta}
         </button>
       </form>
@@ -253,7 +252,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
   ) : (
     <button
       type="button"
-      className="inline-flex cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-600"
+      className={pricingDisabledCtaInlineClass}
       title="Subscription not available for journalist accounts"
       disabled
     >
@@ -265,19 +264,19 @@ export default async function PricingPage({ searchParams }: PageProps) {
     <main className="min-h-screen bg-white">
       <PublicSiteHeader />
 
-      <section className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto max-w-6xl px-6 pt-10 pb-6 md:pt-14 md:pb-8">
-          <h1 className="text-4xl font-normal tracking-tight text-neutral-900 md:text-5xl">
+      <section className="border-b border-border-default bg-white">
+        <div className="bb-container pt-10 pb-6 md:pt-14 md:pb-8">
+          <h1 className="font-heading text-4xl font-normal tracking-tight text-text-primary md:text-5xl">
             {PRICING_COPY.hero.headline}
           </h1>
-          <p className="mt-4 max-w-2xl text-base text-neutral-600">
+          <p className="mt-4 max-w-2xl text-base text-text-secondary">
             {PRICING_COPY.hero.subheading}
           </p>
         </div>
       </section>
 
       <section className="pt-6 pb-10 md:pt-8 md:pb-14">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="bb-container">
           {checkoutError ? (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
               {checkoutError}
@@ -301,9 +300,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
             </div>
           ) : null}
 
-          <div className="mb-8 rounded-2xl border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-5 py-4">
+          <div className="mb-8 rounded-2xl border border-accent/30 bg-accent-subtle px-5 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-neutral-900">
+              <p className="text-sm font-medium text-text-primary">
                 {PRICING_COPY.trial.banner}
               </p>
               <div className="shrink-0">{startTrialCta}</div>
@@ -337,26 +336,29 @@ export default async function PricingPage({ searchParams }: PageProps) {
             />
           </div>
 
-          <div className="mt-14 border-t border-neutral-200 pt-10">
-            <h2 className="text-lg text-neutral-900">
+          <div className="mt-14 border-t border-border-default pt-10">
+            <h2 className="font-heading text-xl text-text-primary">
               {PRICING_COPY.faq.heading}
             </h2>
             <dl className="mt-6 grid gap-6 md:grid-cols-2">
               {PRICING_COPY.faq.items.map((item) => (
-                <div key={item.q} className="rounded-2xl border border-neutral-200 bg-white p-5">
-                  <dt className="text-sm font-semibold text-neutral-900">
+                <div
+                  key={item.q}
+                  className="rounded-2xl border border-border-default bg-white p-5"
+                >
+                  <dt className="text-sm font-semibold text-text-primary">
                     {item.q}
                   </dt>
-                  <dd className="mt-2 text-sm text-neutral-600">{item.a}</dd>
+                  <dd className="mt-2 text-sm text-text-secondary">{item.a}</dd>
                 </div>
               ))}
             </dl>
 
-            <div className="mt-10 text-sm text-neutral-700">
+            <div className="mt-10 text-sm text-text-secondary">
               {PRICING_COPY.footer.cta}{' '}
               <a
                 href={PRICING_COPY.footer.contactHref}
-                className="font-semibold text-[#1D9E75] underline underline-offset-4 hover:text-[#178c68] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2"
+                className="font-semibold text-accent underline underline-offset-4 hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               >
                 {PRICING_COPY.footer.contactLabel}
               </a>
@@ -365,6 +367,8 @@ export default async function PricingPage({ searchParams }: PageProps) {
           </div>
         </div>
       </section>
+
+      <PublicSiteFooter />
     </main>
   );
 }

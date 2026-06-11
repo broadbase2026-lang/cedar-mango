@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
+import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { TestimonialCarousel } from '@/components/home/testimonial-carousel';
@@ -38,6 +39,12 @@ function buildMailto({
   return `mailto:${TO_EMAIL}?${params.toString()}`;
 }
 
+function extractMailtoBody(mailto: string): string {
+  const query = mailto.split('?')[1] ?? '';
+  const params = new URLSearchParams(query);
+  return params.get('body') ?? '';
+}
+
 export default function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -62,19 +69,19 @@ export default function ContactPage() {
     <main className="min-h-screen bg-brand-surface">
       <PublicSiteHeader />
 
-      <section className="mx-auto max-w-6xl px-6 py-12 md:py-20">
+      <section className="bb-container py-12 md:py-20">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-14">
           <div>
-            <div className="inline-flex items-center rounded-full bg-white ring-1 ring-inset ring-brand-border px-3 py-1 text-xs font-medium text-brand-muted">
+            <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-brand-muted ring-1 ring-inset ring-brand-border">
               Contact
             </div>
-            <h1 className="mt-6 text-4xl md:text-5xl font-normal tracking-tight text-brand-ink">
+            <h1 className="mt-6 font-heading text-4xl font-normal tracking-tight text-text-primary md:text-5xl">
               Get in touch.
             </h1>
           </div>
 
           <form
-            className="rounded-3xl bg-white p-6 md:p-8 ring-1 ring-inset ring-brand-border shadow-media-soft"
+            className="rounded-3xl bg-white p-6 shadow-media-soft ring-1 ring-inset ring-brand-border md:p-8"
             onSubmit={async (e) => {
               e.preventDefault();
               if (!canSend) return;
@@ -84,10 +91,14 @@ export default function ContactPage() {
             <div className="grid grid-cols-1 gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold text-brand-muted uppercase tracking-wide">
+                  <label
+                    htmlFor="contact-name"
+                    className="text-xs font-semibold uppercase tracking-wide text-brand-muted"
+                  >
                     Name
                   </label>
                   <Input
+                    id="contact-name"
                     className="mt-2"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -96,10 +107,14 @@ export default function ContactPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-brand-muted uppercase tracking-wide">
+                  <label
+                    htmlFor="contact-email"
+                    className="text-xs font-semibold uppercase tracking-wide text-brand-muted"
+                  >
                     Email
                   </label>
                   <Input
+                    id="contact-email"
                     className="mt-2"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -111,10 +126,14 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-brand-muted uppercase tracking-wide">
+                <label
+                  htmlFor="contact-company"
+                  className="text-xs font-semibold uppercase tracking-wide text-brand-muted"
+                >
                   Company (optional)
                 </label>
                 <Input
+                  id="contact-company"
                   className="mt-2"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
@@ -124,10 +143,14 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-brand-muted uppercase tracking-wide">
+                <label
+                  htmlFor="contact-message"
+                  className="text-xs font-semibold uppercase tracking-wide text-brand-muted"
+                >
                   Message
                 </label>
                 <Textarea
+                  id="contact-message"
                   className="mt-2 min-h-[160px]"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -135,7 +158,7 @@ export default function ContactPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs text-brand-muted">
                   {copied ? 'Copied email draft.' : ' '}
                 </div>
@@ -148,14 +171,7 @@ export default function ContactPage() {
                       if (!canSend) return;
                       try {
                         await navigator.clipboard.writeText(
-                          buildMailto({ name, email, company, message })
-                            .replace(/^mailto:[^?]+\\?/, '')
-                            .split('&')
-                            .map((pair) => pair.split('=').map(decodeURIComponent))
-                            .reduce((acc, [k, v]) => {
-                              acc[k] = v;
-                              return acc;
-                            }, {} as Record<string, string>).body ?? '',
+                          extractMailtoBody(mailto),
                         );
                         setCopied(true);
                         window.setTimeout(() => setCopied(false), 1500);
@@ -179,7 +195,8 @@ export default function ContactPage() {
           <TestimonialCarousel heading="What teams are saying" />
         </div>
       </section>
+
+      <PublicSiteFooter />
     </main>
   );
 }
-

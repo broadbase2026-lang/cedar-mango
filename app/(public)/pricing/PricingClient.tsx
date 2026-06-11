@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { createCheckoutSession, startFreeTrial, type PricingPlan } from './actions';
 import { UI_COPY } from '@/constants/copy';
+import {
+  pricingAccentCtaClass,
+  pricingAccentCtaInlineClass,
+} from './pricing-cta-styles';
 
 export function PlanCheckoutButton(props: {
   plan: PricingPlan;
@@ -20,12 +24,8 @@ export function PlanCheckoutButton(props: {
       <button
         type="button"
         className={[
-          'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-          'ring-offset-white',
-          disabled
-            ? 'cursor-not-allowed bg-neutral-200 text-neutral-600'
-            : 'bg-[#1D9E75] text-white hover:bg-[#178c68] focus-visible:ring-[#1D9E75]',
+          pricingAccentCtaClass,
+          disabled ? 'cursor-not-allowed opacity-50' : '',
         ].join(' ')}
         disabled={disabled}
         title={props.title}
@@ -67,12 +67,8 @@ export function StartTrialButton(props: { label: string }) {
       <button
         type="button"
         className={[
-          'inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-          'ring-offset-white',
-          isLoading
-            ? 'cursor-wait bg-[#1D9E75]/80 text-white'
-            : 'bg-[#1D9E75] text-white hover:bg-[#178c68] focus-visible:ring-[#1D9E75]',
+          pricingAccentCtaInlineClass,
+          isLoading ? 'cursor-wait opacity-80' : '',
         ].join(' ')}
         disabled={isLoading}
         onClick={async () => {
@@ -102,4 +98,3 @@ export function StartTrialButton(props: { label: string }) {
     </div>
   );
 }
-

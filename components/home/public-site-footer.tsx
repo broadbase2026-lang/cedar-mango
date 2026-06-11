@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Globe, Share2 } from 'lucide-react';
 import { APP_NAME } from '@/constants/copy';
 
-const linkClassName = 'hover:text-accent transition-colors';
+const linkClassName =
+  'inline-block py-1 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-dark rounded-sm';
 
 export function PublicSiteFooter() {
   return (
     <footer className="bg-brand-dark py-20">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="bb-container">
         <div className="mb-12 flex flex-col justify-between gap-12 md:flex-row">
           <div className="max-w-xs">
             <div className="mb-6">
@@ -25,10 +25,10 @@ export function PublicSiteFooter() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-12 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
             <div>
               <h4 className="mb-6 text-sm font-semibold text-white">Platform</h4>
-              <ul className="space-y-4 text-sm text-white/70">
+              <ul className="space-y-3 text-sm text-white/70">
                 <li>
                   <Link href="/pricing" className={linkClassName}>
                     Pricing
@@ -49,20 +49,10 @@ export function PublicSiteFooter() {
 
             <div>
               <h4 className="mb-6 text-sm font-semibold text-white">Company</h4>
-              <ul className="space-y-4 text-sm text-white/70">
-                <li>
-                  <Link href="#" className={linkClassName}>
-                    About Us
-                  </Link>
-                </li>
+              <ul className="space-y-3 text-sm text-white/70">
                 <li>
                   <Link href="/contact" className={linkClassName}>
                     Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className={linkClassName}>
-                    Press
                   </Link>
                 </li>
               </ul>
@@ -70,20 +60,10 @@ export function PublicSiteFooter() {
 
             <div>
               <h4 className="mb-6 text-sm font-semibold text-white">Legal</h4>
-              <ul className="space-y-4 text-sm text-white/70">
+              <ul className="space-y-3 text-sm text-white/70">
                 <li>
                   <Link href="/terms" className={linkClassName}>
                     Terms
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className={linkClassName}>
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className={linkClassName}>
-                    Cookies
                   </Link>
                 </li>
               </ul>
@@ -95,22 +75,6 @@ export function PublicSiteFooter() {
           <p className="text-sm text-white/50">
             © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link
-              href="#"
-              className="text-white/50 transition-colors hover:text-accent"
-              aria-label="Website"
-            >
-              <Globe size={20} strokeWidth={1.75} />
-            </Link>
-            <Link
-              href="#"
-              className="text-white/50 transition-colors hover:text-accent"
-              aria-label="Share"
-            >
-              <Share2 size={20} strokeWidth={1.75} />
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

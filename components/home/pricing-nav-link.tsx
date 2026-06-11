@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export function PricingNavLink() {
+function cn(...parts: Array<string | undefined | false | null>) {
+  return parts.filter(Boolean).join(' ');
+}
+
+export function PricingNavLink({ className }: { className?: string }) {
   const pathname = usePathname();
   const isActive = pathname === '/pricing';
 
@@ -11,15 +15,13 @@ export function PricingNavLink() {
     <Link
       href="/pricing"
       aria-current={isActive ? 'page' : undefined}
-      className={[
-        'text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface',
-        isActive
-          ? 'text-[#1D9E75] underline underline-offset-4'
-          : 'text-brand-muted hover:text-brand-ink',
-      ].join(' ')}
+      className={cn(
+        'bb-nav-link',
+        isActive && 'bb-nav-link--active',
+        className,
+      )}
     >
       Pricing
     </Link>
   );
 }
-

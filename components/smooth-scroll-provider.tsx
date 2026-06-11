@@ -40,10 +40,15 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
         lenisRef.current?.start();
       },
     }),
-    []
+    [],
   );
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (reducedMotion) return;
+
     const lenis = new Lenis({
       duration: 1.2,
       smoothWheel: true,

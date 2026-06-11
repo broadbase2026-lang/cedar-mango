@@ -1,5 +1,4 @@
 import type { Config } from 'tailwindcss';
-import plugin from 'tailwindcss/plugin';
 
 const config: Config = {
   content: [
@@ -93,7 +92,7 @@ const config: Config = {
         heading: ['var(--font-radley)', 'Radley', 'ui-serif', 'Georgia', 'serif'],
       },
       fontSize: {
-        lg: ['2rem', { lineHeight: '1.75rem' }],
+        'display-sm': ['2rem', { lineHeight: '2.5rem' }],
       },
       boxShadow: {
         'media-soft':
@@ -101,15 +100,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [
-    plugin(({ addUtilities }) => {
-      addUtilities({
-        '.text-lg': {
-          fontWeight: '400',
-        },
-      });
-    }),
-  ],
+  plugins: [],
 };
 
 export default config;

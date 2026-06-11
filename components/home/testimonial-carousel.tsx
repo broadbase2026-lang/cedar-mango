@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 type Testimonial = {
   imageSrc?: string;
@@ -299,8 +300,12 @@ export function TestimonialCarousel({
   };
 
   return (
-    <section className={cn('w-full', className)}>
-      <div className="mx-auto max-w-6xl px-6">
+    <section
+      className={cn('w-full overflow-x-clip', className)}
+      aria-roledescription="carousel"
+      aria-label="Testimonials"
+    >
+      <div className="bb-container">
         <div
           className={cn(
             'flex items-end gap-4',
@@ -347,7 +352,7 @@ export function TestimonialCarousel({
       {/* Full-bleed carousel track */}
       <div
         className={cn(
-          'relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] overflow-visible',
+          'relative -mx-6 w-[calc(100%+3rem)] overflow-x-clip sm:-mx-10 sm:w-[calc(100%+5rem)]',
           heading ? 'mt-6' : 'mt-2',
         )}
         onMouseEnter={() => {
@@ -377,7 +382,7 @@ export function TestimonialCarousel({
         <div
           ref={trackRef}
           className={cn(
-            'flex gap-16 overflow-x-auto py-8',
+            'flex gap-8 overflow-x-auto py-8 sm:gap-16',
             'scrollbar-none',
             'snap-x snap-mandatory',
             'px-6 sm:px-10',
@@ -460,20 +465,12 @@ export function TestimonialCarousel({
         </div>
 
         <div className="mt-1 flex items-center justify-center gap-2 sm:hidden">
-          <button
-            type="button"
-            onClick={prev}
-            className="bb-btn-primary-sm bg-brand-primary/10 text-brand-ink ring-1 ring-inset ring-brand-border hover:bg-brand-primary/15"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={prev}>
             Prev
-          </button>
-          <button
-            type="button"
-            onClick={next}
-            className="bb-btn-primary-sm bg-brand-primary/10 text-brand-ink ring-1 ring-inset ring-brand-border hover:bg-brand-primary/15"
-          >
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={next}>
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </section>

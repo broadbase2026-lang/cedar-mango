@@ -1,8 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 
 function cn(...parts: Array<string | undefined | false | null>) {
   return parts.filter(Boolean).join(' ');
@@ -33,7 +32,7 @@ export function HomeEnterpriseModule({
         className,
       )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-10 px-6 py-10 md:flex-row md:items-center md:justify-center md:gap-16 md:py-12 lg:gap-20">
+      <div className="bb-container flex flex-col items-center justify-center gap-10 py-10 md:flex-row md:items-center md:gap-16 md:py-12 lg:gap-20">
         <div className="shrink-0">
           <Image
             src="/gavin%20portrait.png"
@@ -45,29 +44,27 @@ export function HomeEnterpriseModule({
         </div>
 
         <div className="min-w-0 text-left">
-          <div className="text-[11px] font-semibold tracking-[0.22em] uppercase text-brand-muted">
+          <div className="text-xs font-semibold uppercase tracking-widest text-brand-ink/70">
             {eyebrow}
           </div>
 
           <h2
             className={cn(
-              'mt-4 font-heading text-4xl font-normal tracking-tight md:text-6xl',
+              'mt-4 font-heading text-4xl font-normal tracking-tight md:text-5xl',
               headingClassName,
             )}
           >
             {heading}
           </h2>
 
-          <p className="mt-4 max-w-2xl text-[0.9rem] leading-[1.5rem] text-brand-muted">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-brand-ink/80">
             {subheading}
           </p>
 
           <div className="mt-8">
-            <Link href={ctaHref}>
-              <Button variant="accent" className="h-11 px-6">
-                {ctaLabel}
-              </Button>
-            </Link>
+            <ButtonLink href={ctaHref} variant="accent" size="lg">
+              {ctaLabel}
+            </ButtonLink>
           </div>
         </div>
       </div>

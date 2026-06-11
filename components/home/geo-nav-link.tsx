@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GEO_PAGE } from '@/constants/copy';
 
-export function GeoNavLink() {
+function cn(...parts: Array<string | undefined | false | null>) {
+  return parts.filter(Boolean).join(' ');
+}
+
+export function GeoNavLink({ className }: { className?: string }) {
   const pathname = usePathname();
   const isActive = pathname === '/geo';
 
@@ -12,12 +16,11 @@ export function GeoNavLink() {
     <Link
       href="/geo"
       aria-current={isActive ? 'page' : undefined}
-      className={[
-        'text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface',
-        isActive
-          ? 'text-accent underline underline-offset-4'
-          : 'text-brand-muted hover:text-brand-ink',
-      ].join(' ')}
+      className={cn(
+        'bb-nav-link',
+        isActive && 'bb-nav-link--active',
+        className,
+      )}
     >
       {GEO_PAGE.NAV_LABEL}
     </Link>
