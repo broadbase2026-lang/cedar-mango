@@ -193,6 +193,7 @@ export const GEO_SCORE_TIPS = {
 } as const;
 
 export const GEO_PAGE = {
+  NAV_LABEL: 'GEO',
   META_TITLE: 'Generative Engine Optimisation for Press Releases | Broadbase',
   META_DESCRIPTION:
     'Learn how Broadbase makes your press releases discoverable by AI-powered search tools — and how to improve your GEO score.',

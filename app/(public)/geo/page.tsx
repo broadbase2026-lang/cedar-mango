@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
@@ -494,6 +495,7 @@ function CtaSection() {
 export default function GeoPage() {
   return (
     <div data-side="brand" className="min-h-screen bg-surface-page">
+      <PublicSiteHeader />
       <HeroSection />
       <ShiftSection />
       <WhatSection />

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { APP_NAME } from '@/constants/copy';
 import { Button } from '@/components/ui/button';
+import { GeoNavLink } from '@/components/home/geo-nav-link';
 import { PricingNavLink } from '@/components/home/pricing-nav-link';
 
 const NAV_COLOR_START = '#ffb81a';
@@ -85,16 +86,19 @@ export function PublicSiteHeader({ scrollNavColor = false }: PublicSiteHeaderPro
     <header ref={headerRef} className="bb-top-nav">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center text-brand-ink">
-            <Image
-              src="/broadbase-logo.png"
-              alt={APP_NAME}
-              width={141}
-              height={25}
-              className="h-7 w-auto"
-              priority
-            />
-          </Link>
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center text-brand-ink">
+              <Image
+                src="/broadbase-logo.png"
+                alt={APP_NAME}
+                width={141}
+                height={25}
+                className="h-7 w-auto"
+                priority
+              />
+            </Link>
+            <GeoNavLink />
+          </div>
 
           <div className="flex items-center gap-6">
             <PricingNavLink />
