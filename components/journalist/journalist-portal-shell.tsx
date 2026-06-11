@@ -4,16 +4,11 @@ import type { ReactNode } from 'react';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Compass,
-  FolderOpen,
-  Search,
-  Settings,
-  type LucideIcon,
-} from 'lucide-react';
+import { Compass, FolderOpen, Settings, type LucideIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
+import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
 const PORTAL_SIDEBAR_ID = 'journalist-portal-sidebar';
@@ -24,7 +19,6 @@ const NAV_ITEMS: ReadonlyArray<{
   icon: LucideIcon;
 }> = [
   { label: 'Discover', href: '/journalist/discover', icon: Compass },
-  { label: 'Search', href: '/journalist/search', icon: Search },
   { label: 'Folders', href: '/journalist/folders', icon: FolderOpen },
   { label: 'Settings', href: '/journalist/settings', icon: Settings },
 ];
@@ -90,6 +84,7 @@ export function JournalistPortalShell({
   children,
 }: JournalistPortalShellProps) {
   const display = userDisplayName?.trim() || userEmail || 'Account';
+  const pathname = usePathname() ?? '';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -97,11 +92,13 @@ export function JournalistPortalShell({
   const [searchText, setSearchText] = useState('');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const mobileHeaderHidden = useMobileScrollHeaderHidden();
 
   useEffect(() => {
-    setSearchText(searchParams?.get('q') ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (pathname.startsWith('/journalist/discover')) {
+      setSearchText(searchParams?.get('q') ?? '');
+    }
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     // Default: collapsed on mobile (off-canvas closed). Desktop preference persists.
@@ -217,7 +214,11 @@ export function JournalistPortalShell({
       </aside>
 
       <div className="bb-portal-main">
-        <header className="bb-portal-header">
+        <header
+          className={
+            'bb-portal-header' + (mobileHeaderHidden ? ' bb-portal-header--hidden' : '')
+          }
+        >
           <PortalHamburgerButton
             open={mobileSidebarOpen}
             controlsId={PORTAL_SIDEBAR_ID}
@@ -232,7 +233,7 @@ export function JournalistPortalShell({
               onSubmit={(e) => {
                 e.preventDefault();
                 const q = searchText.trim();
-                router.push(q ? `/journalist/search?q=${encodeURIComponent(q)}` : '/journalist/search');
+                router.push(q ? `/journalist/discover?q=${encodeURIComponent(q)}` : '/journalist/discover');
               }}
             >
               <div className="flex items-center rounded-lg border border-brand-border bg-white px-3 shadow-sm">

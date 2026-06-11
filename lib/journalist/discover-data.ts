@@ -78,51 +78,22 @@ function toCountMap(rows: { folder_id: string }[]): Map<string, number> {
   return m;
 }
 
-export async function loadJournalistDiscoverData(
-  supabase: SupabaseClient,
-  journalistId: string
-): Promise<JournalistDiscoverData> {
-  const [
-    recentRes,
-    followsRes,
-    foldersRes,
-    savesRes,
-    saveIdsRes,
-  ] = await Promise.all([
-    supabase
-      .from('press_releases')
-      .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
-      .order('published_at', { ascending: false, nullsFirst: false })
-      .limit(20),
-    supabase
-      .from('journalist_follows')
-      .select('brand_id, created_at, brands(id, name, slug, logo_url, industry_vertical)')
-      .eq('journalist_id', journalistId)
-      .order('created_at', { ascending: false })
-      .limit(12),
-    supabase
-      .from('journalist_folders')
-      .select('id, name, updated_at')
-      .eq('journalist_id', journalistId)
-      .order('updated_at', { ascending: false })
-      .limit(12),
-    supabase
-      .from('journalist_folder_releases')
-      .select(
-        'folder_id, saved_at, journalist_folders(name), press_releases(id, title, slug, published_at, brands(name, slug, logo_url))'
-      )
-      .eq('journalist_id', journalistId)
-      .order('saved_at', { ascending: false })
-      .limit(12),
-    supabase
-      .from('journalist_folder_releases')
-      .select('press_release_id')
-      .eq('journalist_id', journalistId)
-      .order('saved_at', { ascending: false })
-      .limit(200),
-  ]);
+type RawDiscoverReleaseRow = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  body: string | null;
+  published_at: string | null;
+  industry_vertical: string | null;
+  brand_id: string | null;
+};
 
-  const recentRaw = recentRes.data ?? [];
+async function enrichDiscoverReleaseRows(
+  supabase: SupabaseClient,
+  journalistId: string,
+  recentRaw: RawDiscoverReleaseRow[]
+): Promise<DiscoverReleaseRow[]> {
   const recentReleaseIds = recentRaw.map((r) => r.id);
 
   const heroMap = new Map<string, string>();
@@ -171,18 +142,28 @@ export async function loadJournalistDiscoverData(
     }
   }
 
-  const savedReleaseIds = new Set(
-    (saveIdsRes.data ?? []).map((r) => r.press_release_id).filter(Boolean) as string[]
-  );
-
+  const savedReleaseIds = new Set<string>();
   const savedFolderIdsByReleaseId = new Map<string, string[]>();
   if (recentReleaseIds.length > 0) {
-    const { data: savedRows } = await supabase
-      .from('journalist_folder_releases')
-      .select('press_release_id, folder_id')
-      .eq('journalist_id', journalistId)
-      .in('press_release_id', recentReleaseIds)
-      .limit(500);
+    const [{ data: saveIdRows }, { data: savedRows }] = await Promise.all([
+      supabase
+        .from('journalist_folder_releases')
+        .select('press_release_id')
+        .eq('journalist_id', journalistId)
+        .in('press_release_id', recentReleaseIds)
+        .limit(500),
+      supabase
+        .from('journalist_folder_releases')
+        .select('press_release_id, folder_id')
+        .eq('journalist_id', journalistId)
+        .in('press_release_id', recentReleaseIds)
+        .limit(500),
+    ]);
+
+    for (const row of saveIdRows ?? []) {
+      if (row.press_release_id) savedReleaseIds.add(row.press_release_id);
+    }
+
     for (const row of savedRows ?? []) {
       if (!row.press_release_id || !row.folder_id) continue;
       const current = savedFolderIdsByReleaseId.get(row.press_release_id) ?? [];
@@ -191,7 +172,7 @@ export async function loadJournalistDiscoverData(
     }
   }
 
-  const recentReleases: DiscoverReleaseRow[] = recentRaw.map((r) => ({
+  return recentRaw.map((r) => ({
     id: r.id,
     title: r.title,
     slug: r.slug,
@@ -205,6 +186,63 @@ export async function loadJournalistDiscoverData(
     saved: savedReleaseIds.has(r.id),
     saved_folder_ids: savedFolderIdsByReleaseId.get(r.id) ?? [],
   }));
+}
+
+export async function loadJournalistDiscoverSearchRows(
+  supabase: SupabaseClient,
+  journalistId: string,
+  q: string
+): Promise<DiscoverReleaseRow[]> {
+  const trimmed = q.trim();
+  if (!trimmed) return [];
+
+  const { data: raw } = await supabase
+    .from('press_releases')
+    .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
+    .textSearch('fts', trimmed, {
+      type: 'websearch',
+      config: 'english',
+    })
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  return enrichDiscoverReleaseRows(supabase, journalistId, raw ?? []);
+}
+
+export async function loadJournalistDiscoverData(
+  supabase: SupabaseClient,
+  journalistId: string
+): Promise<JournalistDiscoverData> {
+  const [recentRes, followsRes, foldersRes, savesRes] = await Promise.all([
+    supabase
+      .from('press_releases')
+      .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .limit(20),
+    supabase
+      .from('journalist_follows')
+      .select('brand_id, created_at, brands(id, name, slug, logo_url, industry_vertical)')
+      .eq('journalist_id', journalistId)
+      .order('created_at', { ascending: false })
+      .limit(12),
+    supabase
+      .from('journalist_folders')
+      .select('id, name, updated_at')
+      .eq('journalist_id', journalistId)
+      .order('updated_at', { ascending: false })
+      .limit(12),
+    supabase
+      .from('journalist_folder_releases')
+      .select(
+        'folder_id, saved_at, journalist_folders(name), press_releases(id, title, slug, published_at, brands(name, slug, logo_url))'
+      )
+      .eq('journalist_id', journalistId)
+      .order('saved_at', { ascending: false })
+      .limit(12),
+  ]);
+
+  const recentRaw = recentRes.data ?? [];
+  const recentReleases = await enrichDiscoverReleaseRows(supabase, journalistId, recentRaw);
 
   const followedBrands: FollowedBrandRow[] = (followsRes.data ?? [])
     .map((row) => {

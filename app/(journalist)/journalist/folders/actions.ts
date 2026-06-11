@@ -21,7 +21,7 @@ export async function createFolder(formData: FormData): Promise<void> {
 
   revalidatePath('/journalist/folders');
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
 }
 
 export async function renameFolder(formData: FormData): Promise<void> {
@@ -41,7 +41,7 @@ export async function renameFolder(formData: FormData): Promise<void> {
   revalidatePath('/journalist/folders');
   revalidatePath(`/journalist/folders/${folderId}`);
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
 }
 
 export async function deleteFolder(formData: FormData): Promise<void> {
@@ -59,7 +59,7 @@ export async function deleteFolder(formData: FormData): Promise<void> {
 
   revalidatePath('/journalist/folders');
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
 }
 
 export async function removeFromFolder(formData: FormData): Promise<void> {
@@ -80,6 +80,6 @@ export async function removeFromFolder(formData: FormData): Promise<void> {
   revalidatePath('/journalist/folders');
   revalidatePath(`/journalist/folders/${folderId}`);
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
 }
 

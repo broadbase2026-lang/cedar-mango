@@ -23,6 +23,8 @@ type JournalistDiscoverViewProps = {
   userDisplayName?: string | null;
   /** Published releases from Supabase; falls back to mock data when empty. */
   releases?: PressReleaseMock[];
+  /** When set, the feed shows FTS search results instead of the curated discover stream. */
+  searchQuery?: string;
 };
 
 type UserDiscoveryPrefs = {
@@ -101,15 +103,24 @@ function verticalBadgeClass(v: PressReleaseMock['vertical']) {
   return 'bg-fuchsia-50 text-fuchsia-900 ring-1 ring-inset ring-fuchsia-700/30';
 }
 
-export function JournalistDiscoverView({ userDisplayName, releases }: JournalistDiscoverViewProps) {
+export function JournalistDiscoverView({
+  userDisplayName,
+  releases,
+  searchQuery = '',
+}: JournalistDiscoverViewProps) {
+  const isSearchMode = searchQuery.trim().length > 0;
   const [mounted, setMounted] = useState(false);
   const [seed, setSeed] = useState('0');
   const [selected, setSelected] = useState<PressReleaseMock | null>(null);
   const [open, setOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(14);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(searchQuery);
   const router = useRouter();
   const [activeIds, setActiveIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSearchText(searchQuery);
+  }, [searchQuery]);
 
   // Mock profile-driven prefs (wire to real profile fields when available).
   const prefs: UserDiscoveryPrefs = useMemo(
@@ -127,16 +138,24 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
     setGreeting(greetingForLocalTime(new Date()));
   }, []);
 
-  const feedSource = releases && releases.length > 0 ? releases : pressReleasesMock;
+  const feedSource =
+    isSearchMode && releases
+      ? releases
+      : releases && releases.length > 0
+        ? releases
+        : pressReleasesMock;
 
   const curated = useMemo(() => {
     if (!mounted) return [];
+    if (isSearchMode) return feedSource;
     const scored = feedSource
       .map((r) => ({ r, s: scoreRelease(r, prefs, seed) }))
       .sort((a, b) => b.s - a.s)
       .map(({ r }) => r);
     return scored;
-  }, [mounted, prefs, seed, feedSource]);
+  }, [mounted, prefs, seed, feedSource, isSearchMode]);
+
+  const effectiveVisibleCount = isSearchMode ? curated.length : visibleCount;
 
   const curatedById = useMemo(() => {
     const m = new Map<string, PressReleaseMock>();
@@ -151,6 +170,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    if (isSearchMode) return;
     const el = sentinelRef.current;
     if (!el) return;
 
@@ -164,7 +184,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
 
     io.observe(el);
     return () => io.disconnect();
-  }, [curated.length]);
+  }, [curated.length, isSearchMode]);
 
   // Keep the visible tile IDs stable so individual tiles can be replaced/dismissed.
   useEffect(() => {
@@ -176,15 +196,15 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
       const curatedSet = new Set(curated.map((r) => r.id));
       const prevIsSubset = prev.every((id) => curatedSet.has(id));
       if (!prev.length || !prevIsSubset) {
-        return curated.slice(0, visibleCount).map((r) => r.id);
+        return curated.slice(0, effectiveVisibleCount).map((r) => r.id);
       }
 
-      // Expand/shrink to match `visibleCount` while keeping ordering stable.
-      let next = prev.slice(0, visibleCount);
+      // Expand/shrink to match `effectiveVisibleCount` while keeping ordering stable.
+      let next = prev.slice(0, effectiveVisibleCount);
       const nextSet = new Set(next);
-      if (next.length < visibleCount) {
+      if (next.length < effectiveVisibleCount) {
         for (const r of curated) {
-          if (next.length >= visibleCount) break;
+          if (next.length >= effectiveVisibleCount) break;
           if (!nextSet.has(r.id)) {
             next.push(r.id);
             nextSet.add(r.id);
@@ -193,7 +213,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
       }
       return next;
     });
-  }, [mounted, curated, visibleCount]);
+  }, [mounted, curated, effectiveVisibleCount]);
 
   useLenisScrollLock(open);
 
@@ -241,7 +261,21 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
               >
                 Good {greeting}, {firstName}
               </div>
-              <div className="hidden sm:flex shrink-0 flex-col items-end">
+              {!isSearchMode ? (
+                <div className="hidden sm:flex shrink-0 flex-col items-end">
+                  <button
+                    type="button"
+                    onClick={onRefresh}
+                    className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface"
+                  >
+                    <RotateCw className="h-4 w-4" />
+                    Refresh
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            {!isSearchMode ? (
+              <div className="mt-4 flex justify-center sm:hidden">
                 <button
                   type="button"
                   onClick={onRefresh}
@@ -251,17 +285,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
                   Refresh
                 </button>
               </div>
-            </div>
-            <div className="mt-4 flex justify-center sm:hidden">
-              <button
-                type="button"
-                onClick={onRefresh}
-                className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface"
-              >
-                <RotateCw className="h-4 w-4" />
-                Refresh
-              </button>
-            </div>
+            ) : null}
           </div>
         </div>
 
@@ -274,7 +298,7 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
             onSubmit={(e) => {
               e.preventDefault();
               const q = searchText.trim();
-              router.push(q ? `/journalist/search?q=${encodeURIComponent(q)}` : '/journalist/search');
+              router.push(q ? `/journalist/discover?q=${encodeURIComponent(q)}` : '/journalist/discover');
             }}
           >
             <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-inset ring-brand-border/60">
@@ -308,6 +332,20 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
               </div>
             </div>
           </form>
+
+          {isSearchMode && mounted ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
+              <p>
+                {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
+              </p>
+              <Link
+                href="/journalist/discover"
+                className="font-medium text-brand-primary-700 hover:underline"
+              >
+                Clear search
+              </Link>
+            </div>
+          ) : null}
 
           <div className="mt-5 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
             <AnimatePresence initial={false}>
@@ -378,8 +416,16 @@ export function JournalistDiscoverView({ userDisplayName, releases }: Journalist
             </AnimatePresence>
           </div>
 
-          <div ref={sentinelRef} className="h-10" />
-          {visibleCount < curated.length ? (
+          {!isSearchMode ? <div ref={sentinelRef} className="h-10" /> : null}
+          {isSearchMode ? (
+            visible.length === 0 ? (
+              <div className="pb-10 text-center text-sm text-brand-muted">
+                No releases found for &ldquo;{searchQuery}&rdquo;.
+              </div>
+            ) : (
+              <div className="pb-10" />
+            )
+          ) : visibleCount < curated.length ? (
             <div className="pb-10 text-center text-xs text-brand-muted">Loading more…</div>
           ) : (
             <div className="pb-10 text-center text-xs text-brand-muted">You’re all caught up.</div>

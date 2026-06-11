@@ -201,8 +201,12 @@
   }
 
   .bb-portal-header {
-    @apply flex h-16 items-center gap-3 border-b border-brand-border px-4 py-2 shadow-sm sm:h-auto sm:min-h-[5.75rem] sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-4;
+    @apply flex h-16 items-center gap-3 border-b border-brand-border px-4 py-2 shadow-sm max-sm:fixed max-sm:inset-x-0 max-sm:top-0 max-sm:z-30 max-sm:transition-transform max-sm:duration-200 sm:relative sm:h-auto sm:min-h-[5.75rem] sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-4;
     background-color: var(--bb-top-nav);
+  }
+
+  .bb-portal-header--hidden {
+    @apply max-sm:-translate-y-full;
   }
 
   .bb-portal-header-title {
@@ -258,7 +262,7 @@
   }
 
   .bb-portal-children {
-    @apply flex-1;
+    @apply flex-1 max-sm:pt-16 sm:pt-0;
   }
 
   /* ---- Dashboard: empty & main surfaces ---- */

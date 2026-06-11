@@ -17,7 +17,7 @@ export async function followBrand(formData: FormData): Promise<void> {
 
   if (error && error.code !== '23505') return;
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
   revalidatePath('/journalist/folders');
 }
 
@@ -35,7 +35,7 @@ export async function unfollowBrand(formData: FormData): Promise<void> {
     .eq('brand_id', brandId);
 
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
 }
 
 export async function toggleSaveReleaseToFolder(formData: FormData): Promise<void> {
@@ -71,7 +71,7 @@ export async function toggleSaveReleaseToFolder(formData: FormData): Promise<voi
   }
 
   revalidatePath('/journalist/discover');
-  revalidatePath('/journalist/search');
+  revalidatePath('/journalist/discover');
   revalidatePath('/journalist/folders');
 }
 

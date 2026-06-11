@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
+import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
 const PORTAL_SIDEBAR_ID = 'brand-portal-sidebar';
@@ -146,6 +147,7 @@ export function BrandPortalShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileHeaderHidden = useMobileScrollHeaderHidden();
 
   useEffect(() => {
     try {
@@ -269,7 +271,11 @@ export function BrandPortalShell({
       </aside>
 
       <div className="bb-portal-main">
-        <header className="bb-portal-header">
+        <header
+          className={
+            'bb-portal-header' + (mobileHeaderHidden ? ' bb-portal-header--hidden' : '')
+          }
+        >
           <PortalHamburgerButton
             open={mobileSidebarOpen}
             controlsId={PORTAL_SIDEBAR_ID}
