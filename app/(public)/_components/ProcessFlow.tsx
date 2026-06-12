@@ -123,8 +123,9 @@ function TrendingChartIcon() {
 
 export function ProcessFlow() {
   return (
-    <section className="fade-in-container w-full bg-brand-dark py-16 md:py-20">
-      <div className="bb-container">
+    <section className="fade-in-container bb-home-tinted-section">
+      <div className="bb-home-tinted-panel bg-brand-dark">
+        <div className="bb-container py-16 md:py-20">
         <h2 className="fade-in-element mb-12 text-center font-heading text-4xl font-normal text-white md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
@@ -144,6 +145,7 @@ export function ProcessFlow() {
               </p>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </section>

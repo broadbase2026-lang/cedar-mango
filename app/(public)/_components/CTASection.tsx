@@ -33,8 +33,9 @@ function ArrowRightIcon() {
 
 export function CTASection() {
   return (
-    <section className="fade-in-container relative w-full bg-[var(--bb-top-nav)] py-16 text-brand-ink md:py-20">
-      <div className="bb-container max-w-4xl">
+    <section className="fade-in-container bb-home-tinted-section">
+      <div className="bb-home-tinted-panel bg-[var(--bb-top-nav)] text-brand-ink">
+        <div className="bb-container max-w-4xl py-16 md:py-20">
         <h2 className="fade-in-element mb-12 text-center font-heading text-4xl font-normal md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
@@ -59,6 +60,7 @@ export function CTASection() {
             {BRAND_CTA.label}
             <ArrowRightIcon />
           </ButtonLink>
+        </div>
         </div>
       </div>
     </section>

@@ -22,7 +22,7 @@ const JOURNALIST_FEATURE_CLASS =
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen overflow-x-clip">
+    <main className="min-h-screen overflow-x-clip bg-white">
       <FadeInScroll />
       <PublicSiteHeader />
       <div className="bb-home-hero-stack">

@@ -13,6 +13,7 @@ import {
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import { APP_NAME } from '@/constants/copy';
+import { SIGNUP_HERO_GRADIENT } from '@/components/home/feature-card-gradients';
 import { AudienceRailButton } from '@/components/home/audience-rail-button';
 import { Button } from '@/components/ui/button';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
@@ -260,10 +261,11 @@ export function HomeAudienceHero({
       aria-modal="true"
       aria-labelledby="home-audience-heading"
       className={cn(
-        'fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-[#ffb81a] px-6',
+        'fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 px-6',
         'transition-opacity duration-500 ease-in-out motion-reduce:transition-none',
         overlayClosing ? 'pointer-events-none opacity-0' : 'opacity-100',
       )}
+      style={{ background: SIGNUP_HERO_GRADIENT }}
     >
       <Image
         src="/broadbase-logo.png"

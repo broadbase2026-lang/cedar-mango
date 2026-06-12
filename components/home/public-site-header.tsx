@@ -4,15 +4,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Context } from 'gsap';
+import { animateFlipDown } from '@/components/home/flip-down-gsap';
 import { usePathname } from 'next/navigation';
 import { APP_NAME } from '@/constants/copy';
 import { ButtonLink } from '@/components/ui/button';
 import { GeoNavLink } from '@/components/home/geo-nav-link';
 import { PricingNavLink } from '@/components/home/pricing-nav-link';
+import {
+  buildNavScrollGradient,
+  NAV_GRADIENT_STOPS_END,
+  NAV_GRADIENT_STOPS_START,
+} from '@/components/home/feature-card-gradients';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 
-const NAV_COLOR_START = '#ffb81a';
-const NAV_COLOR_END = '#EF5301';
+const NAV_COLOR_START = NAV_GRADIENT_STOPS_START[0];
+const NAV_COLOR_END = NAV_GRADIENT_STOPS_END[0];
 const NAV_CTA_CLASS = '!h-8 !min-h-8 !rounded-full px-4 sm:px-5';
 const NAV_BLUR_BELOW_GAP_PX = 10;
 
@@ -108,6 +115,7 @@ export function PublicSiteHeader() {
         '--bb-top-nav',
         interpolateHexColor(NAV_COLOR_START, NAV_COLOR_END, progress),
       );
+      pill.style.setProperty('--bb-top-nav-gradient', buildNavScrollGradient(progress));
     };
 
     const onScroll = () => {
@@ -128,8 +136,33 @@ export function PublicSiteHeader() {
         window.cancelAnimationFrame(frameId);
       }
       pillEl?.style.removeProperty('--bb-top-nav');
+      pillEl?.style.removeProperty('--bb-top-nav-gradient');
     };
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    let ctx: Context | null = null;
+    let cancelled = false;
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+
+      const drawer = drawerRef.current;
+      const pill = pillRef.current;
+      const items = drawer?.querySelectorAll<HTMLElement>('nav a');
+      if (!drawer || !pill || !items?.length) return;
+
+      ctx = animateFlipDown(drawer, pill, Array.from(items));
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+      ctx?.revert();
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -220,19 +253,22 @@ export function PublicSiteHeader() {
               id="public-site-mobile-nav"
               ref={drawerRef}
               className="absolute left-2 right-2 top-full z-20 mt-2 rounded-2xl border border-brand-border/70 p-3 shadow-lg backdrop-blur md:hidden"
-              style={{ backgroundColor: 'var(--bb-top-nav)' }}
+              style={{ background: 'var(--bb-top-nav-gradient, var(--bb-top-nav))' }}
             >
-              <nav className="flex flex-col" aria-label="Mobile">
-                <GeoNavLink className="w-full border-b border-brand-ink/10 px-0" />
-                <PricingNavLink className="w-full border-b border-brand-ink/10 px-0" />
+              <nav
+                className="flex flex-col [perspective:900px]"
+                aria-label="Mobile"
+              >
+                <GeoNavLink className="origin-top w-full border-b border-brand-ink/10 px-0" />
+                <PricingNavLink className="origin-top w-full border-b border-brand-ink/10 px-0" />
                 <Link
                   href="/login"
-                  className="bb-nav-link w-full border-b border-brand-ink/10 px-0"
+                  className="bb-nav-link origin-top w-full border-b border-brand-ink/10 px-0"
                   onClick={closeMenu}
                 >
                   Log In
                 </Link>
-                <div className="pt-4 pb-1">
+                <div className="origin-top pt-4 pb-1">
                   <ButtonLink
                     href="/signup"
                     variant="accent"

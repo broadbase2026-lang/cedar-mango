@@ -26,13 +26,9 @@ export function HomeEnterpriseModule({
   headingClassName?: string;
 }) {
   return (
-    <section
-      className={cn(
-        'fade-in-container border-t border-brand-border/70 bg-[var(--bb-top-nav)] text-brand-ink',
-        className,
-      )}
-    >
-      <div className="bb-container flex flex-col items-center justify-center gap-10 py-10 md:flex-row md:items-center md:gap-16 md:py-12 lg:gap-20">
+    <section className={cn('fade-in-container bb-home-tinted-section', className)}>
+      <div className="bb-home-tinted-panel bg-[var(--bb-top-nav)] text-brand-ink">
+        <div className="bb-container flex flex-col items-center justify-center gap-10 py-10 md:flex-row md:items-center md:gap-16 md:py-12 lg:gap-20">
         <div className="fade-in-element shrink-0">
           <Image
             src="/gavin%20portrait.png"
@@ -66,6 +62,7 @@ export function HomeEnterpriseModule({
               {ctaLabel}
             </ButtonLink>
           </div>
+        </div>
         </div>
       </div>
     </section>

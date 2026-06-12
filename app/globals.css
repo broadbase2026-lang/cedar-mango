@@ -21,6 +21,12 @@
 
     /* Top navigation bar (public + portal) */
     --bb-top-nav: #ffb81a;
+    --bb-top-nav-gradient: linear-gradient(
+      137deg,
+      #ffb81a 0%,
+      #ffd875 45%,
+      #ff9e96 100%
+    );
     --bb-nav-h: 4rem;
     --bb-floating-nav-offset: 3.25rem;
 
@@ -105,6 +111,14 @@
 @layer components {
   .bb-container {
     @apply mx-auto max-w-6xl px-6;
+  }
+
+  .bb-home-tinted-section {
+    @apply bg-white px-4 py-8 sm:px-6 md:py-10;
+  }
+
+  .bb-home-tinted-panel {
+    @apply mx-auto w-full max-w-6xl overflow-hidden rounded-3xl;
   }
 
   .bb-nav-link {
@@ -243,7 +257,7 @@
 
   .bb-top-nav-pill {
     @apply rounded-full border border-brand-border/70 px-8 py-1.5 shadow-sm backdrop-blur sm:px-12 sm:py-2;
-    background-color: var(--bb-top-nav);
+    background: var(--bb-top-nav-gradient, var(--bb-top-nav));
   }
 
   .bb-top-nav-pill .bb-nav-link {
