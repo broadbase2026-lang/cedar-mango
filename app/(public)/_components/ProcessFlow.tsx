@@ -123,9 +123,9 @@ function TrendingChartIcon() {
 
 export function ProcessFlow() {
   return (
-    <section className="w-full bg-brand-dark py-16 md:py-20">
+    <section className="fade-in-container w-full bg-brand-dark py-16 md:py-20">
       <div className="bb-container">
-        <h2 className="mb-12 text-center font-heading text-4xl font-normal text-white md:mb-16 md:text-5xl">
+        <h2 className="fade-in-element mb-12 text-center font-heading text-4xl font-normal text-white md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
 
@@ -133,7 +133,7 @@ export function ProcessFlow() {
           {PROCESS_STEPS.map((step) => (
             <div
               key={step.title}
-              className="flex flex-col items-center gap-4 text-center"
+              className="fade-in-element flex flex-col items-center gap-4 text-center"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-neutral-800">
                 {step.icon}

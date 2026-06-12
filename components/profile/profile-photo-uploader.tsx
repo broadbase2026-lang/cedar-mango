@@ -15,8 +15,18 @@ type UploadResult =
   | { ok: true; publicUrl: string }
   | { ok: false; error: string };
 
+const EDITOR_SIZE = 320;
+const CROP_SIZE = 260;
+const OUT_SIZE = 350;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function computeCoverScale(imgW: number, imgH: number, cropSize: number) {
+  return Math.max(cropSize / imgW, cropSize / imgH);
 }
 
 async function fileToImage(file: File): Promise<HTMLImageElement> {
@@ -37,8 +47,9 @@ async function fileToImage(file: File): Promise<HTMLImageElement> {
 
 async function renderCircleAvatarPng(input: {
   file: File;
+  cropSize: number;
   outSize: number;
-  scale: number;
+  zoom: number;
   offsetX: number;
   offsetY: number;
 }): Promise<Blob> {
@@ -60,12 +71,14 @@ async function renderCircleAvatarPng(input: {
   ctx.closePath();
   ctx.clip();
 
-  // Draw the image with pan+zoom around the square crop.
-  const s = input.scale;
-  const drawW = img.naturalWidth * s;
-  const drawH = img.naturalHeight * s;
-  const dx = input.outSize / 2 - drawW / 2 + input.offsetX;
-  const dy = input.outSize / 2 - drawH / 2 + input.offsetY;
+  // Match the editor: cover-fit base scale, user zoom, and UI→output crop mapping.
+  const coverScale = computeCoverScale(img.naturalWidth, img.naturalHeight, input.cropSize);
+  const displayScale = coverScale * input.zoom;
+  const uiToOut = input.outSize / input.cropSize;
+  const drawW = img.naturalWidth * displayScale * uiToOut;
+  const drawH = img.naturalHeight * displayScale * uiToOut;
+  const dx = input.outSize / 2 - drawW / 2 + input.offsetX * uiToOut;
+  const dy = input.outSize / 2 - drawH / 2 + input.offsetY * uiToOut;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -104,7 +117,9 @@ export function ProfilePhotoUploader({
   // Crop UI state
   const [file, setFile] = useState<File | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  const [coverScale, setCoverScale] = useState(1);
+  const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -139,7 +154,9 @@ export function ProfilePhotoUploader({
   function closeModal() {
     setFile(null);
     setObjectUrl(null);
-    setScale(1);
+    setNaturalSize(null);
+    setCoverScale(1);
+    setZoom(1);
     setOffsetX(0);
     setOffsetY(0);
     setDragging(false);
@@ -162,11 +179,25 @@ export function ProfilePhotoUploader({
       return;
     }
 
-    setFile(f);
-    setObjectUrl(URL.createObjectURL(f));
-    setScale(1);
-    setOffsetX(0);
-    setOffsetY(0);
+    try {
+      const img = await fileToImage(f);
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (!w || !h) {
+        setError('Could not read image dimensions.');
+        return;
+      }
+
+      setFile(f);
+      setObjectUrl(URL.createObjectURL(f));
+      setNaturalSize({ w, h });
+      setCoverScale(computeCoverScale(w, h, CROP_SIZE));
+      setZoom(1);
+      setOffsetX(0);
+      setOffsetY(0);
+    } catch {
+      setError('Failed to load image.');
+    }
   }
 
   async function onSave() {
@@ -178,8 +209,9 @@ export function ProfilePhotoUploader({
       try {
         const blob = await renderCircleAvatarPng({
           file,
-          outSize: 350,
-          scale,
+          cropSize: CROP_SIZE,
+          outSize: OUT_SIZE,
+          zoom,
           offsetX,
           offsetY,
         });
@@ -269,7 +301,8 @@ export function ProfilePhotoUploader({
             <div className="p-5 space-y-4">
               <div className="flex items-center justify-center">
                 <div
-                  className="relative h-[320px] w-[320px] overflow-hidden rounded-2xl bg-brand-surface-2 ring-1 ring-inset ring-brand-border select-none touch-none"
+                  className="relative overflow-hidden rounded-2xl bg-brand-surface-2 ring-1 ring-inset ring-brand-border select-none touch-none"
+                  style={{ width: EDITOR_SIZE, height: EDITOR_SIZE }}
                   onPointerDown={(e) => {
                     if (!objectUrl) return;
                     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
@@ -288,16 +321,18 @@ export function ProfilePhotoUploader({
                     setDragStart(null);
                   }}
                 >
-                  {objectUrl ? (
+                  {objectUrl && naturalSize ? (
                     // Blob URL + drag/zoom crop needs native img sizing (not next/image).
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={objectUrl}
                       alt=""
                       draggable={false}
+                      width={naturalSize.w}
+                      height={naturalSize.h}
                       className="absolute left-1/2 top-1/2 max-w-none"
                       style={{
-                        transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+                        transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px) scale(${coverScale * zoom})`,
                         transformOrigin: 'center',
                       }}
                     />
@@ -306,7 +341,8 @@ export function ProfilePhotoUploader({
                   {/* circular overlay */}
                   <div className="pointer-events-none absolute inset-0">
                     <div
-                      className="absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+                      style={{ width: CROP_SIZE, height: CROP_SIZE }}
                       aria-hidden
                     />
                   </div>
@@ -316,15 +352,15 @@ export function ProfilePhotoUploader({
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-brand-muted">
                   <span>Zoom</span>
-                  <span className="tabular-nums">{scale.toFixed(2)}×</span>
+                  <span className="tabular-nums">{zoom.toFixed(2)}×</span>
                 </div>
                 <input
                   type="range"
-                  min={1}
-                  max={3}
+                  min={MIN_ZOOM}
+                  max={MAX_ZOOM}
                   step={0.01}
-                  value={scale}
-                  onChange={(e) => setScale(clamp(Number(e.target.value), 1, 3))}
+                  value={zoom}
+                  onChange={(e) => setZoom(clamp(Number(e.target.value), MIN_ZOOM, MAX_ZOOM))}
                   className="w-full"
                 />
               </div>

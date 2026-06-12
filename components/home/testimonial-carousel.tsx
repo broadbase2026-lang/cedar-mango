@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useRef } from 'react';
+import { gsap } from 'gsap';
 
 type Testimonial = {
   imageSrc?: string;
@@ -12,12 +12,10 @@ type Testimonial = {
   title: string;
 };
 
+const TICKER_SPEED_PX_PER_SEC = 45;
+
 function cn(...parts: Array<string | undefined | false | null>) {
   return parts.filter(Boolean).join(' ');
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n));
 }
 
 function initials(name: string) {
@@ -55,6 +53,71 @@ function svgPlaceholderDataUri({
   </g>
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function TestimonialCard({
+  testimonial,
+  logicalIdx,
+}: {
+  testimonial: Testimonial;
+  logicalIdx: number;
+}) {
+  const palette = [
+    ['#0ea5e9', '#14b8a6'],
+    ['#8b5cf6', '#ec4899'],
+    ['#22c55e', '#0ea5e9'],
+    ['#f97316', '#f43f5e'],
+    ['#06b6d4', '#a855f7'],
+    ['#10b981', '#0ea5e9'],
+  ] as const;
+  const [from, to] = palette[logicalIdx % palette.length];
+  const label = initials(testimonial.name);
+  const src =
+    testimonial.imageSrc ??
+    svgPlaceholderDataUri({
+      label,
+      from,
+      to,
+    });
+  const alt = testimonial.imageAlt ?? testimonial.name;
+
+  return (
+    <div
+      className={cn(
+        'shrink-0 w-[260px] sm:w-[300px]',
+        'rounded-2xl overflow-hidden',
+        'bg-white ring-1 ring-inset ring-brand-border',
+        'shadow-media-soft',
+      )}
+    >
+      <div className="relative aspect-square w-full bg-brand-surface-2">
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(max-width: 640px) 260px, 300px"
+          className="object-cover"
+        />
+      </div>
+
+      <div className="p-6">
+        <div className="text-sm leading-relaxed text-brand-ink">
+          &ldquo;{testimonial.quote}&rdquo;
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold text-brand-ink">
+              {testimonial.name}
+            </div>
+            <div className="text-xs text-brand-muted">{testimonial.title}</div>
+          </div>
+          <div className="text-xs font-semibold text-brand-primary-700">
+            Broadbase
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function TestimonialCarousel({
@@ -115,365 +178,122 @@ export function TestimonialCarousel({
     [testimonials],
   );
 
-  const renderedItems = useMemo(() => {
-    // 3x copy lets us "wrap" seamlessly by snapping back into the middle copy.
-    return [...items, ...items, ...items];
-  }, [items]);
-
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const rafRef = useRef<number | null>(null);
-  const activeIndexRef = useRef(0);
-  const autoPlayPausedRef = useRef(false);
-  const autoPlayResumeAtRef = useRef(0);
-  const isProgrammaticScrollRef = useRef(false);
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  activeIndexRef.current = activeIndex;
-
-  const AUTO_PLAY_INTERVAL_MS = 5000;
-
-  const centerRenderedIndex = useCallback(
-    (renderedIndex: number, behavior: ScrollBehavior) => {
-      const track = trackRef.current;
-      const el = cardRefs.current[renderedIndex];
-      if (!track || !el) return;
-      const left =
-        el.offsetLeft + el.offsetWidth / 2 - track.clientWidth / 2;
-      isProgrammaticScrollRef.current = true;
-      track.scrollTo({ left, behavior });
-      if (behavior === 'smooth') {
-        window.setTimeout(() => {
-          isProgrammaticScrollRef.current = false;
-        }, 600);
-      } else {
-        isProgrammaticScrollRef.current = false;
-      }
-    },
-    [],
-  );
-
-  const centerLogicalIndex = useCallback(
-    (logicalIndex: number, behavior: ScrollBehavior) => {
-    const n = items.length;
-    if (n === 0) return;
-    // Always target the middle copy to keep room on both sides.
-    centerRenderedIndex(n + ((logicalIndex % n) + n) % n, behavior);
-    },
-    [centerRenderedIndex, items.length],
-  );
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const tweenRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
-    // On mount (and whenever the list changes), jump to the middle copy.
-    // rAF ensures layout is ready for offset measurements.
-    const track = trackRef.current;
-    if (!track) return;
-    requestAnimationFrame(() => centerLogicalIndex(0, 'auto'));
-  }, [centerLogicalIndex, items.length]);
+    const row = rowRef.current;
+    if (!row || items.length === 0) return;
 
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (reducedMotion) return;
 
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const cards = cardRefs.current;
-    const n = items.length;
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const tick = () => {
-      const rect = track.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
+    const ctx = gsap.context(() => {
+      const buildTween = () => {
+        tweenRef.current?.kill();
+        gsap.set(row, { xPercent: 0 });
 
-      let bestIndex = 0;
-      let bestDist = Number.POSITIVE_INFINITY;
+        const setWidth = row.scrollWidth / 2;
+        const duration = setWidth / TICKER_SPEED_PX_PER_SEC;
 
-      for (let i = 0; i < renderedItems.length; i += 1) {
-        const el = cardRefs.current[i];
-        if (!el) continue;
-        const r = el.getBoundingClientRect();
-        const cardCenter = r.left + r.width / 2;
-        const dist = Math.abs(cardCenter - centerX);
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestIndex = i;
-        }
+        tweenRef.current = gsap.to(row, {
+          xPercent: -50,
+          duration,
+          ease: 'none',
+          repeat: -1,
+        });
+      };
 
-        const t = clamp(1 - dist / (rect.width * 0.6), 0, 1);
-        const scale = 0.92 + t * 0.16; // 0.92 → 1.08
-        el.style.setProperty('--bb-scale', String(scale));
-        el.style.setProperty('--bb-opacity', String(0.55 + t * 0.45));
-      }
+      buildTween();
 
-      const logical = n === 0 ? 0 : bestIndex % n;
-      setActiveIndex((prev) => (prev === logical ? prev : logical));
+      const resizeObserver = new ResizeObserver(() => {
+        if (resizeTimer !== null) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(buildTween, 150);
+      });
+      resizeObserver.observe(row);
 
-      // If we've drifted into the first/last copy, jump (no animation) to the
-      // corresponding card in the middle copy. This keeps the loop infinite.
-      if (n > 0) {
-        if (bestIndex < n || bestIndex >= n * 2) {
-          centerLogicalIndex(logical, 'auto');
-        }
-      }
-      rafRef.current = null;
-    };
-
-    const schedule = () => {
-      if (rafRef.current !== null) return;
-      rafRef.current = window.requestAnimationFrame(tick);
-    };
-
-    const onScroll = () => {
-      if (!isProgrammaticScrollRef.current) {
-        autoPlayResumeAtRef.current = Date.now() + AUTO_PLAY_INTERVAL_MS * 2;
-      }
-      schedule();
-    };
-
-    schedule();
-    track.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', schedule);
+      return () => {
+        resizeObserver.disconnect();
+        if (resizeTimer !== null) clearTimeout(resizeTimer);
+      };
+    }, containerRef);
 
     return () => {
-      track.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', schedule);
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (!reduced) {
-        for (const el of cards) {
-          el?.style.removeProperty('--bb-scale');
-          el?.style.removeProperty('--bb-opacity');
-        }
-      }
+      ctx.revert();
+      tweenRef.current = null;
     };
-  }, [centerLogicalIndex, items.length, renderedItems]);
+  }, [items]);
 
-  const pauseAutoPlay = useCallback((durationMs = AUTO_PLAY_INTERVAL_MS * 2) => {
-    autoPlayResumeAtRef.current = Date.now() + durationMs;
-  }, []);
-
-  const advance = useCallback(() => {
-    const n = items.length;
-    if (n <= 1) return;
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    centerLogicalIndex(
-      (activeIndexRef.current + 1) % n,
-      reduced ? 'auto' : 'smooth',
-    );
-  }, [centerLogicalIndex, items.length]);
-
-  useEffect(() => {
-    if (items.length <= 1) return;
-
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return;
-
-    const id = window.setInterval(() => {
-      if (autoPlayPausedRef.current) return;
-      if (Date.now() < autoPlayResumeAtRef.current) return;
-      advance();
-    }, AUTO_PLAY_INTERVAL_MS);
-
-    return () => window.clearInterval(id);
-  }, [advance, items.length]);
-
-  const scrollToIndex = (logicalIndex: number) => {
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    centerLogicalIndex(logicalIndex, reduced ? 'auto' : 'smooth');
+  const pauseTicker = () => {
+    tweenRef.current?.pause();
   };
 
-  const prev = () => {
-    pauseAutoPlay();
-    scrollToIndex((activeIndex - 1 + items.length) % items.length);
-  };
-  const next = () => {
-    pauseAutoPlay();
-    scrollToIndex((activeIndex + 1) % items.length);
+  const playTicker = () => {
+    tweenRef.current?.play();
   };
 
   return (
     <section
       className={cn('w-full overflow-x-clip', className)}
-      aria-roledescription="carousel"
       aria-label="Testimonials"
     >
-      <div className="bb-container">
-        <div
-          className={cn(
-            'flex items-end gap-4',
-            heading ? 'justify-between' : 'justify-end',
-          )}
-        >
-          {heading ? (
-            <h2 className="text-xs font-semibold tracking-wide text-brand-muted uppercase">
-              {heading}
-            </h2>
-          ) : null}
-
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              type="button"
-              onClick={prev}
-              className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-full',
-                'bg-white/70 text-brand-ink ring-1 ring-inset ring-brand-border/70',
-                'shadow-sm transition hover:bg-white',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface',
-              )}
-              aria-label="Previous testimonial"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-full',
-                'bg-white/70 text-brand-ink ring-1 ring-inset ring-brand-border/70',
-                'shadow-sm transition hover:bg-white',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface',
-              )}
-              aria-label="Next testimonial"
-            >
-              ›
-            </button>
-          </div>
+      {heading ? (
+        <div className="bb-container">
+          <h2 className="text-xs font-semibold tracking-wide text-brand-muted uppercase">
+            {heading}
+          </h2>
         </div>
-      </div>
+      ) : null}
 
-      {/* Full-bleed carousel track */}
       <div
+        ref={containerRef}
         className={cn(
           'relative -mx-6 w-[calc(100%+3rem)] overflow-x-clip sm:-mx-10 sm:w-[calc(100%+5rem)]',
           heading ? 'mt-6' : 'mt-2',
         )}
-        onMouseEnter={() => {
-          autoPlayPausedRef.current = true;
-        }}
-        onMouseLeave={() => {
-          autoPlayPausedRef.current = false;
-        }}
-        onFocusCapture={() => {
-          autoPlayPausedRef.current = true;
-        }}
+        onMouseEnter={pauseTicker}
+        onMouseLeave={playTicker}
+        onFocusCapture={pauseTicker}
         onBlurCapture={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-            autoPlayPausedRef.current = false;
+            playTicker();
           }
         }}
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-brand-surface to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-brand-surface to-transparent"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-brand-surface to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-brand-surface to-transparent"
         />
 
-        <div
-          ref={trackRef}
-          className={cn(
-            'flex gap-8 overflow-x-auto py-8 sm:gap-16',
-            'scrollbar-none',
-            'snap-x snap-mandatory',
-            'px-6 sm:px-10',
-          )}
-          style={{
-            WebkitOverflowScrolling: 'touch',
-          }}
-        >
-          {renderedItems.map((t, idx) => (
-            (() => {
-              const logicalIdx = items.length === 0 ? 0 : idx % items.length;
-              const palette = [
-                ['#0ea5e9', '#14b8a6'],
-                ['#8b5cf6', '#ec4899'],
-                ['#22c55e', '#0ea5e9'],
-                ['#f97316', '#f43f5e'],
-                ['#06b6d4', '#a855f7'],
-                ['#10b981', '#0ea5e9'],
-              ] as const;
-              const [from, to] = palette[logicalIdx % palette.length];
-              const label = initials(t.name);
-              const src =
-                t.imageSrc ??
-                svgPlaceholderDataUri({
-                  label,
-                  from,
-                  to,
-                });
-              const alt = t.imageAlt ?? t.name;
-
-              return (
+        <div className="overflow-hidden py-8">
           <div
-            key={`${t.name}-${idx}`}
-            ref={(node) => {
-              cardRefs.current[idx] = node;
-            }}
-            className={cn(
-              'snap-center shrink-0 w-[260px] sm:w-[300px]',
-              'rounded-2xl overflow-hidden',
-              'bg-white ring-1 ring-inset ring-brand-border',
-              'shadow-media-soft',
-              'transform-gpu',
-              'transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none',
-            )}
-            style={{
-              transform: 'scale(var(--bb-scale, 0.96))',
-              opacity: 'var(--bb-opacity, 0.8)',
-            }}
+            ref={rowRef}
+            className="flex w-max gap-8 will-change-transform sm:gap-16"
           >
-            <div className="relative aspect-square w-full bg-brand-surface-2">
-              <Image
-                src={src}
-                alt={alt}
-                fill
-                sizes="(max-width: 640px) 260px, 300px"
-                className="object-cover"
+            {items.map((t, idx) => (
+              <TestimonialCard
+                key={`${t.name}-a-${idx}`}
+                testimonial={t}
+                logicalIdx={idx}
               />
-            </div>
-
-            <div className="p-6">
-              <div className="text-sm leading-relaxed text-brand-ink">
-                “{t.quote}”
+            ))}
+            {items.map((t, idx) => (
+              <div key={`${t.name}-b-${idx}`} aria-hidden="true">
+                <TestimonialCard testimonial={t} logicalIdx={idx} />
               </div>
-              <div className="mt-5 flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-semibold text-brand-ink">
-                    {t.name}
-                  </div>
-                  <div className="text-xs text-brand-muted">{t.title}</div>
-                </div>
-                <div className="text-xs font-semibold text-brand-primary-700">
-                  Broadbase
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
-              );
-            })()
-          ))}
-        </div>
-
-        <div className="mt-1 flex items-center justify-center gap-2 sm:hidden">
-          <Button type="button" variant="ghost" size="sm" onClick={prev}>
-            Prev
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={next}>
-            Next
-          </Button>
         </div>
       </div>
     </section>
   );
 }
-

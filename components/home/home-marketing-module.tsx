@@ -134,9 +134,9 @@ function BadgeCheckIcon() {
 
 export function HomeMarketingModule() {
   return (
-    <section className="w-full bg-surface-page py-16 md:py-20">
+    <section className="fade-in-container w-full bg-surface-page py-16 md:py-20">
       <div className="bb-container">
-        <div className="mb-12 text-center">
+        <div className="fade-in-element mb-12 text-center">
           <h2 className="font-heading text-4xl font-normal text-text-primary md:text-5xl">
             {HEADLINE}
           </h2>
@@ -147,7 +147,7 @@ export function HomeMarketingModule() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:gap-8">
           {FEATURE_CARDS.map((card) => (
-            <div key={card.title} className="group relative">
+            <div key={card.title} className="fade-in-element group relative">
               <div
                 className="pointer-events-none absolute inset-0 rounded-xl opacity-60"
                 style={{ background: card.gradient, filter: 'blur(45px)' }}

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { FadeInScroll } from '@/components/home/fade-in-scroll';
 import { ButtonLink } from '@/components/ui/button';
 import { HomeAudienceHero } from '@/components/home/home-audience-hero';
 import { HomeHeroIllustration } from '@/components/home/home-hero-illustration';
@@ -22,9 +23,10 @@ const JOURNALIST_FEATURE_CLASS =
 export default function HomePage() {
   return (
     <main className="min-h-screen overflow-x-clip">
+      <FadeInScroll />
       <PublicSiteHeader />
-
-      <HomeAudienceHero
+      <div className="bb-home-hero-stack">
+        <HomeAudienceHero
         radleyClassName={headingFontClassName}
         journalist={
           <div className="relative md:min-h-[380px]">
@@ -150,6 +152,7 @@ export default function HomePage() {
           </div>
         }
       />
+      </div>
 
       <HomeSocialProofRow
         logos={[

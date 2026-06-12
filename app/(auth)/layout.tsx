@@ -37,20 +37,5 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 p-6">
-      <div className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
-        {!env ? (
-          <div
-            className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
-            role="status"
-          >
-            Sign-in is unavailable: Supabase environment variables are not configured
-            on this deployment.
-          </div>
-        ) : null}
-        {children}
-      </div>
-    </div>
-  );
+  return children;
 }

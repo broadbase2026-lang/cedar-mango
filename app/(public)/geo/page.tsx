@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { FadeInScroll } from '@/components/home/fade-in-scroll';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Badge } from '@/components/ui/badge';
@@ -64,18 +65,18 @@ const SHIFT_CARDS = [
 
 function ShiftSection() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
-      <h2 className="font-heading text-3xl font-normal">
+    <section className="fade-in-container mx-auto max-w-5xl px-6 py-16">
+      <h2 className="fade-in-element font-heading text-3xl font-normal">
         {GEO_PAGE.SHIFT_HEADING}
       </h2>
 
-      <p className="mt-6 max-w-2xl font-sans text-base leading-relaxed text-text-secondary">
+      <p className="fade-in-element mt-6 max-w-2xl font-sans text-base leading-relaxed text-text-secondary">
         {GEO_PAGE.SHIFT_BODY}
       </p>
 
       <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         {SHIFT_CARDS.map((card) => (
-          <Card key={card.label} className="shadow-media-soft">
+          <Card key={card.label} className="fade-in-element shadow-media-soft">
             <CardHeader>
               <p className="font-sans text-xs uppercase tracking-wide text-text-secondary">
                 {card.label}
@@ -111,9 +112,9 @@ function ContentPreviewRow({
 
 function WhatSection() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
+    <section className="fade-in-container mx-auto max-w-5xl px-6 py-16">
       <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
-        <div>
+        <div className="fade-in-element">
           <h2 className="font-heading text-3xl font-normal">
             {GEO_PAGE.WHAT_HEADING}
           </h2>
@@ -123,7 +124,7 @@ function WhatSection() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-border-default bg-white p-5 shadow-media-soft">
+          <div className="fade-in-element rounded-xl border border-border-default bg-white p-5 shadow-media-soft">
             <Badge status="success">{GEO_PAGE.WHAT_STRUCTURED_LABEL}</Badge>
             <div className="mt-4 flex flex-col gap-3">
               {OPTIMISED_PREVIEW_ROWS.map((barWidth) => (
@@ -136,7 +137,7 @@ function WhatSection() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border-default bg-white p-5 shadow-media-soft">
+          <div className="fade-in-element rounded-xl border border-border-default bg-white p-5 shadow-media-soft">
             <Badge status="error">{GEO_PAGE.WHAT_UNSTRUCTURED_LABEL}</Badge>
             <div className="mt-4 flex flex-col gap-3">
               {UNOPTIMISED_PREVIEW_ROWS.map((barWidth) => (
@@ -274,23 +275,23 @@ const PILLARS = [
 
 function PillarsSection() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
+    <section className="fade-in-container mx-auto max-w-5xl px-6 py-16">
       <div className="rounded-2xl bg-surface-raised px-8 py-12">
-        <p className="font-sans text-xs uppercase tracking-wide text-text-secondary">
+        <p className="fade-in-element font-sans text-xs uppercase tracking-wide text-text-secondary">
           {GEO_PAGE.PILLARS_EYEBROW}
         </p>
 
-        <h2 className="mt-3 font-heading text-3xl font-normal">
+        <h2 className="fade-in-element mt-3 font-heading text-3xl font-normal">
           {GEO_PAGE.PILLARS_HEADING}
         </h2>
 
-        <p className="mt-4 max-w-2xl font-sans text-base text-text-secondary">
+        <p className="fade-in-element mt-4 max-w-2xl font-sans text-base text-text-secondary">
           {GEO_PAGE.PILLARS_SUBHEAD}
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {PILLARS.map(({ title, body, Icon }) => (
-            <Card key={title} className="rounded-xl p-6 shadow-media-soft">
+            <Card key={title} className="fade-in-element rounded-xl p-6 shadow-media-soft">
               <Icon />
               <h3 className="mt-3 font-heading text-lg font-normal">{title}</h3>
               <p className="mt-2 font-sans text-sm leading-relaxed text-text-secondary">
@@ -326,17 +327,17 @@ function ScoringSection() {
   return (
     <section
       id="scoring"
-      className="mx-auto max-w-5xl scroll-mt-20 px-6 py-16"
+      className="fade-in-container mx-auto max-w-5xl scroll-mt-20 px-6 py-16"
     >
-      <h2 className="font-heading text-3xl font-normal">
+      <h2 className="fade-in-element font-heading text-3xl font-normal">
         {GEO_PAGE.SCORING_HEADING}
       </h2>
 
-      <p className="mt-4 max-w-2xl font-sans text-base leading-relaxed text-text-secondary">
+      <p className="fade-in-element mt-4 max-w-2xl font-sans text-base leading-relaxed text-text-secondary">
         {GEO_PAGE.SCORING_SUBHEAD}
       </p>
 
-      <div className="mt-6 mb-8 flex flex-wrap gap-3">
+      <div className="fade-in-element mt-6 mb-8 flex flex-wrap gap-3">
         {SCORE_BANDS.map((band) => (
           <Badge key={band.range} status={band.status}>
             {band.range} — {band.label}
@@ -348,7 +349,7 @@ function ScoringSection() {
         {GEO_SCORE_CRITERIA.map((criterion) => (
           <div
             key={criterion.key}
-            className="flex items-start gap-4 border-b border-border-default py-4 last:border-0"
+            className="fade-in-element flex items-start gap-4 border-b border-border-default py-4 last:border-0"
           >
             <Badge status="neutral" className="tabular-nums">
               +{criterion.points} pts
@@ -365,7 +366,7 @@ function ScoringSection() {
         ))}
       </div>
 
-      <div className="mt-6 border-t border-border-default pt-6">
+      <div className="fade-in-element mt-6 border-t border-border-default pt-6">
         <p className="font-sans text-sm font-medium text-text-primary">
           {GEO_PAGE.SCORING_TOTAL}
         </p>
@@ -414,13 +415,13 @@ const AGENCY_BENEFITS = [
 
 function BenefitsSection() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
-      <h2 className="text-center font-heading text-3xl font-normal">
+    <section className="fade-in-container mx-auto max-w-5xl px-6 py-16">
+      <h2 className="fade-in-element text-center font-heading text-3xl font-normal">
         {GEO_PAGE.BENEFITS_HEADING}
       </h2>
 
       <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2">
-        <Card className="rounded-xl p-8 shadow-media-soft">
+        <Card className="fade-in-element rounded-xl p-8 shadow-media-soft">
           <div className="mb-6 h-1 rounded-full bg-accent/40" />
           <h3 className="font-heading text-xl font-normal">
             {GEO_PAGE.BENEFITS_BRAND_LABEL}
@@ -437,7 +438,7 @@ function BenefitsSection() {
           </ul>
         </Card>
 
-        <Card className="rounded-xl p-8 shadow-media-soft">
+        <Card className="fade-in-element rounded-xl p-8 shadow-media-soft">
           <div className="mb-6 h-1 rounded-full bg-accent" />
           <h3 className="font-heading text-xl font-normal">
             {GEO_PAGE.BENEFITS_AGENCY_LABEL}
@@ -460,16 +461,16 @@ function BenefitsSection() {
 
 function CtaSection() {
   return (
-    <section className="mx-auto max-w-2xl px-6 py-24 text-center">
-      <h2 className="font-heading text-3xl font-normal">
+    <section className="fade-in-container mx-auto max-w-2xl px-6 py-24 text-center">
+      <h2 className="fade-in-element font-heading text-3xl font-normal">
         {GEO_PAGE.CTA_HEADING}
       </h2>
 
-      <p className="mt-4 font-sans text-base leading-relaxed text-text-secondary">
+      <p className="fade-in-element mt-4 font-sans text-base leading-relaxed text-text-secondary">
         {GEO_PAGE.CTA_BODY}
       </p>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-4">
+      <div className="fade-in-element mt-8 flex flex-wrap justify-center gap-4">
         <ButtonLink href="/signup" variant="accent" size="md">
           {GEO_PAGE.CTA_PRIMARY}
         </ButtonLink>
@@ -478,7 +479,7 @@ function CtaSection() {
         </ButtonLink>
       </div>
 
-      <p className="mt-4 font-sans text-xs text-text-secondary">
+      <p className="fade-in-element mt-4 font-sans text-xs text-text-secondary">
         {GEO_PAGE.CTA_NOTE}
       </p>
 
@@ -490,6 +491,7 @@ function CtaSection() {
 export default function GeoPage() {
   return (
     <div className="min-h-screen bg-surface-page">
+      <FadeInScroll />
       <PublicSiteHeader />
       <HeroSection />
       <ShiftSection />

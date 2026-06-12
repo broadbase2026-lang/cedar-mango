@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { isBetaTrialOnly } from '@/lib/config/beta';
 import { PRICING_COPY } from '@/constants/copy';
+import { FadeInScroll } from '@/components/home/fade-in-scroll';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { ButtonLink } from '@/components/ui/button';
@@ -44,7 +45,7 @@ function TierCard(props: {
   return (
     <section
       className={[
-        'relative flex h-full flex-col rounded-2xl border border-border-default bg-white p-6',
+        'fade-in-element relative flex h-full flex-col rounded-2xl border border-border-default bg-white p-6',
         props.badge
           ? 'shadow-media-soft ring-2 ring-accent'
           : 'shadow-sm',
@@ -262,6 +263,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
   return (
     <main className="min-h-screen bg-white">
+      <FadeInScroll />
       <PublicSiteHeader />
 
       <section className="border-b border-border-default bg-white">
@@ -275,7 +277,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <section className="pt-6 pb-10 md:pt-8 md:pb-14">
+      <section className="fade-in-container pt-6 pb-10 md:pt-8 md:pb-14">
         <div className="bb-container">
           {checkoutError ? (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
@@ -294,13 +296,13 @@ export default async function PricingPage({ searchParams }: PageProps) {
           ) : null}
 
           {isBetaTrialOnly ? (
-            <div className="mb-8 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-4 text-sm text-neutral-700">
+            <div className="fade-in-element mb-8 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-4 text-sm text-neutral-700">
               Paid subscriptions are not available during the beta. Start a free trial
               above to publish your first press release.
             </div>
           ) : null}
 
-          <div className="mb-8 rounded-2xl border border-accent/30 bg-accent-subtle px-5 py-4">
+          <div className="fade-in-element mb-8 rounded-2xl border border-accent/30 bg-accent-subtle px-5 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium text-text-primary">
                 {PRICING_COPY.trial.banner}
@@ -335,35 +337,37 @@ export default async function PricingPage({ searchParams }: PageProps) {
               cta={planButton('agency')}
             />
           </div>
+        </div>
+      </section>
 
-          <div className="mt-14 border-t border-border-default pt-10">
-            <h2 className="font-heading text-xl text-text-primary">
-              {PRICING_COPY.faq.heading}
-            </h2>
-            <dl className="mt-6 grid gap-6 md:grid-cols-2">
-              {PRICING_COPY.faq.items.map((item) => (
-                <div
-                  key={item.q}
-                  className="rounded-2xl border border-border-default bg-white p-5"
-                >
-                  <dt className="text-sm font-semibold text-text-primary">
-                    {item.q}
-                  </dt>
-                  <dd className="mt-2 text-sm text-text-secondary">{item.a}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <div className="mt-10 text-sm text-text-secondary">
-              {PRICING_COPY.footer.cta}{' '}
-              <a
-                href={PRICING_COPY.footer.contactHref}
-                className="font-semibold text-accent underline underline-offset-4 hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+      <section className="fade-in-container border-t border-border-default pb-10 md:pb-14">
+        <div className="bb-container pt-10">
+          <h2 className="fade-in-element font-heading text-xl text-text-primary">
+            {PRICING_COPY.faq.heading}
+          </h2>
+          <dl className="mt-6 grid gap-6 md:grid-cols-2">
+            {PRICING_COPY.faq.items.map((item) => (
+              <div
+                key={item.q}
+                className="fade-in-element rounded-2xl border border-border-default bg-white p-5"
               >
-                {PRICING_COPY.footer.contactLabel}
-              </a>
-              .
-            </div>
+                <dt className="text-sm font-semibold text-text-primary">
+                  {item.q}
+                </dt>
+                <dd className="mt-2 text-sm text-text-secondary">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="fade-in-element mt-10 text-sm text-text-secondary">
+            {PRICING_COPY.footer.cta}{' '}
+            <a
+              href={PRICING_COPY.footer.contactHref}
+              className="font-semibold text-accent underline underline-offset-4 hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
+              {PRICING_COPY.footer.contactLabel}
+            </a>
+            .
           </div>
         </div>
       </section>

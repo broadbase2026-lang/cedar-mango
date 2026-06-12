@@ -1,12 +1,17 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
+
+gsap.registerPlugin(ScrollTrigger);
 
 type LenisControl = {
   stop: () => void;
   start: () => void;
+  scrollToTop: (immediate?: boolean) => void;
 };
 
 const LenisContext = createContext<LenisControl | null>(null);
@@ -19,11 +24,21 @@ export function useLenisControl(): LenisControl | null {
 export function useLenisScrollLock(locked: boolean) {
   const lenis = useLenisControl();
 
-  useEffect(() => {
-    if (!locked || !lenis) return;
-    lenis.stop();
+  useLayoutEffect(() => {
+    if (!locked) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+
+    if (lenis) {
+      lenis.scrollToTop(true);
+      lenis.stop();
+    }
+
     return () => {
-      lenis.start();
+      document.body.style.overflow = prevOverflow;
+      lenis?.start();
     };
   }, [locked, lenis]);
 }
@@ -38,6 +53,9 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
       },
       start: () => {
         lenisRef.current?.start();
+      },
+      scrollToTop: (immediate = true) => {
+        lenisRef.current?.scrollTo(0, { immediate });
       },
     }),
     [],
@@ -55,14 +73,18 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
     });
     lenisRef.current = lenis;
 
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
+    lenis.on('scroll', ScrollTrigger.update);
 
-    requestAnimationFrame(raf);
+    const onTick = (time: number) => {
+      lenis.raf(time * 1000);
+    };
+
+    gsap.ticker.add(onTick);
+    gsap.ticker.lagSmoothing(0);
 
     return () => {
+      lenis.off('scroll', ScrollTrigger.update);
+      gsap.ticker.remove(onTick);
       lenis.destroy();
       lenisRef.current = null;
     };

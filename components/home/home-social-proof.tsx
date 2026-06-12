@@ -26,28 +26,29 @@ export function HomeSocialProofRow({
   return (
     <section
       className={cn(
-        'border-t border-brand-border/70 bg-brand-surface',
+        'fade-in-container border-t border-brand-border/70 bg-brand-surface',
         className,
       )}
     >
       <div className="bb-container py-10">
-        <p className="text-center text-xs font-medium uppercase tracking-wide text-brand-muted">
+        <p className="fade-in-element text-center text-xs font-medium uppercase tracking-wide text-brand-muted">
           {heading}
         </p>
 
         <div className="mt-6 grid grid-cols-2 items-center justify-items-center gap-6 sm:flex sm:flex-wrap sm:justify-evenly">
           {logos.map((logo) => (
-            <Image
-              key={logo.name}
-              src={logo.src}
-              alt={logo.name}
-              width={logo.width}
-              height={logo.height}
-              className={cn(
-                'w-auto shrink-0 object-contain',
-                logo.imageClassName ?? 'h-10 sm:h-14',
-              )}
-            />
+            <div key={logo.name} className="fade-in-element">
+              <Image
+                src={logo.src}
+                alt={logo.name}
+                width={logo.width}
+                height={logo.height}
+                className={cn(
+                  'w-auto shrink-0 object-contain',
+                  logo.imageClassName ?? 'h-10 sm:h-14',
+                )}
+              />
+            </div>
           ))}
         </div>
       </div>

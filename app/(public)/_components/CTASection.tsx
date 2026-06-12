@@ -33,13 +33,13 @@ function ArrowRightIcon() {
 
 export function CTASection() {
   return (
-    <section className="relative w-full bg-[var(--bb-top-nav)] py-16 text-brand-ink md:py-20">
+    <section className="fade-in-container relative w-full bg-[var(--bb-top-nav)] py-16 text-brand-ink md:py-20">
       <div className="bb-container max-w-4xl">
-        <h2 className="mb-12 text-center font-heading text-4xl font-normal md:mb-16 md:text-5xl">
+        <h2 className="fade-in-element mb-12 text-center font-heading text-4xl font-normal md:mb-16 md:text-5xl">
           {HEADLINE}
         </h2>
 
-        <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
+        <div className="fade-in-element flex flex-col items-center justify-center gap-6 sm:flex-row">
           <ButtonLink
             href={JOURNALIST_CTA.href}
             variant="accent"

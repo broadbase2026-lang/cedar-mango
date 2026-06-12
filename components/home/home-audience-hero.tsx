@@ -4,12 +4,16 @@ import Image from 'next/image';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
+import { gsap } from 'gsap';
 import { APP_NAME } from '@/constants/copy';
+import { AudienceRailButton } from '@/components/home/audience-rail-button';
 import { Button } from '@/components/ui/button';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 
@@ -22,22 +26,10 @@ function cn(...parts: Array<string | undefined | false | null>) {
   return parts.filter(Boolean).join(' ');
 }
 
-const DESKTOP_STRIP_WIDTH = 'w-12';
-
 const panelTransitionStyle = {
   transitionDuration: `${PANEL_ANIMATION_MS}ms`,
   transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
 } as const;
-
-const desktopStripButtonClassName = cn(
-  'absolute inset-y-0 z-50 hidden md:flex',
-  DESKTOP_STRIP_WIDTH,
-  'items-center justify-center px-2 py-8',
-  'rounded-none bg-accent text-sm font-semibold text-text-inverse',
-  'ring-1 ring-inset ring-white/20',
-  'transition-[left] ease-in-out motion-reduce:transition-none',
-  'hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
-);
 
 const mobileAudienceCtaWrapClassName = cn(
   'sticky bottom-0 z-20 w-full shrink-0 self-stretch md:hidden',
@@ -70,9 +62,9 @@ export function HomeAudienceHero({
 }) {
   const [ready, setReady] = useState(false);
   const [audience, setAudience] = useState<Audience | null>(null);
-  /** Start true so the picker paints on first paint; visibility stays tied to `audience === null` once ready. */
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [overlayClosing, setOverlayClosing] = useState(false);
+  const [overlayMounted, setOverlayMounted] = useState(false);
 
   const overlayTimerRef = useRef<number | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -83,25 +75,10 @@ export function HomeAudienceHero({
 
   useLenisScrollLock(showOverlay && !overlayClosing);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === 'journalist' || stored === 'brand') {
-        setAudience(stored);
-        setOverlayVisible(false);
-      }
-    } finally {
-      setReady(true);
-    }
+  useLayoutEffect(() => {
+    setReady(true);
+    setOverlayMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    // Only force the picker open when no audience is chosen; closing is handled in `choose`.
-    if (audience === null) {
-      setOverlayVisible(true);
-    }
-  }, [audience, ready]);
 
   useEffect(() => {
     return () => {
@@ -215,76 +192,135 @@ export function HomeAudienceHero({
     return () => window.cancelAnimationFrame(id);
   }, [showOverlay, overlayClosing]);
 
+  useEffect(() => {
+    if (!showOverlay || overlayClosing || !overlayMounted) return;
+
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    let ctx: gsap.Context | null = null;
+    let cancelled = false;
+    const frameId = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+
+      const overlay = overlayRef.current;
+      const buttonWrap = overlay?.querySelector<HTMLElement>(
+        '[data-audience-overlay-buttons]',
+      );
+      const buttons = buttonWrap?.querySelectorAll('button');
+      if (!overlay || !buttonWrap || !buttons?.length) return;
+
+      ctx = gsap.context(() => {
+        if (reducedMotion) {
+          gsap.set(buttons, { rotationX: 0, opacity: 1, y: 0, clearProps: 'transform' });
+          return;
+        }
+
+        gsap.set(buttonWrap, { perspective: 900 });
+        gsap.fromTo(
+          buttons,
+          {
+            rotationX: -90,
+            opacity: 0,
+            y: -8,
+            transformOrigin: '50% 0%',
+            transformPerspective: 900,
+          },
+          {
+            rotationX: 0,
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            stagger: 0.12,
+            ease: 'back.out(1.35)',
+            delay: 0.2,
+          },
+        );
+      }, overlay);
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+      ctx?.revert();
+    };
+  }, [showOverlay, overlayClosing, overlayMounted]);
+
   const trackOffsetClassName = bothPreview
     ? '-translate-x-[25%] motion-reduce:-translate-x-[25%]'
     : audience === 'journalist'
       ? 'translate-x-0'
       : '-translate-x-1/2 motion-reduce:-translate-x-1/2';
 
+  const overlay = showOverlay ? (
+    <div
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="home-audience-heading"
+      className={cn(
+        'fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-[#ffb81a] px-6',
+        'transition-opacity duration-500 ease-in-out motion-reduce:transition-none',
+        overlayClosing ? 'pointer-events-none opacity-0' : 'opacity-100',
+      )}
+    >
+      <Image
+        src="/broadbase-logo.png"
+        alt={APP_NAME}
+        width={180}
+        height={32}
+        className="h-8 w-auto"
+        priority
+      />
+      <p
+        id="home-audience-heading"
+        className={cn(
+          radleyClassName,
+          'text-center text-2xl font-normal tracking-tight text-brand-ink md:text-3xl',
+        )}
+      >
+        Choose your character
+      </p>
+      <div
+        data-audience-overlay-buttons
+        className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center [perspective:900px]"
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
+          onClick={() => choose('journalist')}
+          disabled={overlayClosing}
+        >
+          I am a journalist
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
+          onClick={() => choose('brand')}
+          disabled={overlayClosing}
+        >
+          I am a brand / agency
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <section
       ref={sectionRef}
-      className="relative isolate"
+      className="bb-home-audience-hero relative isolate"
       style={
         {
           '--hero-parallax-y': `${parallaxY}px`,
         } as CSSProperties
       }
     >
-      {showOverlay ? (
-        <div
-          ref={overlayRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="home-audience-heading"
-          className={cn(
-            'fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 px-6',
-            'bg-[color-mix(in_srgb,var(--bb-top-nav)_60%,transparent)] backdrop-blur-md',
-            'transition-opacity duration-500 motion-reduce:transition-none',
-            overlayClosing
-              ? 'opacity-0 pointer-events-none'
-              : 'opacity-100',
-          )}
-        >
-          <Image
-            src="/broadbase-logo.png"
-            alt={APP_NAME}
-            width={180}
-            height={32}
-            className="h-8 w-auto brightness-0 invert"
-            priority
-          />
-          <p
-            id="home-audience-heading"
-            className={cn(
-              radleyClassName,
-              'text-center text-2xl text-white md:text-3xl font-normal tracking-tight',
-            )}
-          >
-            Choose your character
-          </p>
-          <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-12 w-full sm:flex-1 bg-white text-brand-ink hover:bg-white/90"
-              onClick={() => choose('journalist')}
-              disabled={overlayClosing}
-            >
-              I am a journalist
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-12 w-full sm:flex-1 bg-white text-brand-ink hover:bg-white/90"
-              onClick={() => choose('brand')}
-              disabled={overlayClosing}
-            >
-              I am a brand / agency
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      {overlayMounted && overlay
+        ? createPortal(overlay, document.body)
+        : null}
 
       <div className="relative">
         <div className="overflow-x-hidden">
@@ -302,7 +338,7 @@ export function HomeAudienceHero({
             <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col justify-start px-6">
               <div
                 className={cn(
-                  'relative py-12 md:py-20',
+                  'bb-home-audience-panel-content relative',
                   bothPreview && 'md:pr-16',
                   audience === 'journalist' && 'md:pr-12',
                 )}
@@ -339,7 +375,7 @@ export function HomeAudienceHero({
             <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col justify-start px-6">
               <div
                 className={cn(
-                  'relative py-12 md:py-20',
+                  'bb-home-audience-panel-content relative',
                   bothPreview && 'md:pl-16',
                   audience === 'brand' && 'md:pl-12',
                 )}
@@ -372,33 +408,20 @@ export function HomeAudienceHero({
         </div>
 
         {showDesktopStrip ? (
-          <button
-            type="button"
+          <AudienceRailButton
+            label={audience === 'brand' ? 'PRESS' : 'BRANDS'}
+            side={audience === 'brand' ? 'left' : 'right'}
             onClick={() =>
               switchTo(audience === 'brand' ? 'journalist' : 'brand')
             }
-            className={cn(
-              desktopStripButtonClassName,
-              audience === 'brand' ? 'left-0' : 'left-[calc(100%-3rem)]',
-            )}
-            style={ready && !showOverlay ? panelTransitionStyle : undefined}
-            aria-label={
+            ariaLabel={
               audience === 'brand'
-                ? 'Switch to journalist view'
-                : 'Switch to brand view'
+                ? 'Switch to press view'
+                : 'Switch to brands view'
             }
-          >
-            <span
-              className={cn(
-                'inline-block max-h-[min(60vh,440px)] overflow-hidden',
-                'uppercase tracking-wide',
-                audience === 'brand' && 'rotate-180',
-              )}
-              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-            >
-              {audience === 'brand' ? 'for journalists' : 'for brands'}
-            </span>
-          </button>
+            animatePosition
+            style={ready && !showOverlay ? panelTransitionStyle : undefined}
+          />
         ) : null}
       </div>
     </section>
