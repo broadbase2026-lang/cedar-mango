@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Context } from 'gsap';
 import { animateFlipDown } from '@/components/home/flip-down-gsap';
 import { usePathname } from 'next/navigation';
 import { APP_NAME } from '@/constants/copy';
@@ -74,6 +73,7 @@ export function PublicSiteHeader() {
 
     const header = headerRef.current;
     const pill = pillRef.current;
+    const blur = blurRef.current;
     const resizeObserver =
       typeof ResizeObserver !== 'undefined' && header
         ? new ResizeObserver(updateNavBlurHeight)
@@ -88,7 +88,7 @@ export function PublicSiteHeader() {
       resizeObserver?.disconnect();
       window.removeEventListener('resize', updateNavBlurHeight);
       window.removeEventListener('scroll', updateNavBlurHeight);
-      blurRef.current?.style.removeProperty('height');
+      blur?.style.removeProperty('height');
     };
   }, [updateNavBlurHeight]);
 
@@ -143,7 +143,7 @@ export function PublicSiteHeader() {
   useEffect(() => {
     if (!menuOpen) return;
 
-    let ctx: Context | null = null;
+    let ctx: ReturnType<typeof animateFlipDown> = null;
     let cancelled = false;
 
     const frameId = window.requestAnimationFrame(() => {

@@ -11,7 +11,7 @@ export function animateFlipDown(
   perspectiveParent: HTMLElement,
   targets: Element[],
   options: FlipDownOptions = {},
-): gsap.Context | null {
+): ReturnType<typeof gsap.context> | null {
   if (!targets.length) return null;
 
   const { delay = 0.2, stagger = 0.12, duration = 0.7 } = options;
