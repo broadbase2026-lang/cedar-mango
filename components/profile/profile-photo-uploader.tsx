@@ -25,8 +25,9 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function computeCoverScale(imgW: number, imgH: number, cropSize: number) {
-  return Math.max(cropSize / imgW, cropSize / imgH);
+/** Scale so the full image bounding box fits inside a circle of `cropSize` diameter. */
+function computeCircleContainScale(imgW: number, imgH: number, cropSize: number) {
+  return cropSize / Math.hypot(imgW, imgH);
 }
 
 async function fileToImage(file: File): Promise<HTMLImageElement> {
@@ -71,9 +72,9 @@ async function renderCircleAvatarPng(input: {
   ctx.closePath();
   ctx.clip();
 
-  // Match the editor: cover-fit base scale, user zoom, and UI→output crop mapping.
-  const coverScale = computeCoverScale(img.naturalWidth, img.naturalHeight, input.cropSize);
-  const displayScale = coverScale * input.zoom;
+  // Match the editor: circle-contain base scale, user zoom, and UI→output crop mapping.
+  const baseScale = computeCircleContainScale(img.naturalWidth, img.naturalHeight, input.cropSize);
+  const displayScale = baseScale * input.zoom;
   const uiToOut = input.outSize / input.cropSize;
   const drawW = img.naturalWidth * displayScale * uiToOut;
   const drawH = img.naturalHeight * displayScale * uiToOut;
@@ -140,12 +141,12 @@ export function ProfilePhotoUploader({
     return () => URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
-  const coverScale = useMemo(() => {
+  const baseScale = useMemo(() => {
     if (!naturalSize) return 1;
-    return computeCoverScale(naturalSize.w, naturalSize.h, CROP_SIZE);
+    return computeCircleContainScale(naturalSize.w, naturalSize.h, CROP_SIZE);
   }, [naturalSize]);
 
-  const displayScale = coverScale * zoom;
+  const displayScale = baseScale * zoom;
   const displaySize = useMemo(() => {
     if (!naturalSize) return null;
     return {

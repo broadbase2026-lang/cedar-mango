@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
-import { ERROR_MESSAGES, PLAN_LIMITS } from '@/constants/copy';
+import { ERROR_MESSAGES, PLAN_LIMITS, TRIAL_LIMIT_COPY } from '@/constants/copy';
 
 type ApiResult =
   | { success: true; data: { id: string } }
@@ -82,7 +82,10 @@ export async function POST(req: Request) {
   const subscription = await resolvePayableSubscription(admin, user.id);
 
   if (!subscription) {
-    return json({ success: false, error: 'subscription_required' }, 403);
+    return json(
+      { success: false, error: 'You need an active subscription to publish.' },
+      403
+    );
   }
 
   const { trialMode, releasesUsed, plan: subPlan, releasesPublishedThisPeriod } =
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
     return json(
       {
         success: false,
-        error: 'upgrade_required',
+        error: TRIAL_LIMIT_COPY.errors.releaseLimit,
         data: { redirectTo: '/pricing?reason=release-limit' },
       },
       200
@@ -129,7 +132,27 @@ export async function POST(req: Request) {
   }
 
   if (releaseRes.data.status !== 'draft') {
-    return json({ success: false, error: 'invalid_status' }, 400);
+    return json(
+      { success: false, error: 'Only draft releases can be published.' },
+      400
+    );
+  }
+
+  const assetsCountRes = await admin
+    .from('press_assets')
+    .select('id', { count: 'exact', head: true })
+    .eq('press_release_id', parsed.data.releaseId)
+    .is('deleted_at', null);
+
+  if ((assetsCountRes.count ?? 0) < 1) {
+    return json(
+      {
+        success: false,
+        error:
+          'Add at least 1 press image on the draft (Press images section) or in Media Library before publishing.',
+      },
+      400
+    );
   }
 
   const now = new Date().toISOString();

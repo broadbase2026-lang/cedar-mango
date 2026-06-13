@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { publishRelease } from '@/app/(brand)/brand/dashboard/actions';
 
 function toDatetimeLocalValue(isoUtc: string): string {
   const d = new Date(isoUtc);
@@ -22,6 +21,12 @@ function minMaxEmbargo() {
     max: max.toISOString().slice(0, 16),
   };
 }
+
+type PublishApiResponse = {
+  success?: boolean;
+  error?: string;
+  data?: { redirectTo?: string };
+};
 
 export function ReleasePublishPanel(props: {
   releaseId: string;
@@ -65,18 +70,38 @@ export function ReleasePublishPanel(props: {
                 const embargoUntilUtc = embargoLocal
                   ? new Date(embargoLocal).toISOString()
                   : undefined;
-                const res = await publishRelease(releaseId, embargoUntilUtc);
-                if (!res.ok) {
-                  if ('redirectTo' in res && typeof res.redirectTo === 'string') {
-                    router.push(res.redirectTo);
+                const res = await fetch('/api/press-releases/publish', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    releaseId,
+                    ...(embargoUntilUtc ? { embargo_until: embargoUntilUtc } : {}),
+                  }),
+                });
+
+                let json: PublishApiResponse | null = null;
+                try {
+                  json = (await res.json()) as PublishApiResponse;
+                } catch {
+                  json = null;
+                }
+
+                if (!json || json.success !== true) {
+                  if (json?.data?.redirectTo) {
+                    router.push(json.data.redirectTo);
                     return;
                   }
-                  setError(res.message);
+                  setError(
+                    typeof json?.error === 'string' && json.error.length > 0
+                      ? json.error
+                      : `Publish failed (${res.status}).`
+                  );
                   return;
                 }
+
                 router.refresh();
-              } catch (e: any) {
-                setError(e?.message ?? 'Publish failed.');
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : 'Publish failed.');
               }
             });
           }}
@@ -119,4 +144,3 @@ export function ReleasePublishPanel(props: {
     </section>
   );
 }
-
