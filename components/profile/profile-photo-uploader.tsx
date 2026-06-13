@@ -118,7 +118,6 @@ export function ProfilePhotoUploader({
   const [file, setFile] = useState<File | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
-  const [coverScale, setCoverScale] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -141,6 +140,20 @@ export function ProfilePhotoUploader({
     return () => URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
+  const coverScale = useMemo(() => {
+    if (!naturalSize) return 1;
+    return computeCoverScale(naturalSize.w, naturalSize.h, CROP_SIZE);
+  }, [naturalSize]);
+
+  const displayScale = coverScale * zoom;
+  const displaySize = useMemo(() => {
+    if (!naturalSize) return null;
+    return {
+      w: naturalSize.w * displayScale,
+      h: naturalSize.h * displayScale,
+    };
+  }, [naturalSize, displayScale]);
+
   const initials = useMemo(() => {
     const x = (displayFallback || 'A').trim();
     return x.slice(0, 1).toUpperCase();
@@ -155,7 +168,6 @@ export function ProfilePhotoUploader({
     setFile(null);
     setObjectUrl(null);
     setNaturalSize(null);
-    setCoverScale(1);
     setZoom(1);
     setOffsetX(0);
     setOffsetY(0);
@@ -191,7 +203,6 @@ export function ProfilePhotoUploader({
       setFile(f);
       setObjectUrl(URL.createObjectURL(f));
       setNaturalSize({ w, h });
-      setCoverScale(computeCoverScale(w, h, CROP_SIZE));
       setZoom(1);
       setOffsetX(0);
       setOffsetY(0);
@@ -321,19 +332,20 @@ export function ProfilePhotoUploader({
                     setDragStart(null);
                   }}
                 >
-                  {objectUrl && naturalSize ? (
+                  {objectUrl && naturalSize && displaySize ? (
                     // Blob URL + drag/zoom crop needs native img sizing (not next/image).
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={objectUrl}
                       alt=""
                       draggable={false}
-                      width={naturalSize.w}
-                      height={naturalSize.h}
-                      className="absolute left-1/2 top-1/2 max-w-none"
+                      className="absolute left-1/2 top-1/2 max-w-none max-h-none select-none"
                       style={{
-                        transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px) scale(${coverScale * zoom})`,
-                        transformOrigin: 'center',
+                        width: displaySize.w,
+                        height: displaySize.h,
+                        maxWidth: 'none',
+                        maxHeight: 'none',
+                        transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`,
                       }}
                     />
                   ) : null}

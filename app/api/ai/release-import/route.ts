@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { GenerativeModel } from '@google/generative-ai';
 import {
   buildInlineDataPart,
   geminiJsonGenerationConfig,
@@ -12,119 +11,19 @@ import {
   isGeminiQuotaError,
   isGeminiUnsupportedLocationError,
 } from '@/lib/ai/gemini-errors';
-import { normalizeReleaseImportResult } from '@/lib/ai/release-import-normalize';
 import { RELEASE_IMPORT_SYSTEM } from '@/lib/ai/release-import-prompt';
+import { stripEmbeddedMediaFromHtml } from '@/lib/rich-text/strip-embedded-media';
 import { classifyReleaseImportFile } from '@/lib/brand/release-import-files';
+import {
+  bytesToBase64,
+  generateImportFromPdf,
+  generateImportFromTextPrompt,
+} from '@/lib/migration/release-import-core';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiRateLimitMessage, enforceAiRateLimit } from '@/lib/ai/rate-limit';
 
 const IMPORT_HOURLY_LIMIT = 15;
-
-function stripCodeFences(raw: string): string {
-  const s = raw.trim();
-  if (!s.startsWith('```')) return s;
-  return s.replace(/^```[a-zA-Z0-9]*\n?/, '').replace(/```$/, '').trim();
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString('base64');
-}
-
-async function generateImportFromTextPrompt(
-  model: GenerativeModel,
-  prompt: string
-) {
-  const first = await model.generateContent(prompt);
-  const firstText = first.response.text();
-  try {
-    return normalizeReleaseImportResult(firstText);
-  } catch (err: unknown) {
-    const retryPrompt = [
-      'Your previous response was invalid JSON and could not be parsed.',
-      `Parse error: ${String(err instanceof Error ? err.message : err)}`,
-      '',
-      'Return ONLY corrected, strictly valid JSON for the same document.',
-      'Do not add commentary.',
-      'If bodyHtml escaping is difficult, return bodyHtmlBase64 instead.',
-      '',
-      'Previous response (for reference):',
-      stripCodeFences(firstText).slice(0, 20_000),
-    ].join('\n');
-    const second = await model.generateContent(retryPrompt);
-    const secondText = second.response.text();
-    try {
-      return normalizeReleaseImportResult(secondText);
-    } catch {
-      const finalPrompt = [
-        'Return ONLY valid JSON with this shape:',
-        '{ "title": string, "summary": string|null, "bodyHtmlBase64": string, "industry_vertical": "fnb"|"travel"|"culture"|"fashion"|"lifestyle"|"other"|null, "tags": string[] }',
-        '',
-        'Requirements:',
-        '- bodyHtmlBase64 must be base64 of UTF-8 HTML (no other encoding).',
-        '- Do NOT include bodyHtml (only bodyHtmlBase64).',
-        '',
-        prompt.slice(0, 500_000),
-      ].join('\n');
-      const third = await model.generateContent(finalPrompt);
-      return normalizeReleaseImportResult(third.response.text());
-    }
-  }
-}
-
-async function generateImportFromPdf(
-  model: GenerativeModel,
-  base64: string
-) {
-  const userText =
-    'Extract the press release fields from the attached PDF. ' +
-    'Scan the ENTIRE PDF (all pages). ' +
-    'If the document contains "ENDS"/"END", do NOT stop there; continue reading subsequent pages/sections.';
-
-  const first = await model.generateContent([
-    { text: userText },
-    buildInlineDataPart('application/pdf', base64),
-  ]);
-  const firstText = first.response.text();
-  try {
-    return normalizeReleaseImportResult(firstText);
-  } catch (err: unknown) {
-    const retryPrompt = [
-      'Your previous response was invalid JSON and could not be parsed.',
-      `Parse error: ${String(err instanceof Error ? err.message : err)}`,
-      '',
-      'Return ONLY corrected, strictly valid JSON for the same document.',
-      'Do not add commentary.',
-      'If bodyHtml escaping is difficult, return bodyHtmlBase64 instead.',
-      '',
-      'Previous response (for reference):',
-      stripCodeFences(firstText).slice(0, 20_000),
-    ].join('\n');
-    const second = await model.generateContent([
-      { text: retryPrompt },
-      buildInlineDataPart('application/pdf', base64),
-    ]);
-    const secondText = second.response.text();
-    try {
-      return normalizeReleaseImportResult(secondText);
-    } catch {
-      const finalPrompt = [
-        'Return ONLY valid JSON with this shape:',
-        '{ "title": string, "summary": string|null, "bodyHtmlBase64": string, "industry_vertical": "fnb"|"travel"|"culture"|"fashion"|"lifestyle"|"other"|null, "tags": string[] }',
-        '',
-        'Requirements:',
-        '- bodyHtmlBase64 must be base64 of UTF-8 HTML (no other encoding).',
-        '- Do NOT include bodyHtml (only bodyHtmlBase64).',
-        '- Scan the ENTIRE PDF (all pages). Ignore "ENDS"/"END" as a stop marker.',
-      ].join('\n');
-      const third = await model.generateContent([
-        { text: finalPrompt },
-        buildInlineDataPart('application/pdf', base64),
-      ]);
-      return normalizeReleaseImportResult(third.response.text());
-    }
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -166,12 +65,14 @@ export async function POST(req: Request) {
 
     if (urlRaw) {
       const { url, html } = await fetchPageHtmlForImport(urlRaw);
+      const pageHtml = stripEmbeddedMediaFromHtml(html);
       const prompt = [
         `Source URL: ${url}`,
         'The page HTML is provided below. Extract press release fields from the main article content.',
+        'Embedded images have been removed; do not recreate or reference them in bodyHtml.',
         '',
         'PAGE_HTML_START',
-        html.length > 500_000 ? html.slice(0, 500_000) : html,
+        pageHtml.length > 500_000 ? pageHtml.slice(0, 500_000) : pageHtml,
         'PAGE_HTML_END',
       ].join('\n');
       const parsed = await generateImportFromTextPrompt(model, prompt);
@@ -217,12 +118,17 @@ export async function POST(req: Request) {
         { buffer: buf },
         {
           includeDefaultStyleMap: true,
+          convertImage: mammoth.images.imgElement(async (image) => {
+            const alt = image.altText?.trim();
+            return alt ? { alt } : {};
+          }),
         }
       );
-      const docHtml = converted.value || '';
+      const docHtml = stripEmbeddedMediaFromHtml(converted.value || '');
       const prompt = [
         'Document is provided as HTML below (converted from .docx).',
         'Extract and normalize it into the required JSON fields.',
+        'Inline images were stripped from the source; do not recreate or reference them in bodyHtml.',
         '',
         'DOC_HTML_START',
         docHtml.length > 500_000 ? docHtml.slice(0, 500_000) : docHtml,
@@ -236,14 +142,18 @@ export async function POST(req: Request) {
     const rawText = await file.text();
     const prompt =
       kind === 'html'
-        ? [
-            'Document is provided as HTML below.',
-            'Extract and normalize it into the required JSON fields.',
-            '',
-            'DOC_HTML_START',
-            rawText.length > 500_000 ? rawText.slice(0, 500_000) : rawText,
-            'DOC_HTML_END',
-          ].join('\n')
+        ? (() => {
+            const docHtml = stripEmbeddedMediaFromHtml(rawText);
+            return [
+              'Document is provided as HTML below.',
+              'Extract and normalize it into the required JSON fields.',
+              'Embedded images have been removed; do not recreate or reference them in bodyHtml.',
+              '',
+              'DOC_HTML_START',
+              docHtml.length > 500_000 ? docHtml.slice(0, 500_000) : docHtml,
+              'DOC_HTML_END',
+            ].join('\n');
+          })()
         : [
             'Document is provided as plain text below.',
             'Extract and normalize it into the required JSON fields.',

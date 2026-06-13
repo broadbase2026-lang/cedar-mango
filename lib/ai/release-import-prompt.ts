@@ -12,6 +12,8 @@ export const RELEASE_IMPORT_SYSTEM = [
   'Rules:',
   '- summary: use the page subhead/dek/subtitle when clearly present; otherwise write a concise digest summary (max 280 characters). Use null only if nothing usable exists.',
   '- bodyHtml MUST be valid HTML using only these tags: p, br, strong, em, u, a, h1, h2, h3, ul, ol, li, blockquote, span',
+  '- NEVER include images in bodyHtml: no img tags, no picture/video elements, no data: URIs, and no base64 blobs.',
+  '  If the source has inline or embedded images, omit them entirely. Use nearby caption/alt text as plain paragraph text only when it adds meaning.',
   '- Preserve structure and styling: headings, paragraphs, bold/italic/underline, lists (bulleted/numbered), and links.',
   '- Prefer semantic tags over inline styles; only use inline styles when necessary (e.g., font-size, color).',
   '- Keep tags concise (1-2 words each), max 12.',
