@@ -1,7 +1,7 @@
 import type { UserType } from '@/types';
 
 export function dashboardPathForUserType(userType: UserType): string {
-  return userType === 'journalist' ? '/journalist/discover' : '/dashboard/brand';
+  return userType === 'journalist' ? '/journalist/discover' : '/brand/dashboard';
 }
 
 /** Returns a safe post-login path under `/brand` or `/journalist`, or null. */

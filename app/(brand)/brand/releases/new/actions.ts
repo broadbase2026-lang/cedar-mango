@@ -162,13 +162,19 @@ export async function createPressReleaseAction(formData: FormData) {
       );
       if (assetErr) {
         console.error('[createPressReleaseAction] press_assets insert', assetErr);
-        redirect('/brand/releases/new?error=assets_failed');
+        revalidatePath('/brand/dashboard');
+        revalidatePath('/brand/upload');
+        redirect(
+          `/brand/releases/new?edit=${encodeURIComponent(created.id)}&error=assets_failed`
+        );
       }
-      revalidatePath('/dashboard/brand');
-      revalidatePath('/brand/upload');
     }
 
-    redirect('/dashboard/brand?section=releases');
+    revalidatePath('/brand/dashboard');
+    revalidatePath('/brand/upload');
+    redirect(
+      `/brand/releases/new?edit=${encodeURIComponent(created.id)}&saved=true`
+    );
   } catch (e) {
     // Next.js `redirect()` throws a special exception; don't swallow it,
     // otherwise the browser can surface a generic "Failed to fetch".
@@ -215,7 +221,7 @@ export async function updatePressReleaseAction(formData: FormData) {
         : [];
 
     if (!releaseId) {
-      redirect('/dashboard/brand?section=releases');
+      redirect('/brand/dashboard?section=releases');
     }
     if (!title) {
       redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=missing_title`);
@@ -260,10 +266,10 @@ export async function updatePressReleaseAction(formData: FormData) {
       .maybeSingle();
 
     if (existing.error || !existing.data) {
-      redirect('/dashboard/brand?section=releases');
+      redirect('/brand/dashboard?section=releases');
     }
     if (existing.data.status === 'published') {
-      redirect('/dashboard/brand?section=releases');
+      redirect('/brand/dashboard?section=releases');
     }
 
     let admin;
@@ -319,7 +325,7 @@ export async function updatePressReleaseAction(formData: FormData) {
       revalidatePath('/brand/upload');
     }
 
-    revalidatePath('/dashboard/brand');
+    revalidatePath('/brand/dashboard');
     revalidatePath('/brand/releases/new');
     redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&saved=true`);
   } catch (e) {
@@ -331,7 +337,7 @@ export async function updatePressReleaseAction(formData: FormData) {
       throw e;
     }
     console.error('[updatePressReleaseAction] unhandled exception', e);
-    redirect('/dashboard/brand?section=releases');
+    redirect('/brand/dashboard?section=releases');
   }
 }
 

@@ -143,7 +143,7 @@ export async function registerPressAsset(input: {
   }
 
   revalidatePath('/brand/upload');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   revalidatePath('/brand/releases/new');
   return { error: null, success: true, assetId: inserted?.id };
 }
@@ -185,7 +185,7 @@ export async function softDeletePressAsset(input: {
   }
 
   revalidatePath('/brand/upload');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { error: null, success: true };
 }
 
@@ -296,6 +296,6 @@ export async function setPressAssetHero(input: {
   }
 
   revalidatePath('/brand/upload');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { error: null, success: true };
 }

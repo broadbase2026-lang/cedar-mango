@@ -61,7 +61,7 @@ export default async function NewPressReleasePage({
 
   // Only allow editing draft/archived content from this UI. Published releases are immutable here.
   if (editId && (!existing?.data || existing.data.status === 'published')) {
-    redirect('/dashboard/brand?section=releases');
+    redirect('/brand/dashboard?section=releases');
   }
 
   const errorRaw = searchParams?.error;

@@ -18,6 +18,8 @@ function first(value: string | string[] | undefined): string | undefined {
   return undefined;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function BrandUploadPage({ searchParams }: PageProps) {
   const session = await getBrandPortalSession();
   if (!session.ok) {
@@ -64,7 +66,7 @@ export default async function BrandUploadPage({ searchParams }: PageProps) {
                   {TRIAL_LIMIT_COPY.uploadGate.primaryCta}
                 </Button>
               </Link>
-              <Link href="/dashboard/brand" className="w-full sm:w-auto">
+              <Link href="/brand/dashboard" className="w-full sm:w-auto">
                 <Button className="w-full sm:w-auto" variant="ghost">
                   {TRIAL_LIMIT_COPY.uploadGate.secondaryCta}
                 </Button>

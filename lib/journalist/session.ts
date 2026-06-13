@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
@@ -25,7 +26,7 @@ export type JournalistPortalSession =
  * Server-only: authenticated journalist session + optional journalist profile row.
  * RLS applies to all subsequent queries using the returned client.
  */
-export async function getJournalistPortalSession(): Promise<JournalistPortalSession> {
+export const getJournalistPortalSession = cache(async function getJournalistPortalSession(): Promise<JournalistPortalSession> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -88,7 +89,7 @@ export async function getJournalistPortalSession(): Promise<JournalistPortalSess
     inactiveAt: null,
     scheduledDeletionAt: null,
   };
-}
+});
 
 /** HTTP status for journalist API routes when session is not ok. */
 export function journalistSessionHttpStatus(

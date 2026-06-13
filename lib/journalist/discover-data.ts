@@ -15,7 +15,6 @@ export type DiscoverReleaseRow = {
   title: string;
   slug: string;
   summary: string | null;
-  body: string | null;
   published_at: string | null;
   industry_vertical: string | null;
   brand: {
@@ -83,7 +82,6 @@ type RawDiscoverReleaseRow = {
   title: string;
   slug: string;
   summary: string | null;
-  body: string | null;
   published_at: string | null;
   industry_vertical: string | null;
   brand_id: string | null;
@@ -177,7 +175,6 @@ async function enrichDiscoverReleaseRows(
     title: r.title,
     slug: r.slug,
     summary: r.summary ?? null,
-    body: r.body ?? null,
     published_at: r.published_at ?? null,
     industry_vertical: r.industry_vertical ?? null,
     brand: r.brand_id ? brandMap.get(r.brand_id) ?? null : null,
@@ -198,7 +195,7 @@ export async function loadJournalistDiscoverSearchRows(
 
   const { data: raw } = await supabase
     .from('press_releases')
-    .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
+    .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
     .textSearch('fts', trimmed, {
       type: 'websearch',
       config: 'english',
@@ -216,7 +213,7 @@ export async function loadJournalistDiscoverData(
   const [recentRes, followsRes, foldersRes, savesRes] = await Promise.all([
     supabase
       .from('press_releases')
-      .select('id, title, slug, summary, body, published_at, industry_vertical, brand_id')
+      .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(20),
     supabase
@@ -336,7 +333,7 @@ export function mapDiscoverRowsToFeed(rows: DiscoverReleaseRow[]): PressReleaseM
         row.hero_image_url ??
         `https://picsum.photos/seed/${encodeURIComponent(row.id)}/1200/1400`,
       summary: row.summary ?? '',
-      body: row.body?.trim() ? row.body : (row.summary ?? ''),
+      body: row.summary ?? '',
       publishedAt: row.published_at ?? new Date().toISOString(),
       engagement: { pastReads: 0, pastSaves: row.saved ? 1 : 0 },
       mediaAssets: row.assets.map((a) => ({

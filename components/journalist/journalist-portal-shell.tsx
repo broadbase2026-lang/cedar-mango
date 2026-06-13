@@ -42,7 +42,6 @@ function SidebarNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             key={item.label}
             href={item.href}
-            prefetch={false}
             className={'bb-portal-nav-link ' + (active ? 'bb-portal-nav-link--active' : '')}
             onClick={onNavigate}
           >

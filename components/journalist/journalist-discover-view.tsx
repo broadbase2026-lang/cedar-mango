@@ -112,6 +112,8 @@ export function JournalistDiscoverView({
   const [mounted, setMounted] = useState(false);
   const [seed, setSeed] = useState('0');
   const [selected, setSelected] = useState<PressReleaseMock | null>(null);
+  const [previewBody, setPreviewBody] = useState('');
+  const [previewBodyLoading, setPreviewBodyLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(14);
   const [searchText, setSearchText] = useState(searchQuery);
@@ -216,6 +218,41 @@ export function JournalistDiscoverView({
   }, [mounted, curated, effectiveVisibleCount]);
 
   useLenisScrollLock(open);
+
+  useEffect(() => {
+    if (!open || !selected?.slug) {
+      setPreviewBody('');
+      setPreviewBodyLoading(false);
+      return;
+    }
+
+    const slug = selected.slug;
+    let cancelled = false;
+    setPreviewBodyLoading(true);
+
+    fetch(`/api/journalist/release-body?slug=${encodeURIComponent(slug)}`)
+      .then((res) => res.json().catch(() => null))
+      .then((json: { ok?: boolean; body?: string } | null) => {
+        if (cancelled) return;
+        if (json?.ok && typeof json.body === 'string' && json.body.trim()) {
+          setPreviewBody(json.body);
+        } else {
+          setPreviewBody(selected.body?.trim() || selected.summary || '');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreviewBody(selected.body?.trim() || selected.summary || '');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewBodyLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selected]);
 
   function onRefresh() {
     setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
@@ -513,7 +550,14 @@ export function JournalistDiscoverView({
 
                         <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
                           <div className="text-sm font-semibold text-brand-ink">Body</div>
-                          <RichTextRender html={selected.body} className="mt-2 bb-richtext text-sm leading-relaxed text-brand-ink/90" />
+                          {previewBodyLoading ? (
+                            <p className="mt-2 text-sm text-brand-muted">Loading release…</p>
+                          ) : (
+                            <RichTextRender
+                              html={previewBody}
+                              className="mt-2 bb-richtext text-sm leading-relaxed text-brand-ink/90"
+                            />
+                          )}
                         </div>
 
                         <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
@@ -544,7 +588,6 @@ export function JournalistDiscoverView({
                             <div className="mt-4 border-t border-brand-border/70 pt-3">
                               <Link
                                 href={`/journalist/release/${selected.slug}`}
-                                prefetch={false}
                                 className="text-sm font-medium text-brand-primary-700 hover:underline"
                               >
                                 Open full release page →

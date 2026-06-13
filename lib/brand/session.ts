@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { applyDevProfileOverrides } from '@/lib/auth/dev-profile-mock';
 import { createClient } from '@/lib/supabase/server';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
@@ -21,7 +22,7 @@ export type BrandPortalSession =
  * Server-only: authenticated brand owner session + optional brand row.
  * RLS applies to all subsequent queries using the returned client.
  */
-export async function getBrandPortalSession(): Promise<BrandPortalSession> {
+export const getBrandPortalSession = cache(async function getBrandPortalSession(): Promise<BrandPortalSession> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,6 +56,9 @@ export async function getBrandPortalSession(): Promise<BrandPortalSession> {
     .from('brands')
     .select('id, name')
     .eq('owner_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   return {
@@ -66,4 +70,4 @@ export async function getBrandPortalSession(): Promise<BrandPortalSession> {
     email: user.email,
     brand: brand ?? null,
   };
-}
+});

@@ -26,8 +26,8 @@ const NAV_ITEMS: ReadonlyArray<{
   href: string;
   icon: LucideIcon;
 }> = [
-  { label: 'Overview', href: '/dashboard/brand', icon: Home },
-  { label: 'My Releases', href: '/dashboard/brand?section=releases', icon: FileText },
+  { label: 'Overview', href: '/brand/dashboard', icon: Home },
+  { label: 'My Releases', href: '/brand/dashboard?section=releases', icon: FileText },
   { label: 'Media Library', href: '/brand/upload', icon: ImageIcon },
   { label: 'Analytics', href: '/brand/analytics', icon: BarChart2 },
   { label: 'Coverage', href: '/coverage', icon: Newspaper },
@@ -67,7 +67,6 @@ function SidebarNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             key={item.label}
             href={item.href}
-            prefetch={false}
             className={
               'bb-portal-nav-link ' +
               (active ? 'bb-portal-nav-link--active' : '')
@@ -254,7 +253,6 @@ export function BrandPortalShell({
         <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
           <Link
             href="/brand/releases/new"
-            prefetch={false}
             className="bb-btn-primary-md w-full no-underline sm:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           >
@@ -287,7 +285,6 @@ export function BrandPortalShell({
           <div className="bb-portal-header-actions">
             <Link
               href="/brand/releases/new"
-              prefetch={false}
               className="bb-btn-primary-md hidden no-underline sm:inline-flex"
             >
               Quick Upload

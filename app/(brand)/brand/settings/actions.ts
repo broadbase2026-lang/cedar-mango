@@ -44,7 +44,7 @@ export async function updateAccountAvatar(
   if (error) return { error: error.message };
 
   revalidatePath('/brand/settings');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { error: null, success: true };
 }
 
@@ -107,7 +107,7 @@ export async function updateAccountName(
   }
 
   revalidatePath('/brand/settings');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { error: null, success: true };
 }
 
@@ -284,7 +284,7 @@ export async function saveBrandWorkspace(
   }
 
   revalidatePath('/brand/settings');
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   revalidatePath('/brand/upload');
   return { error: null, success: true };
 }

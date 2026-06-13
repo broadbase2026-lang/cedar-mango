@@ -262,7 +262,7 @@ export function BrandMediaLibraryView({
             </p>
           </div>
           <Link
-            href="/dashboard/brand"
+            href="/brand/dashboard"
             className="text-sm font-medium text-brand-primary-700 hover:underline"
           >
             ← Back to overview

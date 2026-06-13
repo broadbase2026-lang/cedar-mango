@@ -47,8 +47,17 @@ export async function loadMediaLibraryData(
       .order('created_at', { ascending: false }),
   ]);
 
-  const assetsRaw = assetsRes.data ?? [];
-  const releases = (releasesRes.data ?? []) as MediaReleaseOption[];
+  if (releasesRes.error) {
+    console.error('[loadMediaLibraryData] releases query failed', releasesRes.error);
+  }
+  if (assetsRes.error) {
+    console.error('[loadMediaLibraryData] assets query failed', assetsRes.error);
+  }
+
+  const assetsRaw = assetsRes.error ? [] : (assetsRes.data ?? []);
+  const releases = releasesRes.error
+    ? []
+    : ((releasesRes.data ?? []) as MediaReleaseOption[]);
   const releaseMap = new Map(releases.map((r) => [r.id, r]));
 
   const assets: MediaAssetRow[] = assetsRaw.map((a) => {

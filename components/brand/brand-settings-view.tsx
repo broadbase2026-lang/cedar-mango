@@ -410,7 +410,7 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
           </section>
 
           <p className="text-sm text-brand-muted">
-            <Link href="/dashboard/brand" className="text-brand-primary-700 hover:underline">
+            <Link href="/brand/dashboard" className="text-brand-primary-700 hover:underline">
               ← Back to overview
             </Link>
           </p>

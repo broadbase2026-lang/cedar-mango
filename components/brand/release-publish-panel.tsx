@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { publishRelease } from '@/app/dashboard/brand/actions';
+import { publishRelease } from '@/app/(brand)/brand/dashboard/actions';
 
 function toDatetimeLocalValue(isoUtc: string): string {
   const d = new Date(isoUtc);

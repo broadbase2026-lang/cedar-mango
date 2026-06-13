@@ -7,7 +7,7 @@ import {
   archiveRelease,
   softDeleteRelease,
   unpublishReleaseToDraft,
-} from '@/app/dashboard/brand/actions';
+} from '@/app/(brand)/brand/dashboard/actions';
 import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzone';
 import { GeoScoreBadge } from '@/components/brand/geo-score-badge';
 import type {
@@ -190,7 +190,8 @@ export function BrandDashboardView({
       (TIER_FEATURES as any)[accessState.plan]?.aiReadinessSuggestions === true);
 
   const emptyNoBrand = !hasBrand;
-  const emptyNoReleases = hasBrand && data.releases.length === 0;
+  const emptyNoReleases =
+    hasBrand && data.releases.length === 0 && !data.loadError;
 
   async function onGenerateAiReadiness() {
     if (!selectedDraft?.id) return;
@@ -364,6 +365,15 @@ export function BrandDashboardView({
         <div className="bb-dash-empty-releases-wrap">
           <div className="bb-dash-empty-releases-frame">
             <div className="bb-dash-empty-releases-inner">
+              {data.loadError ? (
+                <div
+                  className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+                  role="alert"
+                >
+                  Could not load your releases. Refresh the page or contact support if
+                  this persists.
+                </div>
+              ) : null}
               {trialBanner}
               {expiredBanner}
               <div className="bb-dash-empty-releases-icon" aria-hidden>
@@ -393,6 +403,15 @@ export function BrandDashboardView({
   return (
     <main className="bb-dash-main">
       <div className="bb-dash-inner">
+        {data.loadError ? (
+          <div
+            className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            role="alert"
+          >
+            Could not load your releases. Refresh the page or contact support if this
+            persists.
+          </div>
+        ) : null}
         {trialBanner}
         {expiredBanner}
         <div className="bb-dash-eyebrow">

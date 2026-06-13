@@ -27,7 +27,7 @@ export async function softDeleteRelease(
     return { ok: false, message: error.message };
   }
 
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { ok: true };
 }
 
@@ -163,7 +163,7 @@ export async function publishRelease(
     }
   }
 
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { ok: true };
   } catch (err) {
     console.error('[publishRelease] unhandled exception', err);
@@ -202,7 +202,7 @@ export async function unpublishReleaseToDraft(
     return { ok: false, message: error.message };
   }
 
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { ok: true };
 }
 
@@ -230,6 +230,6 @@ export async function archiveRelease(
     return { ok: false, message: error.message };
   }
 
-  revalidatePath('/dashboard/brand');
+  revalidatePath('/brand/dashboard');
   return { ok: true };
 }

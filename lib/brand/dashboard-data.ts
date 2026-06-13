@@ -26,7 +26,57 @@ export type BrandDashboardData = {
   };
   releases: DashboardReleaseRow[];
   drafts: DraftSummary[];
+  loadError?: string | null;
 };
+
+const RELEASE_LIST_COLUMNS =
+  'id, title, status, industry_vertical, views_count, ai_readiness_score, embargo_until';
+
+type ReleaseListRow = {
+  id: string;
+  title: string;
+  status: string;
+  industry_vertical: string | null;
+  views_count: number | null;
+  ai_readiness_score: number | null;
+  embargo_until: string | null;
+  geo_readiness_score?: number | null;
+};
+
+async function loadDashboardReleases(
+  supabase: SupabaseClient,
+  brandId: string
+): Promise<{ rows: ReleaseListRow[]; error: string | null }> {
+  const base = supabase
+    .from('press_releases')
+    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`)
+    .eq('brand_id', brandId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const withGeo = await base;
+  if (!withGeo.error) {
+    return { rows: (withGeo.data ?? []) as ReleaseListRow[], error: null };
+  }
+
+  console.error('[loadBrandDashboardData] releases query failed', withGeo.error);
+
+  const fallback = await supabase
+    .from('press_releases')
+    .select(RELEASE_LIST_COLUMNS)
+    .eq('brand_id', brandId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (fallback.error) {
+    console.error('[loadBrandDashboardData] releases fallback failed', fallback.error);
+    return { rows: [], error: fallback.error.message };
+  }
+
+  return { rows: (fallback.data ?? []) as ReleaseListRow[], error: null };
+}
 
 const VERTICAL_LABEL: Record<string, string> = {
   fnb: 'F&B',
@@ -105,13 +155,14 @@ export async function loadBrandDashboardData(
   const monthStart = startOfMonthIso();
   const weekStart = lastNDaysStart(7);
 
+  const releasesPromise = loadDashboardReleases(supabase, brandId);
+
   const [
     viewsCountRes,
     downloadsCountRes,
     viewsThisMonth,
     downloadsThisMonth,
     draftScoresRes,
-    releasesRes,
     sparkRowsRes,
   ] = await Promise.all([
     supabase
@@ -142,20 +193,13 @@ export async function loadBrandDashboardData(
       .is('deleted_at', null)
       .not('ai_readiness_score', 'is', null),
     supabase
-      .from('press_releases')
-      .select(
-        'id, title, status, industry_vertical, views_count, ai_readiness_score, geo_readiness_score, embargo_until'
-      )
-      .eq('brand_id', brandId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
       .from('release_views')
       .select('press_release_id, viewed_at')
       .eq('brand_id', brandId)
       .gte('viewed_at', weekStart),
   ]);
+
+  const { rows: rawReleases, error: releasesError } = await releasesPromise;
 
   const activeIds = new Set<string>();
   for (const row of viewsThisMonth.data ?? []) {
@@ -173,7 +217,6 @@ export async function loadBrandDashboardData(
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
       : null;
 
-  const rawReleases = releasesRes.data ?? [];
   const ids = rawReleases.map((r) => r.id);
   const sparkMap = bucketSparklines(sparkRowsRes.data ?? [], ids);
 
@@ -184,7 +227,7 @@ export async function loadBrandDashboardData(
     verticalLabel: labelVertical(r.industry_vertical),
     viewsCount: r.views_count ?? 0,
     sparkline: sparkMap[r.id] ?? [0, 0, 0, 0, 0, 0, 0],
-    embargoUntil: (r as any).embargo_until ?? null,
+    embargoUntil: r.embargo_until ?? null,
     geoReadinessScore:
       typeof r.geo_readiness_score === 'number' ? r.geo_readiness_score : null,
   }));
@@ -206,5 +249,6 @@ export async function loadBrandDashboardData(
     },
     releases,
     drafts,
+    loadError: releasesError,
   };
 }

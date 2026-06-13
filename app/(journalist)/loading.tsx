@@ -1,4 +1,5 @@
-export default function DashboardBrandLoading() {
+/** Instant shell while RSC resolves — avoids a blank main area during sidebar navigation. */
+export default function JournalistRouteLoading() {
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6">
       <div
