@@ -67,7 +67,7 @@ async function softDeleteReleases(
   const entries = Object.entries(manifest.messages);
   if (entries.length === 0) return 0;
 
-  const releaseIds = [...new Set(entries.map(([, v]) => v.releaseId))];
+  const releaseIds = Array.from(new Set(entries.map(([, v]) => v.releaseId)));
   console.log(
     `${dryRun ? 'DRY RUN — would soft-delete' : 'Soft-deleting'} ${releaseIds.length} release(s)...`
   );

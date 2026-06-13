@@ -118,10 +118,8 @@ export async function POST(req: Request) {
         { buffer: buf },
         {
           includeDefaultStyleMap: true,
-          convertImage: mammoth.images.imgElement(async (image) => {
-            const alt = image.altText?.trim();
-            return alt ? { alt } : {};
-          }),
+          // Placeholder src avoids mammoth's default data-URI embed; alt comes from docx.
+          convertImage: mammoth.images.imgElement(async () => ({ src: '' })),
         }
       );
       const docHtml = stripEmbeddedMediaFromHtml(converted.value || '');

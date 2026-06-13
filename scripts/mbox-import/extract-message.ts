@@ -21,7 +21,7 @@ export type ExtractedMessage = {
 function headerMap(parsed: ParsedMail): Record<string, string> {
   const out: Record<string, string> = {};
   if (!parsed.headers) return out;
-  for (const [key, value] of parsed.headers) {
+  parsed.headers.forEach((value, key) => {
     if (typeof value === 'string') {
       out[key.toLowerCase()] = value;
     } else if (Array.isArray(value)) {
@@ -29,7 +29,7 @@ function headerMap(parsed: ParsedMail): Record<string, string> {
     } else if (value != null) {
       out[key.toLowerCase()] = String(value);
     }
-  }
+  });
   return out;
 }
 
