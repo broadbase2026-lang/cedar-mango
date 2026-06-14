@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { SignupForm } from '@/components/auth/SignupForm';
 import { SignupHero } from '@/components/auth/SignupHero';
 import { AuthEnvWarning } from '@/components/auth/auth-env-warning';
-import { betaInviteCode } from '@/lib/config/beta';
 import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import { APP_NAME, TRIAL_COPY } from '@/constants/copy';
 
@@ -63,7 +62,7 @@ export default function SignupPage({ searchParams }: SignupPageProps) {
             </p>
           ) : null}
 
-          <SignupForm inviteRequired={Boolean(betaInviteCode)} />
+          <SignupForm />
 
           <p className="text-center text-xs text-text-secondary">
             By signing up you agree to{' '}

@@ -82,8 +82,7 @@ function InputGroup({
   );
 }
 
-export function SignupForm(props: { inviteRequired?: boolean }) {
-  const inviteRequired = props.inviteRequired ?? false;
+export function SignupForm() {
   const initialState: AuthActionState = { error: null };
   const [state, formAction] = useFormState(signupAction, initialState);
   const searchParams = useSearchParams();
@@ -144,17 +143,6 @@ export function SignupForm(props: { inviteRequired?: boolean }) {
             </label>
           </div>
         </fieldset>
-
-        {inviteRequired ? (
-          <InputGroup
-            label="Invite code"
-            id="invite_code"
-            name="invite_code"
-            autoComplete="off"
-            placeholder="Enter your beta invite code"
-            helperText="Broadbase is invite-only during the beta. Contact us if you need access."
-          />
-        ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <InputGroup

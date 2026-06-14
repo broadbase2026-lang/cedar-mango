@@ -8,7 +8,6 @@ import {
   sanitizeInternalNextParam,
 } from '@/lib/auth/redirects';
 import { signupWithResendConfirmation } from '@/lib/auth/signup-with-resend-confirmation';
-import { validateBetaInviteCode } from '@/lib/config/beta';
 import { getAppUrl } from '@/lib/config/app-url';
 import { getResendEnv, resendNotConfiguredMessage } from '@/lib/email/resend-env';
 import { createClient } from '@/lib/supabase/server';
@@ -82,10 +81,6 @@ export async function signupAction(
   const fullName = String(formData.get('full_name') ?? '').trim();
   const userType = parseUserType(formData.get('user_type'));
   const wantsTrial = parseBool(formData.get('trial'));
-  const inviteCode = String(formData.get('invite_code') ?? '').trim();
-
-  const inviteError = validateBetaInviteCode(inviteCode);
-  if (inviteError) return { error: inviteError };
 
   if (!email) return { error: 'Email is required.' };
   if (!password) return { error: 'Password is required.' };

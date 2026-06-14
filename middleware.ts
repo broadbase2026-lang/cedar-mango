@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  BETA_ACCESS_COOKIE,
+  hasValidBetaAccessCookie,
+  isBetaGateEnabled,
+  isBetaGateExemptPath,
+} from '@/lib/config/beta';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
 
 function applyProductionCsp(response: NextResponse) {
@@ -48,11 +54,34 @@ export async function middleware(request: NextRequest) {
       requestHeaders
     );
 
+    let isAuthenticated = false;
     if (supabase) {
       try {
-        await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        isAuthenticated = Boolean(user);
       } catch (err) {
         console.error('[middleware] supabase.auth.getUser failed', err);
+      }
+    }
+
+    if (
+      isBetaGateEnabled() &&
+      !isBetaGateExemptPath(url.pathname) &&
+      !isAuthenticated
+    ) {
+      const betaCookie = request.cookies.get(BETA_ACCESS_COOKIE)?.value;
+      const hasBetaAccess = await hasValidBetaAccessCookie(betaCookie);
+      if (!hasBetaAccess) {
+        const betaUrl = new URL('/beta-access', url.origin);
+        const next = `${url.pathname}${url.search}`;
+        betaUrl.searchParams.set('next', next);
+        const redirectResponse = NextResponse.redirect(betaUrl);
+        if (process.env.NODE_ENV === 'production') {
+          applyProductionCsp(redirectResponse);
+        }
+        return redirectResponse;
       }
     }
 

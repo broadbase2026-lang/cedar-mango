@@ -9,7 +9,7 @@ Operational steps to deploy Broadbase for an invite-only, trial-only beta on Ver
 - DNS control for `broadbase.app` and `www.broadbase.app`
 - New **production** Supabase project (do not reuse local dev DB)
 - Google AI Studio API key with billing enabled
-- Beta invite code to share with testers
+- Beta site password to share with testers
 
 ## 1. Supabase production setup
 
@@ -62,7 +62,7 @@ Optional: run `supabase/tests/rls_smoke.sql` and `supabase/tests/embargoed_asset
 | `RESEND_FROM_EMAIL` | Verified sender, e.g. `Broadbase <onboarding@broadbase.app>` |
 | `GEMINI_API_KEY` | Google AI key |
 | `BETA_TRIAL_ONLY` | `true` |
-| `BETA_INVITE_CODE` | Your private invite code |
+| `BETA_INVITE_CODE` | Your private beta site password |
 
 Stripe variables are **not required** for trial-only beta.
 
@@ -86,8 +86,8 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 **Public / auth**
 - [x] Homepage loads; nav links work (CSP does not break hydration)
 - [x] `/pricing` shows trial CTA; paid checkout buttons show “Beta — trial only”
-- [x] `/signup` requires invite code; wrong code rejected
-- [x] Valid invite signup → email confirmation flow works
+- [x] Unauthenticated visitors are redirected to `/beta-access` until they enter the beta password
+- [x] `/signup` no longer asks for an invite code; signup works after site unlock
 - [x] Login → brand user reaches dashboard or trial upload
 
 **Brand trial**
@@ -100,16 +100,16 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 - [x] Chat widget responds (requires `GEMINI_API_KEY`)
 
 **Storage**
-- [ ] Avatar upload works
-- [ ] Public press asset upload works
+- [X] Avatar upload works
+- [x] Public press asset upload works
 
 **Security**
-- [ ] Dev mock user does not get Enterprise access in production
+- [x] Dev mock user does not get Enterprise access in production
 - [x] Unauthenticated `/brand/dashboard` redirects to login
 
 ## 5. Beta operations
 
-**Onboarding testers:** share `https://broadbase.app/signup?trial=true` and the invite code privately.
+**Onboarding testers:** share `https://broadbase.app` and the beta password privately.
 
 **Rotate access:** change `BETA_INVITE_CODE` in Vercel and redeploy between cohorts.
 

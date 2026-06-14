@@ -3,7 +3,10 @@ import type { SubscriptionPlan } from '@/types';
 
 // DEV ONLY MOCK — start
 /** Temporary override while subscription/profile sync is fixed. Delete this file when done. */
-const DEV_MOCK_ENTERPRISE_USER_ID = 'a28c4072-a264-416c-87cc-95693b5359bb';
+const DEV_MOCK_ENTERPRISE_USER_IDS = new Set([
+  'a28c4072-a264-416c-87cc-95693b5359bb',
+  '4b3d39fd-c336-4df7-b23d-b7df60cce5e0', // admin@broadbase.app
+]);
 
 function devMockEnabled(): boolean {
   return process.env.NODE_ENV !== 'production';
@@ -11,7 +14,7 @@ function devMockEnabled(): boolean {
 
 export function isDevEnterpriseMockUser(userId: string): boolean {
   if (!devMockEnabled()) return false;
-  return userId === DEV_MOCK_ENTERPRISE_USER_ID;
+  return DEV_MOCK_ENTERPRISE_USER_IDS.has(userId);
 }
 
 /** Maps to `profiles.user_type` (supply-side / brand portal). */
