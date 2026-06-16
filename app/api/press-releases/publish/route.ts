@@ -124,11 +124,33 @@ export async function POST(req: Request) {
   const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
   const publishedThisPeriod = releasesPublishedThisPeriod;
 
-  if (typeof tierLimit === 'number' && publishedThisPeriod >= tierLimit) {
-    return NextResponse.json(
-      { success: false, error: ERROR_MESSAGES.publishLimitReached },
-      { status: 200 }
-    );
+  if (typeof tierLimit === 'number') {
+    // Primary enforcement: subscription counter (fast path).
+    if (publishedThisPeriod >= tierLimit) {
+      return NextResponse.json(
+        { success: false, error: ERROR_MESSAGES.publishLimitReached },
+        { status: 200 }
+      );
+    }
+
+    // Fallback enforcement: if the counter is missing/out-of-sync (common when a DB
+    // migration hasn't been applied yet), count actual published releases.
+    // We use a 31-day rolling window as an approximation of "billing period" for now.
+    const windowStartIso = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+    const publishedCountRes = await admin
+      .from('press_releases')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_id', releaseRes.data.brand_id)
+      .eq('status', 'published')
+      .is('deleted_at', null)
+      .gte('published_at', windowStartIso);
+
+    if (!publishedCountRes.error && (publishedCountRes.count ?? 0) >= tierLimit) {
+      return NextResponse.json(
+        { success: false, error: ERROR_MESSAGES.publishLimitReached },
+        { status: 200 }
+      );
+    }
   }
 
   if (releaseRes.data.status !== 'draft') {

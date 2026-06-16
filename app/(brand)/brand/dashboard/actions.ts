@@ -104,8 +104,33 @@ export async function publishRelease(
   const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
   const publishedThisPeriod = releasesPublishedThisPeriod;
 
-  if (typeof tierLimit === 'number' && publishedThisPeriod >= tierLimit) {
-    return { ok: false, message: ERROR_MESSAGES.publishLimitReached };
+  if (typeof tierLimit === 'number') {
+    if (publishedThisPeriod >= tierLimit) {
+      return { ok: false, message: ERROR_MESSAGES.publishLimitReached };
+    }
+
+    // Fallback: count actual publishes when the subscription counter is missing/out-of-sync.
+    const windowStartIso = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: brandRow } = await supabase
+      .from('press_releases')
+      .select('brand_id')
+      .eq('id', releaseId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (brandRow?.brand_id) {
+      const publishedCountRes = await admin
+        .from('press_releases')
+        .select('id', { count: 'exact', head: true })
+        .eq('brand_id', brandRow.brand_id)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .gte('published_at', windowStartIso);
+
+      if (!publishedCountRes.error && (publishedCountRes.count ?? 0) >= tierLimit) {
+        return { ok: false, message: ERROR_MESSAGES.publishLimitReached };
+      }
+    }
   }
 
   // Gate: must have at least 1 (non-deleted) asset attached.
