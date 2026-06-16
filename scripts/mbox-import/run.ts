@@ -18,6 +18,7 @@ import {
 } from './manifest';
 import { streamMboxMessages } from './parse-mbox';
 import { resolveBrandForSender } from './resolve-brand';
+import { resolvePublisherBrand } from './resolve-publisher';
 import { uploadMessageAttachments } from './upload-attachments';
 
 const DEFAULT_MANIFEST = path.join(process.cwd(), 'scripts/mbox-import/.manifest.json');
@@ -30,6 +31,7 @@ type CliOptions = {
   limit: number | null;
   skipAttachments: boolean;
   manifestPath: string;
+  publisherEmail: string | null;
 };
 
 function parseArgs(argv: string[]): CliOptions {
@@ -38,6 +40,7 @@ function parseArgs(argv: string[]): CliOptions {
   let limit: number | null = null;
   let skipAttachments = false;
   let manifestPath = DEFAULT_MANIFEST;
+  let publisherEmail: string | null = null;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -62,6 +65,10 @@ function parseArgs(argv: string[]): CliOptions {
       manifestPath = argv[++i] ?? DEFAULT_MANIFEST;
       continue;
     }
+    if (arg === '--publisher-email') {
+      publisherEmail = (argv[++i] ?? '').trim().toLowerCase() || null;
+      continue;
+    }
     if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -74,7 +81,7 @@ function parseArgs(argv: string[]): CliOptions {
     process.exit(1);
   }
 
-  return { mboxPath, dryRun, limit, skipAttachments, manifestPath };
+  return { mboxPath, dryRun, limit, skipAttachments, manifestPath, publisherEmail };
 }
 
 const EXAMPLE_MBOX = '/Users/gavin/Desktop/allmail.mbox';
@@ -88,9 +95,9 @@ Run from the project root (loads .env.local):
   node --env-file=.env.local ./node_modules/.bin/tsx scripts/mbox-import/run.ts \\
     --mbox ${EXAMPLE_MBOX} --dry-run --limit 5
 
-  # 2. Pilot — first 20 messages
+  # 2. Pilot — first 20 messages under admin publisher account
   node --env-file=.env.local ./node_modules/.bin/tsx scripts/mbox-import/run.ts \\
-    --mbox ${EXAMPLE_MBOX} --limit 20
+    --mbox ${EXAMPLE_MBOX} --limit 20 --publisher-email admin@broadbase.app
 
   # 3. Full import
   node --env-file=.env.local ./node_modules/.bin/tsx scripts/mbox-import/run.ts \\
@@ -104,6 +111,7 @@ Options:
   --mbox <path>         Path to the mbox file (required)
   --dry-run             Parse and log without writing to the database
   --limit <n>           Process only the first N messages (stops reading early)
+  --publisher-email <email>  Assign all imports to this brand owner's workspace
   --skip-attachments    Import body only; skip storage uploads
   --manifest <path>     Idempotency manifest (default: scripts/mbox-import/.manifest.json)
   -h, --help            Show this help
@@ -125,6 +133,9 @@ async function main(): Promise<void> {
   console.log(
     `Mode: ${opts.dryRun ? 'DRY RUN' : 'LIVE'} | manifest: ${opts.manifestPath}`
   );
+  if (opts.publisherEmail) {
+    console.log(`Publisher: ${opts.publisherEmail} (all releases → that brand workspace)`);
+  }
 
   if (opts.limit != null) {
     console.log(`Streaming up to ${opts.limit} message(s) from mbox...`);
@@ -132,8 +143,23 @@ async function main(): Promise<void> {
     console.log('Streaming messages from mbox (file is read incrementally)...');
   }
 
+  const needsAdmin = !opts.dryRun || Boolean(opts.publisherEmail);
+  const admin = needsAdmin ? createAdminClient() : null;
+
+  let publisherBrand: Awaited<ReturnType<typeof resolvePublisherBrand>> | null =
+    null;
+  if (opts.publisherEmail) {
+    publisherBrand = await resolvePublisherBrand({
+      admin,
+      publisherEmail: opts.publisherEmail,
+      dryRun: opts.dryRun,
+    });
+    console.log(
+      `Publisher brand: ${publisherBrand.displayName} (${publisherBrand.brandId})`
+    );
+  }
+
   const manifest: ImportManifest = loadManifest(opts.manifestPath);
-  const admin = opts.dryRun ? null : createAdminClient();
 
   let model: GenerativeModel | null = null;
   try {
@@ -178,12 +204,14 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const brand = await resolveBrandForSender({
-        admin,
-        fromRaw: msg.from,
-        manifest,
-        dryRun: opts.dryRun,
-      });
+      const brand =
+        publisherBrand ??
+        (await resolveBrandForSender({
+          admin,
+          fromRaw: msg.from,
+          manifest,
+          dryRun: opts.dryRun,
+        }));
 
       if (!brand) {
         console.log(`  skip: could not parse sender — "${msg.subject}"`);
@@ -191,11 +219,13 @@ async function main(): Promise<void> {
         continue;
       }
 
-      if (brand.created) {
+      if (!opts.publisherEmail && brand.created) {
         stats.brandsCreated++;
         console.log(
           `  brand: ${brand.created ? 'CREATE' : 'reuse'} ${brand.displayName} (${brand.domain})`
         );
+      } else if (opts.publisherEmail) {
+        console.log(`  brand: publisher → ${brand.displayName}`);
       } else {
         console.log(`  brand: reuse ${brand.displayName} (${brand.domain})`);
       }
