@@ -54,6 +54,7 @@ export async function brandOwnerHasWorkspace(
 }
 
 export type ResolvedPayableSubscription = {
+  subscriptionId: string;
   trialMode: boolean;
   releasesUsed: number;
   plan: SubscriptionPlan;
@@ -88,6 +89,7 @@ export async function resolvePayableSubscription(
       const plan = planFromRow(sub);
       if (canUse && plan) {
         return {
+          subscriptionId: sub.id,
           trialMode,
           releasesUsed:
             typeof sub.trial_releases_used === 'number'
@@ -103,7 +105,10 @@ export async function resolvePayableSubscription(
     }
 
     if (isBetaTrialOnly && (await brandOwnerHasWorkspace(admin, ownerId))) {
+      const ensured = await ensureTrialSubscriptionForOwner(admin, ownerId);
+      if (!ensured) return null;
       return {
+        subscriptionId: ensured.id,
         trialMode: true,
         releasesUsed: 0,
         plan: 'starter',
@@ -115,7 +120,10 @@ export async function resolvePayableSubscription(
   } catch (err) {
     console.error('[resolvePayableSubscription] failed', err);
     if (isBetaTrialOnly && (await brandOwnerHasWorkspace(admin, ownerId))) {
+      const ensured = await ensureTrialSubscriptionForOwner(admin, ownerId);
+      if (!ensured) return null;
       return {
+        subscriptionId: ensured.id,
         trialMode: true,
         releasesUsed: 0,
         plan: 'starter',

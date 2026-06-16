@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SubscriptionPlan } from '@/types';
 
 export type PayableSubscriptionRow = {
+  id: string;
   plan: SubscriptionPlan;
   status: string;
   trial_mode: boolean | null;
@@ -26,14 +27,20 @@ function isSchemaMismatchError(error: { message?: string; code?: string } | null
   );
 }
 
-function normalizePayableRow(row: Record<string, unknown> | undefined): PayableSubscriptionRow | null {
+function normalizePayableRow(
+  row: Record<string, unknown> | undefined
+): PayableSubscriptionRow | null {
   if (!row) return null;
+  const id = row.id;
   const plan = row.plan;
   const status = row.status;
-  if (typeof plan !== 'string' || typeof status !== 'string') return null;
+  if (typeof id !== 'string' || typeof plan !== 'string' || typeof status !== 'string') {
+    return null;
+  }
   if (plan !== 'starter' && plan !== 'pro' && plan !== 'agency') return null;
 
   return {
+    id,
     plan,
     status,
     trial_mode: typeof row.trial_mode === 'boolean' ? row.trial_mode : null,
@@ -62,7 +69,7 @@ async function queryPayableSubscription(
     query = query.in('status', ['active', 'trialing', 'past_due']);
   }
 
-  return query.order('updated_at', { ascending: false }).limit(1);
+  return query.order('updated_at', { ascending: false }).limit(10);
 }
 
 /** Latest subscription row that can upload/publish (trial or paid). Never throws. */
@@ -72,21 +79,30 @@ export async function findPayableSubscription(
 ): Promise<PayableSubscriptionRow | null> {
   const attempts: Array<{ select: string; mode: PayableQueryMode }> = [
     {
-      select: 'plan, status, trial_mode, trial_releases_used, releases_published_this_period',
+      select:
+        'id, plan, status, trial_mode, trial_releases_used, releases_published_this_period',
       mode: 'full_or',
     },
     {
-      select: 'plan, status, trial_mode, trial_releases_used',
+      select: 'id, plan, status, trial_mode, trial_releases_used',
       mode: 'full_or',
     },
     {
-      select: 'plan, status, trial_releases_used',
+      select: 'id, plan, status, trial_releases_used',
       mode: 'status_only',
     },
-    { select: 'plan, status', mode: 'status_only' },
-    { select: 'plan, status, trial_mode, trial_releases_used', mode: 'owner_only' },
-    { select: 'plan, status', mode: 'owner_only' },
+    { select: 'id, plan, status', mode: 'status_only' },
+    { select: 'id, plan, status, trial_mode, trial_releases_used', mode: 'owner_only' },
+    { select: 'id, plan, status', mode: 'owner_only' },
   ];
+
+  function statusWeight(status: string): number {
+    // Prefer a clearly usable subscription row over stale payable rows.
+    if (status === 'active') return 3;
+    if (status === 'trialing') return 2;
+    if (status === 'past_due') return 1;
+    return 0;
+  }
 
   for (const attempt of attempts) {
     const { data, error } = await queryPayableSubscription(
@@ -97,10 +113,15 @@ export async function findPayableSubscription(
     );
 
     if (!error) {
-      const row = normalizePayableRow(
-        (data?.[0] ?? undefined) as unknown as Record<string, unknown> | undefined
+      const rows = (Array.isArray(data) ? data : []).map((r) =>
+        normalizePayableRow(r as unknown as Record<string, unknown> | undefined)
       );
-      if (row) return row;
+      const normalized = rows.filter(Boolean) as PayableSubscriptionRow[];
+
+      if (normalized.length > 0) {
+        normalized.sort((a, b) => statusWeight(b.status) - statusWeight(a.status));
+        return normalized[0] ?? null;
+      }
       continue;
     }
 

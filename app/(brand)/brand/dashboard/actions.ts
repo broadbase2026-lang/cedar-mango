@@ -144,7 +144,7 @@ export async function publishRelease(
     const { error: trialCounterErr } = await admin
       .from('subscriptions')
       .update({ trial_releases_used: releasesUsed + 1 })
-      .eq('owner_id', user.id);
+      .eq('id', subscription.subscriptionId);
     if (trialCounterErr) {
       console.error('[publishRelease] trial_releases_used update', trialCounterErr);
     }
@@ -154,7 +154,7 @@ export async function publishRelease(
     const { error: periodCounterErr } = await admin
       .from('subscriptions')
       .update({ releases_published_this_period: publishedThisPeriod + 1 })
-      .eq('owner_id', user.id);
+      .eq('id', subscription.subscriptionId);
     if (periodCounterErr) {
       console.error(
         '[publishRelease] releases_published_this_period update',
