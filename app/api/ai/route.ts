@@ -19,6 +19,65 @@ import { createClient } from '@/lib/supabase/server';
 import { ERROR_MESSAGES } from '@/constants/copy';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+async function assertAiAccess(): Promise<
+  | { ok: true; userId: string; plan: 'pro' | 'agency' }
+  | { ok: false; status: number; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, status: 401, error: 'Not signed in.' };
+  }
+
+  // Plan gate: AI writing assistant is not available on Solo (starter).
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { ok: false, status: 500, error: 'Server misconfigured.' };
+  }
+
+  const { data: subRow } = await admin
+    .from('subscriptions')
+    .select('plan, status')
+    .eq('owner_id', user.id)
+    .in('status', ['active', 'trialing'])
+    .maybeSingle();
+
+  const sub = applyDevSubscriptionOverrides(user.id, subRow);
+  const plan = sub?.plan as 'starter' | 'pro' | 'agency' | undefined;
+  if (!plan) {
+    return { ok: false, status: 403, error: 'You need an active subscription to use AI.' };
+  }
+  if (plan === 'starter') {
+    return { ok: false, status: 403, error: ERROR_MESSAGES.aiNotAvailable };
+  }
+
+  return { ok: true, userId: user.id, plan };
+}
+
+export async function OPTIONS() {
+  // Avoid default 405s on preflight requests.
+  return new NextResponse(null, {
+    status: 204,
+    headers: { Allow: 'POST, GET, OPTIONS' },
+  });
+}
+
+export async function GET() {
+  // Ensure Solo users see the expected 403 rather than a 405 when they hit this URL directly.
+  const access = await assertAiAccess();
+  if (!access.ok) {
+    return NextResponse.json({ ok: false, error: access.error }, { status: access.status });
+  }
+  return NextResponse.json(
+    { ok: false, error: 'Method not allowed. Use POST.' },
+    { status: 405, headers: { Allow: 'POST, GET, OPTIONS' } }
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { pressReleaseId?: unknown };
@@ -30,43 +89,13 @@ export async function POST(req: Request) {
       );
     }
 
+    const access = await assertAiAccess();
+    if (!access.ok) {
+      return NextResponse.json({ ok: false, error: access.error }, { status: access.status });
+    }
+
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ ok: false, error: 'Not signed in.' }, { status: 401 });
-    }
-
-    // Plan gate: AI writing assistant is not available on Solo (starter).
-    let admin;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return NextResponse.json({ ok: false, error: 'Server misconfigured.' }, { status: 500 });
-    }
-
-    const { data: subRow } = await admin
-      .from('subscriptions')
-      .select('plan, status')
-      .eq('owner_id', user.id)
-      .in('status', ['active', 'trialing'])
-      .maybeSingle();
-
-    const sub = applyDevSubscriptionOverrides(user.id, subRow);
-    const plan = sub?.plan as 'starter' | 'pro' | 'agency' | undefined;
-    if (!plan) {
-      return NextResponse.json(
-        { ok: false, error: 'You need an active subscription to use AI.' },
-        { status: 403 }
-      );
-    }
-    if (plan === 'starter') {
-      return NextResponse.json(
-        { ok: false, error: ERROR_MESSAGES.aiNotAvailable },
-        { status: 403 }
-      );
-    }
+    const admin = createAdminClient();
 
     const releaseRes = await supabase
       .from('press_releases')
