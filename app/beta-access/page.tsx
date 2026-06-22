@@ -25,7 +25,7 @@ export default function BetaAccessPage({ searchParams }: BetaAccessPageProps) {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-10"
+      className="flex min-h-screen flex-col items-center justify-center gap-12 px-8 py-16 md:gap-14 md:px-10 md:py-20"
       style={{ background: SIGNUP_HERO_GRADIENT }}
     >
       <Image
@@ -37,7 +37,7 @@ export default function BetaAccessPage({ searchParams }: BetaAccessPageProps) {
         priority
       />
 
-      <div className="w-full max-w-md space-y-3 text-center">
+      <div className="w-full max-w-md space-y-5 text-center">
         <h1 className="font-heading text-2xl font-normal tracking-tight text-brand-ink md:text-3xl">
           Welcome to the end of the unsolicited pitch.
         </h1>
@@ -51,7 +51,7 @@ export default function BetaAccessPage({ searchParams }: BetaAccessPageProps) {
         <BetaWaitlistForm />
       </div>
 
-      <div className="flex w-full max-w-md items-center gap-4">
+      <div className="flex w-full max-w-md items-center gap-5 px-2">
         <div className="h-px flex-1 bg-brand-ink/20" />
         <span className="text-xs font-medium uppercase tracking-wide text-brand-ink/70">
           Beta access
@@ -59,7 +59,7 @@ export default function BetaAccessPage({ searchParams }: BetaAccessPageProps) {
         <div className="h-px flex-1 bg-brand-ink/20" />
       </div>
 
-      <div className="w-full max-w-md rounded-2xl bg-white/60 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-white/60 p-8 backdrop-blur-sm">
         <BetaAccessForm nextPath={nextPath} />
       </div>
     </main>

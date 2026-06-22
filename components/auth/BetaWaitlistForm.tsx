@@ -15,8 +15,9 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      size="md"
-      className="h-12 w-full rounded-xl bg-white text-brand-ink hover:bg-white/90"
+      variant="accent"
+      size="lg"
+      className="h-12 w-full rounded-xl"
     >
       {pending ? 'Please wait…' : 'Sign up'}
     </Button>
@@ -24,7 +25,7 @@ function SubmitButton() {
 }
 
 const audienceOptionClassName = cn(
-  'flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/40 bg-white px-3 py-3',
+  'flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/40 bg-white px-4 py-3.5',
   'text-sm font-semibold text-brand-ink transition-colors hover:bg-white/90',
   'has-[:checked]:border-brand-ink has-[:checked]:ring-2 has-[:checked]:ring-brand-ink/20',
 );
@@ -45,10 +46,10 @@ export function BetaWaitlistForm() {
   }
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-4">
-      <fieldset className="space-y-2">
+    <form action={formAction} className="flex w-full flex-col gap-6">
+      <fieldset className="space-y-3">
         <legend className="sr-only">I am a</legend>
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-4 sm:flex-row">
           <label className={cn(audienceOptionClassName, 'sm:flex-1')}>
             <input
               type="radio"
@@ -95,7 +96,7 @@ export function BetaWaitlistForm() {
 
       <SubmitButton />
 
-      <p className="text-center text-sm text-brand-ink/80">
+      <p className="pt-1 text-center text-sm text-brand-ink/80">
         No spam, ever. Just one email when we&apos;re ready to share.
       </p>
     </form>
