@@ -7,6 +7,7 @@ import {
   saveManifest,
   type ImportManifest,
 } from './manifest';
+import { assertScriptMutationsAllowed } from '@/scripts/lib/script-env-guard';
 import { migrationUserEmail } from './parse-sender';
 
 const DEFAULT_MANIFEST = path.join(process.cwd(), 'scripts/mbox-import/.manifest.json');
@@ -254,6 +255,10 @@ async function main(): Promise<void> {
       'Manifest has migration brands but no messages. Re-run with --purge-brands to remove them.'
     );
     return;
+  }
+
+  if (!dryRun) {
+    assertScriptMutationsAllowed();
   }
 
   const needsAdmin = !dryRun || purgeBrands;

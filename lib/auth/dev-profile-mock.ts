@@ -4,7 +4,6 @@ import type { SubscriptionPlan } from '@/types';
 // DEV ONLY MOCK — start
 /** Temporary override while subscription/profile sync is fixed. Delete this file when done. */
 const DEV_MOCK_ENTERPRISE_USER_IDS = new Set([
-  'a28c4072-a264-416c-87cc-95693b5359bb',
   '4b3d39fd-c336-4df7-b23d-b7df60cce5e0', // admin@broadbase.app
 ]);
 

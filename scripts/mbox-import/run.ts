@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { GenerativeModel } from '@google/generative-ai';
 import { createReleaseImportModel } from '@/lib/migration/release-import-core';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertScriptMutationsAllowed } from '@/scripts/lib/script-env-guard';
 import { buildReleaseFromMessage } from './build-release';
 import {
   extractMessage,
@@ -118,6 +119,7 @@ Options:
 
 Environment (.env.local):
   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY (plain-text/PDF only)
+  BROADBASE_PROD_SUPABASE_PROJECT_REF — blocks mutating scripts from targeting prod
 `);
 }
 
@@ -141,6 +143,10 @@ async function main(): Promise<void> {
     console.log(`Streaming up to ${opts.limit} message(s) from mbox...`);
   } else {
     console.log('Streaming messages from mbox (file is read incrementally)...');
+  }
+
+  if (!opts.dryRun) {
+    assertScriptMutationsAllowed();
   }
 
   const needsAdmin = !opts.dryRun || Boolean(opts.publisherEmail);

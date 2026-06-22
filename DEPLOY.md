@@ -150,3 +150,50 @@ Run on `https://broadbase.app` (see `QA.md` for full checklist):
 4. Set `CRON_SECRET`; confirm journalist deletion cron is scheduled.
 5. Set `BETA_TRIAL_ONLY=false`; remove or rotate `BETA_INVITE_CODE`.
 6. Re-enable billing portal in brand settings.
+
+## 8. Disaster recovery
+
+Broadbase splits **code**, **database**, and **files**. Plan for each independently.
+
+### What Vercel rollback covers
+
+- **Covers:** previous Next.js deployment (app code, serverless config).
+- **Does not cover:** Supabase data, storage objects, Stripe subscriptions, or DNS.
+
+Use **Vercel → Deployments → … → Promote to Production** (or instant rollback) for bad deploys only.
+
+### Database (Supabase)
+
+1. **Prevention:** use a separate Supabase project for local/dev (`DEPLOY.md` §1). Never point `.env.local` at production for routine work. Set `BROADBASE_PROD_SUPABASE_PROJECT_REF` locally so mutating CLI scripts block prod (see `AGENTS.md`).
+2. **Backups:** confirm your prod plan includes [daily backups and/or PITR](https://supabase.com/docs/guides/platform/backups) in the Supabase dashboard. Note the retention window.
+3. **Restore:** Supabase dashboard → **Database → Backups** (or **Point in Time Recovery** on eligible plans). Restores replace DB state to a prior time — coordinate with app deploy version if schema changed.
+4. **Migrations:** schema is versioned in `supabase/migrations/`. After a DB restore to an empty project, re-apply migrations in order (`supabase db push` or SQL Editor).
+
+### Storage (Supabase buckets)
+
+- `press-assets-public`, `press-assets-private`, `media-kits-private` are **not** restored when you roll back a Vercel deploy.
+- Bucket recovery depends on Supabase backup scope for your plan; treat uploaded assets as critical data.
+- For extra safety: periodic export of bucket manifests or off-platform copy for irreplaceable media (manual or scheduled job outside this repo).
+
+### Secrets and third parties
+
+| Asset | If compromised or lost |
+|-------|-------------------------|
+| `SUPABASE_SERVICE_ROLE_KEY` | Rotate in Supabase → Settings → API; update Vercel env; redeploy |
+| `STRIPE_*` | Rotate in Stripe dashboard; update webhook signing secret |
+| `GEMINI_API_KEY` | Rotate in Google AI Studio |
+| `CRON_SECRET` | Regenerate; update Vercel env |
+
+### Code
+
+- Source of truth: **GitHub** (`main`). Clone or revert commits if working tree is corrupted.
+- Agent rules: `AGENTS.md`.
+
+### RTO checklist (data incident)
+
+1. Stop the bleeding — revoke/rotate leaked keys; disable cron if abuse suspected.
+2. Assess scope — Supabase logs, `asset_download_events`, Stripe dashboard.
+3. Restore DB from Supabase backup/PITR to last known-good time.
+4. Roll back or redeploy app if needed.
+5. Verify smoke tests in `QA.md` §4 against production.
+6. Post-incident: document cause; tighten env separation and backups if gaps found.

@@ -4,24 +4,23 @@
 
 ## Brand flows
 
-- [ ] Attempt to publish a 5th release on Solo plan → confirm limit error
-- [ ] Attempt to publish a 21st release on Growth plan → confirm limit error
+- [x] Attempt to publish a 5th release on Solo plan → confirm limit error
 - [ ] Confirm Enterprise plan has no publish limit
 - [ ] Attempt to create an 11th brand on Growth plan → confirm limit error
 - [ ] Confirm Enterprise plan has no brand limit
 - [ ] Upload assets until storage limit is reached → confirm 413 with correct message
-- [ ] Attempt to use embargo on Solo plan → confirm 403 with correct message
-- [ ] Attempt to call `/api/ai` as a Solo user → confirm 403 with correct message
-- [ ] Confirm AI Readiness Score displays without suggestions on Solo dashboard
-- [ ] Confirm suggestions panel shows locked state with upgrade prompt on Solo
+- [x] Attempt to use embargo on Solo plan → confirm 403 with correct message
+- [x] Attempt to call `/api/ai` as a Solo user → confirm 403 with correct message
+- [x] Confirm AI Readiness Score displays without suggestions on Solo dashboard
+- [x] Confirm suggestions panel shows locked state with upgrade prompt on Solo
 - [ ] Confirm CSV export button visible on Enterprise analytics page
 - [ ] Confirm CSV export returns 403 for Growth and Solo users
 
 ## Free trial signup flow
 
-- [ ] Unauthenticated user clicks "Start Free Trial" on `/pricing`
-  - [ ] Redirects to `/signup?trial=true`
-  - [ ] Signup page shows contextual banner: "You're signing up for a free trial..." 
+- [x] Unauthenticated user clicks "Start Free Trial" on `/pricing`
+  - [x] Redirects to `/signup?trial=true`
+  - [x] Signup page shows contextual banner: "You're signing up for a free trial..." 
 - [ ] Complete signup with email, password, full_name (brand)
   - [ ] `profiles` row created with `user_type = 'brand'`
   - [ ] `brands` row created with correct slug
@@ -36,13 +35,13 @@
 
 ## Free trial upload and limit enforcement
 
-- [ ] Brand on trial publishes a press release (first publish)
-  - [ ] Publish succeeds
+- [x] Brand on trial publishes a press release (first publish)
+  - [x] Publish succeeds
   - [ ] `trial_releases_used` incremented to 1 in `subscriptions`
   - [ ] No Stripe charge
-- [ ] Brand on trial attempts to publish a second press release
-  - [ ] Upload page gate shows upgrade prompt instead of form
-  - [ ] Prompt reads: "You've used your free press release"
+- [x] Brand on trial attempts to publish a second press release
+  - [x] Upload page gate shows upgrade prompt instead of form
+  - [xd] Prompt reads: "You've used your free press release"
   - [ ] "View Pricing" button links to `/pricing`
   - [ ] "Back to Dashboard" button links to `/dashboard/brand`
   - [ ] (Alternatively: if user bypasses UI and calls `/api/press-releases/publish` directly with a second press release)
@@ -75,8 +74,8 @@
 
 - [ ] **Unauthenticated user**
   - [ ] All three "Get Started" buttons link to `/signup?plan=PLAN_NAME` (starter/pro/agency)
-  - [ ] Free trial banner is visible: "Not ready to commit? Start with a free press release..."
-  - [ ] "Start Free Trial" button links to `/signup?trial=true`
+  - [x] Free trial banner is visible: "Not ready to commit? Start with a free press release..."
+  - [x] "Start Free Trial" button links to `/signup?trial=true`
 
 - [ ] **Authenticated brand user on no subscription**
   - [ ] All three "Get Started" buttons trigger the `createCheckoutSession` server action
@@ -205,7 +204,7 @@ HAVING COUNT(*) > 1;
 
 ### Upload and publish flow
 
-- [ ] Solo user: confirm embargo date picker is not rendered in the publish UI
+- [x] Solo user: confirm embargo date picker is not rendered in the publish UI
 - [ ] Solo user: attempt to POST to publish API with `embargo_until` in request body → confirm 403
 - [ ] Growth/Enterprise user: confirm embargo datetime input renders with correct min (now + 15 min) and max (12 months) values
 - [ ] Set embargo 1 hour in future → publish → confirm release shows "Embargoed" badge on dashboard with correct lift time
@@ -609,7 +608,7 @@ HAVING COUNT(*) > 1;
 - [ ] Confirm `geo_readiness_score = null` for a release published before migration 016 (`016_geo_readiness_score.sql`) → confirm 'Not scored' state renders on analytics page
 
 ### GEO page
-- [ ] Visit `/geo` as an unauthenticated user → confirm page loads, no redirect
+- [x] Visit `/geo` as an unauthenticated user → confirm page loads, no redirect
 - [ ] Confirm page title is 'Generative Engine Optimisation for Press Releases | Broadbase'
 - [ ] Confirm og:title and og:description meta tags are present in page source
 - [ ] Confirm canonical URL is set to `{APP_URL}/geo`

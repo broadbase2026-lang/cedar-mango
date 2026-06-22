@@ -53,7 +53,7 @@ export function BetaAccessForm({ nextPath }: BetaAccessFormProps) {
           </button>
         </div>
         <p className="text-xs text-text-secondary">
-          Broadbase is in private beta. Contact us if you need access.
+          Already invited? Enter your beta password to continue.
         </p>
       </div>
 

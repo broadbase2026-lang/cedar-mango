@@ -8,10 +8,42 @@ import {
   betaSitePassword,
   sanitizeBetaNextParam,
 } from '@/lib/config/beta';
+import {
+  addBetaWaitlistContact,
+  type BetaWaitlistAudience,
+} from '@/lib/email/add-beta-waitlist-contact';
 
 export type BetaAccessActionState = {
   error: string | null;
 };
+
+export type BetaWaitlistActionState = {
+  error: string | null;
+  success: boolean;
+};
+
+export async function betaWaitlistAction(
+  _prev: BetaWaitlistActionState,
+  formData: FormData
+): Promise<BetaWaitlistActionState> {
+  const email = String(formData.get('email') ?? '').trim();
+  const audience = String(formData.get('audience') ?? '');
+
+  if (audience !== 'journalist' && audience !== 'brand') {
+    return { error: 'Choose journalist or brand.', success: false };
+  }
+
+  const result = await addBetaWaitlistContact({
+    email,
+    audience: audience as BetaWaitlistAudience,
+  });
+
+  if (!result.ok) {
+    return { error: result.error, success: false };
+  }
+
+  return { error: null, success: true };
+}
 
 export async function betaAccessAction(
   _prev: BetaAccessActionState,

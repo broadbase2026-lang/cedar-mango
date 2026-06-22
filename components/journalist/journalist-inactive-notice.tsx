@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '@/constants/copy';
 import { formatDateMedium } from '@/lib/utils/dates';
 
 type JournalistInactiveNoticeProps = {
@@ -36,10 +37,10 @@ export function JournalistInactiveNotice({
           <p className="mt-6 text-sm text-brand-ink">
             Email{' '}
             <a
-              href="mailto:support@broadbase.app"
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="font-medium text-brand-primary-700 underline"
             >
-              support@broadbase.app
+              {SUPPORT_EMAIL}
             </a>{' '}
             if you believe this is an error.
           </p>

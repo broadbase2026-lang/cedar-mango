@@ -1,5 +1,7 @@
 export const APP_NAME = 'Broadbase';
 
+export const SUPPORT_EMAIL = 'help@broadbase.app';
+
 export const PLAN_DISPLAY_NAMES = {
   starter: 'Solo',
   pro: 'Growth',
@@ -132,7 +134,7 @@ export const PRICING_COPY = {
   footer: {
     cta: 'Still have questions?',
     contactLabel: 'Contact support',
-    contactHref: 'mailto:support@broadbase.app',
+    contactHref: `mailto:${SUPPORT_EMAIL}`,
   },
 } as const;
 
