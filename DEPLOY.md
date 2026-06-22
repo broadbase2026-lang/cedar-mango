@@ -58,7 +58,7 @@ Optional: run `supabase/tests/rls_smoke.sql` and `supabase/tests/embargoed_asset
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key |
 | `NEXT_PUBLIC_APP_URL` | `https://broadbase.app` |
-| `RESEND_API_KEY` | Resend API key (signup confirmation emails) |
+| `RESEND_API_KEY` | Resend API key — must allow **Contacts** (not send-only); used for signup emails and beta waitlist |
 | `RESEND_FROM_EMAIL` | Verified sender, e.g. `Broadbase <onboarding@broadbase.app>` |
 | `GEMINI_API_KEY` | Google AI key |
 | `BETA_TRIAL_ONLY` | `true` |
