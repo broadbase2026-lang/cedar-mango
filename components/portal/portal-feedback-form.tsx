@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import type { PortalFeedbackActionState } from '@/lib/portal/feedback-actions';
+import type { PortalFeedbackActionState } from '@/lib/portal/feedback-state';
 
 type PortalFeedbackFormProps = {
   action: (

@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PortalFeedbackForm } from '@/components/portal/portal-feedback-form';
-import {
-  portalFeedbackInitialState,
-  submitBrandFeedbackAction,
-} from '@/lib/portal/feedback-actions';
+import { portalFeedbackInitialState } from '@/lib/portal/feedback-state';
+import { submitBrandFeedbackAction } from '@/lib/portal/feedback-actions';
 import { getBrandPortalSession } from '@/lib/brand/session';
 
 export default async function BrandFeedbackPage() {

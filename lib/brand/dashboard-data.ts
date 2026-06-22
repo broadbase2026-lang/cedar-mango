@@ -17,7 +17,7 @@ export type DraftSummary = {
   aiReadinessScore: number | null;
 };
 
-export const RELEASES_PAGE_SIZE = 20;
+export const RELEASES_PAGE_SIZE = 10;
 
 export type BrandDashboardData = {
   metrics: {
@@ -75,6 +75,24 @@ async function loadDashboardDrafts(
   }));
 }
 
+async function loadDashboardReleasesCount(
+  supabase: SupabaseClient,
+  brandId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('press_releases')
+    .select('id', { count: 'exact', head: true })
+    .eq('brand_id', brandId)
+    .is('deleted_at', null);
+
+  if (error) {
+    console.error('[loadBrandDashboardData] releases count failed', error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 async function loadDashboardReleases(
   supabase: SupabaseClient,
   brandId: string,
@@ -83,19 +101,23 @@ async function loadDashboardReleases(
   const from = (page - 1) * RELEASES_PAGE_SIZE;
   const to = from + RELEASES_PAGE_SIZE - 1;
 
-  const base = supabase
+  const listWithGeo = supabase
     .from('press_releases')
-    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`, { count: 'exact' })
+    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`)
     .eq('brand_id', brandId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  const withGeo = await base;
+  const [withGeo, total] = await Promise.all([
+    listWithGeo,
+    loadDashboardReleasesCount(supabase, brandId),
+  ]);
+
   if (!withGeo.error) {
     return {
       rows: (withGeo.data ?? []) as ReleaseListRow[],
-      total: withGeo.count ?? 0,
+      total,
       error: null,
     };
   }
@@ -104,7 +126,7 @@ async function loadDashboardReleases(
 
   const fallback = await supabase
     .from('press_releases')
-    .select(RELEASE_LIST_COLUMNS, { count: 'exact' })
+    .select(RELEASE_LIST_COLUMNS)
     .eq('brand_id', brandId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -117,7 +139,7 @@ async function loadDashboardReleases(
 
   return {
     rows: (fallback.data ?? []) as ReleaseListRow[],
-    total: fallback.count ?? 0,
+    total,
     error: null,
   };
 }

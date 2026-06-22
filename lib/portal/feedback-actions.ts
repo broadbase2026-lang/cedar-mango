@@ -3,13 +3,7 @@
 import { sendPortalFeedbackEmail } from '@/lib/email/send-portal-feedback';
 import { getBrandPortalSession } from '@/lib/brand/session';
 import { getJournalistPortalSession } from '@/lib/journalist/session';
-
-export type PortalFeedbackActionState = {
-  error: string | null;
-  success?: boolean;
-};
-
-const INITIAL_STATE: PortalFeedbackActionState = { error: null };
+import type { PortalFeedbackActionState } from '@/lib/portal/feedback-state';
 
 function parseMessage(raw: FormDataEntryValue | null): string | null {
   const message = String(raw ?? '').trim();
@@ -91,4 +85,3 @@ export async function submitJournalistFeedbackAction(
   return submitFeedbackForPortal('journalist', formData);
 }
 
-export { INITIAL_STATE as portalFeedbackInitialState };

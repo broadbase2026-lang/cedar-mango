@@ -160,20 +160,23 @@ function dashboardReleasesHref(
 
 function DashboardReleasesPagination({
   pagination,
+  rowCount,
   preserveSectionInLinks,
 }: {
   pagination: BrandDashboardData['releasesPagination'];
+  rowCount: number;
   preserveSectionInLinks: boolean;
 }) {
   const { page, pageSize, total } = pagination;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const effectiveTotal = Math.max(total, (page - 1) * pageSize + rowCount);
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
 
-  if (total <= pageSize) {
+  if (totalPages <= 1) {
     return null;
   }
 
   const rangeStart = (page - 1) * pageSize + 1;
-  const rangeEnd = Math.min(page * pageSize, total);
+  const rangeEnd = Math.min(page * pageSize, effectiveTotal);
 
   return (
     <nav
@@ -181,7 +184,7 @@ function DashboardReleasesPagination({
       aria-label="Press release pages"
     >
       <p className="bb-dash-pagination-summary">
-        Showing {rangeStart}–{rangeEnd} of {total.toLocaleString()}
+        Showing {rangeStart}–{rangeEnd} of {effectiveTotal.toLocaleString()}
       </p>
       <div className="bb-dash-pagination-controls">
         {page > 1 ? (
@@ -724,6 +727,7 @@ export function BrandDashboardView({
               </div>
               <DashboardReleasesPagination
                 pagination={data.releasesPagination}
+                rowCount={data.releases.length}
                 preserveSectionInLinks={preserveSectionInLinks}
               />
             </div>

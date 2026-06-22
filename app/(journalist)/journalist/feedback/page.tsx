@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PortalFeedbackForm } from '@/components/portal/portal-feedback-form';
-import {
-  portalFeedbackInitialState,
-  submitJournalistFeedbackAction,
-} from '@/lib/portal/feedback-actions';
+import { portalFeedbackInitialState } from '@/lib/portal/feedback-state';
+import { submitJournalistFeedbackAction } from '@/lib/portal/feedback-actions';
 import { getJournalistPortalSession } from '@/lib/journalist/session';
 
 export default async function JournalistFeedbackPage() {

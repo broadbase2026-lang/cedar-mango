@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { BrandDashboardView } from '@/components/brand/brand-dashboard-view';
-import { loadBrandDashboardData } from '@/lib/brand/dashboard-data';
+import { loadBrandDashboardData, RELEASES_PAGE_SIZE } from '@/lib/brand/dashboard-data';
 import { getBrandPortalSession } from '@/lib/brand/session';
 import type { BrandDashboardData } from '@/lib/brand/dashboard-data';
 import { brandPlanFromSubscription, fetchBrandOwnerSubscription } from '@/lib/auth/dev-profile-mock';
@@ -16,7 +16,7 @@ const EMPTY_DATA: BrandDashboardData = {
   releases: [],
   releasesPagination: {
     page: 1,
-    pageSize: 20,
+    pageSize: RELEASES_PAGE_SIZE,
     total: 0,
   },
   drafts: [],
