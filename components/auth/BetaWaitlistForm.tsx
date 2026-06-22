@@ -25,10 +25,29 @@ function SubmitButton() {
 }
 
 const audienceOptionClassName = cn(
-  'flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/40 bg-white px-4 py-3.5',
+  'group flex cursor-pointer items-center gap-3 rounded-xl border border-white/40 bg-white px-4 py-3.5',
   'text-sm font-semibold text-brand-ink transition-colors hover:bg-white/90',
   'has-[:checked]:border-brand-ink has-[:checked]:ring-2 has-[:checked]:ring-brand-ink/20',
 );
+
+function AudienceRadioIndicator() {
+  return (
+    <span
+      className={cn(
+        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-brand-ink/35',
+        'transition-colors group-has-[:checked]:border-accent',
+      )}
+      aria-hidden
+    >
+      <span
+        className={cn(
+          'h-2.5 w-2.5 rounded-full bg-accent transition-transform',
+          'scale-0 group-has-[:checked]:scale-100',
+        )}
+      />
+    </span>
+  );
+}
 
 export function BetaWaitlistForm() {
   const initialState: BetaWaitlistActionState = { error: null, success: false };
@@ -58,6 +77,7 @@ export function BetaWaitlistForm() {
               required
               className="sr-only"
             />
+            <AudienceRadioIndicator />
             Journalist
           </label>
           <label className={cn(audienceOptionClassName, 'sm:flex-1')}>
@@ -68,6 +88,7 @@ export function BetaWaitlistForm() {
               required
               className="sr-only"
             />
+            <AudienceRadioIndicator />
             Brand
           </label>
         </div>
@@ -83,7 +104,7 @@ export function BetaWaitlistForm() {
           type="email"
           autoComplete="email"
           required
-          placeholder="you@example.com"
+          placeholder="Email address"
           className="h-12 border-white/40 bg-white text-brand-ink placeholder:text-brand-muted"
         />
       </div>
