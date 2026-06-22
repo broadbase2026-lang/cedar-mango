@@ -16,8 +16,7 @@ export default async function JournalistFeedbackPage() {
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-brand-ink">Feedback</h1>
           <p className="mt-1 text-sm text-brand-muted">
-            Share bugs, ideas, or questions. We read every message and reply from{' '}
-            <span className="font-medium text-brand-ink">help@broadbase.app</span>.
+            Share bugs, ideas, or questions. We read every message and reply.
           </p>
         </div>
 
@@ -25,8 +24,6 @@ export default async function JournalistFeedbackPage() {
           action={submitJournalistFeedbackAction}
           initialState={portalFeedbackInitialState}
           userEmail={session.email}
-          userDisplayName={session.displayName}
-          contextLabel={session.journalistProfile?.publication ?? null}
         />
       </div>
     </main>

@@ -202,12 +202,15 @@ export function JournalistPortalShell({
           </Suspense>
         </nav>
 
-        <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
+        <div className="bb-portal-sidebar-footer">
           <PortalSidebarFeedbackLink
             href="/journalist/feedback"
             active={pathname === '/journalist/feedback'}
             onNavigate={() => setMobileSidebarOpen(false)}
           />
+        </div>
+
+        <div className="px-2 pb-4 sm:hidden">
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}

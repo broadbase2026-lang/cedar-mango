@@ -252,12 +252,15 @@ export function BrandPortalShell({
           </Suspense>
         </nav>
 
-        <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
+        <div className="bb-portal-sidebar-footer">
           <PortalSidebarFeedbackLink
             href="/brand/feedback"
             active={pathname === '/brand/feedback'}
             onNavigate={() => setMobileSidebarOpen(false)}
           />
+        </div>
+
+        <div className="space-y-2 px-2 pb-4 sm:hidden">
           <Link
             href="/brand/releases/new"
             className="bb-btn-primary-md w-full no-underline sm:hidden"
