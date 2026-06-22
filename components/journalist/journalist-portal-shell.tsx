@@ -8,6 +8,7 @@ import { Compass, FolderOpen, Settings, type LucideIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
+import { PortalSidebarFeedbackLink } from '@/components/portal/portal-sidebar-feedback-link';
 import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
@@ -201,7 +202,12 @@ export function JournalistPortalShell({
           </Suspense>
         </nav>
 
-        <div className="mt-auto px-2 pb-4">
+        <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
+          <PortalSidebarFeedbackLink
+            href="/journalist/feedback"
+            active={pathname === '/journalist/feedback'}
+            onNavigate={() => setMobileSidebarOpen(false)}
+          />
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}

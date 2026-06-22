@@ -117,12 +117,18 @@ export function JournalistDiscoverView({
   const [open, setOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(14);
   const [searchText, setSearchText] = useState(searchQuery);
+  const [feedReleases, setFeedReleases] = useState<PressReleaseMock[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const [activeIds, setActiveIds] = useState<string[]>([]);
 
   useEffect(() => {
     setSearchText(searchQuery);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setFeedReleases(releases ?? null);
+  }, [releases]);
 
   // Mock profile-driven prefs (wire to real profile fields when available).
   const prefs: UserDiscoveryPrefs = useMemo(
@@ -140,12 +146,14 @@ export function JournalistDiscoverView({
     setGreeting(greetingForLocalTime(new Date()));
   }, []);
 
-  const feedSource =
-    isSearchMode && releases
-      ? releases
-      : releases && releases.length > 0
-        ? releases
-        : pressReleasesMock;
+  const feedSource = useMemo(() => {
+    if (isSearchMode && releases) return releases;
+    const live = feedReleases ?? releases;
+    if (live && live.length > 0) return live;
+    return pressReleasesMock;
+  }, [isSearchMode, feedReleases, releases]);
+
+  const feedIdKey = useMemo(() => feedSource.map((r) => r.id).join(','), [feedSource]);
 
   const curated = useMemo(() => {
     if (!mounted) return [];
@@ -172,6 +180,7 @@ export function JournalistDiscoverView({
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const lastAppliedSeedRef = useRef<string | null>(null);
+  const lastAppliedFeedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isSearchMode) return;
@@ -190,19 +199,22 @@ export function JournalistDiscoverView({
     return () => io.disconnect();
   }, [curated.length, isSearchMode]);
 
-  // Keep the visible tile IDs stable so individual tiles can be replaced/dismissed.
-  // Rebuild the list when the refresh seed changes so the feed visibly reorders.
+  // Rebuild the list when the refresh seed changes or new releases arrive from the server.
   useEffect(() => {
     if (!mounted) return;
 
     const seedChanged =
       lastAppliedSeedRef.current !== null && lastAppliedSeedRef.current !== seed;
+    const feedChanged =
+      lastAppliedFeedKeyRef.current !== null &&
+      lastAppliedFeedKeyRef.current !== feedIdKey;
     lastAppliedSeedRef.current = seed;
+    lastAppliedFeedKeyRef.current = feedIdKey;
 
     setActiveIds((prev) => {
       const curatedSet = new Set(curated.map((r) => r.id));
       const prevIsSubset = prev.length > 0 && prev.every((id) => curatedSet.has(id));
-      if (!prev.length || !prevIsSubset || seedChanged) {
+      if (!prev.length || !prevIsSubset || seedChanged || feedChanged) {
         return curated.slice(0, effectiveVisibleCount).map((r) => r.id);
       }
 
@@ -220,7 +232,7 @@ export function JournalistDiscoverView({
       }
       return next;
     });
-  }, [mounted, curated, effectiveVisibleCount, seed]);
+  }, [mounted, curated, effectiveVisibleCount, seed, feedIdKey]);
 
   useLenisScrollLock(open);
 
@@ -259,10 +271,24 @@ export function JournalistDiscoverView({
     };
   }, [open, selected]);
 
-  function onRefresh() {
-    setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
-    setVisibleCount(14);
-    router.refresh();
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/journalist/discover-feed', { cache: 'no-store' });
+      const json = (await res.json().catch(() => null)) as
+        | { ok: true; releases: PressReleaseMock[] }
+        | { ok: false; error?: string }
+        | null;
+
+      if (res.ok && json && json.ok === true && Array.isArray(json.releases)) {
+        setFeedReleases(json.releases);
+      }
+
+      setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
+      setVisibleCount(14);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function onOpenRelease(r: PressReleaseMock) {
@@ -308,11 +334,12 @@ export function JournalistDiscoverView({
                 <div className="hidden sm:flex shrink-0 flex-col items-end">
                   <button
                     type="button"
-                    onClick={onRefresh}
-                    className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface"
+                    onClick={() => void onRefresh()}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface disabled:opacity-60"
                   >
-                    <RotateCw className="h-4 w-4" />
-                    Refresh
+                    <RotateCw className={'h-4 w-4 ' + (refreshing ? 'animate-spin' : '')} />
+                    {refreshing ? 'Refreshing…' : 'Refresh'}
                   </button>
                 </div>
               ) : null}
@@ -321,11 +348,12 @@ export function JournalistDiscoverView({
               <div className="mt-4 flex justify-center sm:hidden">
                 <button
                   type="button"
-                  onClick={onRefresh}
-                  className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface"
+                  onClick={() => void onRefresh()}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink shadow-sm hover:bg-brand-surface disabled:opacity-60"
                 >
-                  <RotateCw className="h-4 w-4" />
-                  Refresh
+                  <RotateCw className={'h-4 w-4 ' + (refreshing ? 'animate-spin' : '')} />
+                  {refreshing ? 'Refreshing…' : 'Refresh'}
                 </button>
               </div>
             ) : null}

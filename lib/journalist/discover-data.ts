@@ -185,6 +185,31 @@ async function enrichDiscoverReleaseRows(
   }));
 }
 
+const DISCOVER_FEED_LIMIT = 20;
+
+async function loadRecentDiscoverRaw(
+  supabase: SupabaseClient,
+  limit = DISCOVER_FEED_LIMIT
+): Promise<RawDiscoverReleaseRow[]> {
+  const { data } = await supabase
+    .from('press_releases')
+    .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  return data ?? [];
+}
+
+/** Latest published releases for the discover masonry feed. */
+export async function loadJournalistDiscoverFeedReleases(
+  supabase: SupabaseClient,
+  journalistId: string,
+  limit = DISCOVER_FEED_LIMIT
+): Promise<DiscoverReleaseRow[]> {
+  const recentRaw = await loadRecentDiscoverRaw(supabase, limit);
+  return enrichDiscoverReleaseRows(supabase, journalistId, recentRaw);
+}
+
 export async function loadJournalistDiscoverSearchRows(
   supabase: SupabaseClient,
   journalistId: string,
@@ -210,12 +235,8 @@ export async function loadJournalistDiscoverData(
   supabase: SupabaseClient,
   journalistId: string
 ): Promise<JournalistDiscoverData> {
-  const [recentRes, followsRes, foldersRes, savesRes] = await Promise.all([
-    supabase
-      .from('press_releases')
-      .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
-      .order('published_at', { ascending: false, nullsFirst: false })
-      .limit(20),
+  const [recentReleases, followsRes, foldersRes, savesRes] = await Promise.all([
+    loadJournalistDiscoverFeedReleases(supabase, journalistId),
     supabase
       .from('journalist_follows')
       .select('brand_id, created_at, brands(id, name, slug, logo_url, industry_vertical)')
@@ -237,9 +258,6 @@ export async function loadJournalistDiscoverData(
       .order('saved_at', { ascending: false })
       .limit(12),
   ]);
-
-  const recentRaw = recentRes.data ?? [];
-  const recentReleases = await enrichDiscoverReleaseRows(supabase, journalistId, recentRaw);
 
   const followedBrands: FollowedBrandRow[] = (followsRes.data ?? [])
     .map((row) => {

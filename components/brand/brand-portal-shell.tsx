@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
+import { PortalSidebarFeedbackLink } from '@/components/portal/portal-sidebar-feedback-link';
 import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
@@ -141,6 +142,7 @@ export function BrandPortalShell({
   userAvatarUrl,
   children,
 }: BrandPortalShellProps) {
+  const pathname = usePathname() ?? '';
   const display = userDisplayName?.trim() || userEmail || 'Account';
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -251,6 +253,11 @@ export function BrandPortalShell({
         </nav>
 
         <div className="mt-auto space-y-2 px-2 pb-4 sm:pb-6">
+          <PortalSidebarFeedbackLink
+            href="/brand/feedback"
+            active={pathname === '/brand/feedback'}
+            onNavigate={() => setMobileSidebarOpen(false)}
+          />
           <Link
             href="/brand/releases/new"
             className="bb-btn-primary-md w-full no-underline sm:hidden"

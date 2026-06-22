@@ -10,6 +10,8 @@ type PageProps = {
   searchParams?: { q?: string };
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function JournalistDiscoverPage({ searchParams }: PageProps) {
   const session = await getJournalistPortalSession();
   if (!session.ok) {
