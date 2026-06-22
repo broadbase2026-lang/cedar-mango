@@ -21,6 +21,7 @@ type BrandDashboardViewProps = {
   hasBrand: boolean;
   data: BrandDashboardData;
   scrollToReleasesSection?: boolean;
+  preserveSectionInLinks?: boolean;
   accessState: {
     hasActiveSubscription: boolean;
     isInTrial: boolean;
@@ -142,10 +143,84 @@ function critiqueForScore(score: number | null): string[] {
   return base;
 }
 
+function dashboardReleasesHref(
+  page: number,
+  preserveSectionInLinks: boolean
+): string {
+  const params = new URLSearchParams();
+  if (preserveSectionInLinks) {
+    params.set('section', 'releases');
+  }
+  if (page > 1) {
+    params.set('page', String(page));
+  }
+  const query = params.toString();
+  return query ? `/brand/dashboard?${query}` : '/brand/dashboard';
+}
+
+function DashboardReleasesPagination({
+  pagination,
+  preserveSectionInLinks,
+}: {
+  pagination: BrandDashboardData['releasesPagination'];
+  preserveSectionInLinks: boolean;
+}) {
+  const { page, pageSize, total } = pagination;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  if (total <= pageSize) {
+    return null;
+  }
+
+  const rangeStart = (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, total);
+
+  return (
+    <nav
+      className="bb-dash-pagination"
+      aria-label="Press release pages"
+    >
+      <p className="bb-dash-pagination-summary">
+        Showing {rangeStart}–{rangeEnd} of {total.toLocaleString()}
+      </p>
+      <div className="bb-dash-pagination-controls">
+        {page > 1 ? (
+          <Link
+            href={dashboardReleasesHref(page - 1, preserveSectionInLinks)}
+            className="bb-dash-pagination-btn"
+          >
+            Previous
+          </Link>
+        ) : (
+          <span className="bb-dash-pagination-btn bb-dash-pagination-btn-disabled">
+            Previous
+          </span>
+        )}
+        <span className="bb-dash-pagination-status">
+          Page {page} of {totalPages}
+        </span>
+        {page < totalPages ? (
+          <Link
+            href={dashboardReleasesHref(page + 1, preserveSectionInLinks)}
+            className="bb-dash-pagination-btn"
+          >
+            Next
+          </Link>
+        ) : (
+          <span className="bb-dash-pagination-btn bb-dash-pagination-btn-disabled">
+            Next
+          </span>
+        )}
+      </div>
+    </nav>
+  );
+}
+
 export function BrandDashboardView({
   hasBrand,
   data,
   scrollToReleasesSection = false,
+  preserveSectionInLinks = false,
   accessState,
 }: BrandDashboardViewProps) {
   const router = useRouter();
@@ -191,7 +266,7 @@ export function BrandDashboardView({
 
   const emptyNoBrand = !hasBrand;
   const emptyNoReleases =
-    hasBrand && data.releases.length === 0 && !data.loadError;
+    hasBrand && data.releasesPagination.total === 0 && !data.loadError;
 
   async function onGenerateAiReadiness() {
     if (!selectedDraft?.id) return;
@@ -464,7 +539,7 @@ export function BrandDashboardView({
             </div>
             <div className="bb-dash-releases-top">
               <div>
-                <h2 className="bb-dash-section-title">Release management</h2>
+                <h2 className="bb-dash-section-title">Your Press Releases</h2>
                 <p className="bb-dash-section-desc">
                   Recent uploads for your organization
                 </p>
@@ -647,6 +722,10 @@ export function BrandDashboardView({
                   </tbody>
                 </table>
               </div>
+              <DashboardReleasesPagination
+                pagination={data.releasesPagination}
+                preserveSectionInLinks={preserveSectionInLinks}
+              />
             </div>
 
             {embargoEdit ? (

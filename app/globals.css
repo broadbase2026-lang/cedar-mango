@@ -587,6 +587,30 @@
     @apply flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between;
   }
 
+  .bb-dash-pagination {
+    @apply flex flex-col gap-3 border-t border-brand-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .bb-dash-pagination-summary {
+    @apply text-sm text-brand-muted;
+  }
+
+  .bb-dash-pagination-controls {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .bb-dash-pagination-status {
+    @apply px-2 text-sm tabular-nums text-brand-muted;
+  }
+
+  .bb-dash-pagination-btn {
+    @apply inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-brand-ink no-underline ring-1 ring-inset ring-brand-border transition-colors hover:bg-brand-surface-2;
+  }
+
+  .bb-dash-pagination-btn-disabled {
+    @apply pointer-events-none opacity-50;
+  }
+
   .bb-badge-published {
     @apply inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20;
   }

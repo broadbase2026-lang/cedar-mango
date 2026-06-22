@@ -1,0 +1,45 @@
+{
+  "$comment": "Reduced WAF set for Vercel Hobby (max 3 custom rules, 1 rate-limit rule). Apply with: node scripts/firewall/apply-rules.mjs --manifest scripts/firewall/manifest.hobby.json --yes",
+  "rules": [
+    {
+      "name": "Broadbase: bypass webhooks and cron",
+      "description": "Stripe/Resend webhooks and Vercel cron must not be rate-limited.",
+      "cli": {
+        "action": "bypass",
+        "conditions": [
+          { "type": "path", "op": "pre", "value": "/api/webhooks" },
+          { "type": "path", "op": "pre", "value": "/api/cron", "or": true }
+        ]
+      }
+    },
+    {
+      "name": "Broadbase: deny security probes",
+      "description": "Block common scanner paths (.env, .git, WordPress, phpMyAdmin).",
+      "cli": {
+        "action": "deny",
+        "conditions": [
+          {
+            "type": "path",
+            "op": "re",
+            "value": "(?i)^/(\\.env(\\.\\w+)?|\\.git|wp-admin|wp-login\\.php|phpmyadmin|xmlrpc\\.php)(/|$)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Broadbase: rate limit API",
+      "description": "Single Hobby-plan rate limit: all /api routes (webhooks bypassed by rule 1).",
+      "cli": {
+        "action": "rate_limit",
+        "rateLimit": {
+          "window": 60,
+          "requests": 100,
+          "keys": ["ip"],
+          "algo": "fixed_window",
+          "exceededAction": "rate_limit"
+        },
+        "conditions": [{ "type": "path", "op": "pre", "value": "/api" }]
+      }
+    }
+  ]
+}

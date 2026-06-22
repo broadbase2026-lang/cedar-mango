@@ -18,6 +18,8 @@ import { ReleaseFileImportDropzone } from '@/components/brand/release-file-impor
 import { ReleaseUrlImportField } from '@/components/brand/release-url-import-field';
 import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
 import { registerPressAsset, softDeletePressAsset } from '@/app/(brand)/brand/upload/actions';
+import { savePressReleaseDraftAction } from '@/app/(brand)/brand/releases/new/actions';
+import { ReleasePublishPanel } from '@/components/brand/release-publish-panel';
 import type { ReleaseImageAsset } from '@/lib/brand/release-asset-model';
 import { TRIAL_LIMIT_COPY } from '@/constants/copy';
 import { TRIAL_RELEASE_LIMIT_ERROR_CODE } from '@/lib/brand/trial-release-limit';
@@ -76,6 +78,27 @@ function formatBytes(n: number): string {
   return `${v >= 10 || i === 0 ? v.toFixed(0) : v.toFixed(1)} ${units[i]}`;
 }
 
+function releaseFormErrorMessage(errorCode: string | null | undefined): string | null {
+  if (!errorCode) return null;
+  if (errorCode === 'missing_title') return 'Title is required.';
+  if (errorCode === 'missing_body') return 'Body is required.';
+  if (errorCode === 'body_too_long')
+    return 'Body is too long (max 500,000 characters).';
+  if (errorCode === 'summary_too_long') return 'Summary must be ≤ 280 characters.';
+  if (errorCode === 'invalid_rich_text') return 'Body content was invalid. Try again.';
+  if (errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE) {
+    return TRIAL_LIMIT_COPY.errors.createDraftLimit;
+  }
+  if (errorCode === 'create_failed') return 'Could not save the draft. Try again.';
+  if (errorCode === 'invalid_pending_assets')
+    return 'Uploaded images could not be attached. Remove images and try again.';
+  if (errorCode === 'assets_failed')
+    return 'Draft was saved, but linking images failed. Save again or add them from Media Library.';
+  if (errorCode === 'not_signed_in') return 'You must be signed in to save.';
+  if (errorCode === 'already_published') return 'This release is already published.';
+  return 'Something went wrong. Try again.';
+}
+
 function dragHasFiles(e: React.DragEvent): boolean {
   const dt = e.dataTransfer;
   if (!dt) return false;
@@ -91,6 +114,7 @@ export function NewReleaseForm({
   initialImages = [],
   savedNotice = false,
   existing,
+  publishConfig,
 }: {
   action: (formData: FormData) => Promise<void>;
   brandId: string;
@@ -99,6 +123,10 @@ export function NewReleaseForm({
   initialImages?: ReleaseImageAsset[];
   savedNotice?: boolean;
   existing?: ExistingRelease | null;
+  publishConfig?: {
+    plan: string | null;
+    embargoUntil: string | null;
+  } | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +145,7 @@ export function NewReleaseForm({
   const [importBusy, setImportBusy] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
   const pendingAssetsRef = useRef<PendingAsset[]>([]);
+  const hydratedReleaseIdRef = useRef<string | null>(null);
 
   const applyImportResult = useCallback((result: ReleaseImportResult) => {
     setTitle(result.title || '');
@@ -132,28 +161,24 @@ export function NewReleaseForm({
   }, [pendingAssets]);
 
   useEffect(() => {
-    if (!existing?.id) return;
-    setPendingAssets(initialImages);
-    pendingAssetsRef.current = initialImages;
-  }, [existing?.id, initialImages]);
+    if (!existing?.id) {
+      hydratedReleaseIdRef.current = null;
+      return;
+    }
+    // Hydrate from the server once per release. Avoid re-applying when image uploads
+    // or other actions revalidate the page — that would wipe unsaved editor state.
+    if (hydratedReleaseIdRef.current === existing.id) return;
+    hydratedReleaseIdRef.current = existing.id;
 
-  useEffect(() => {
-    if (!existing?.id) return;
-    // Editing an existing draft: server-provided values win over any stale import prefill.
     setTitle(existing.title || '');
     setSummary(existing.summary || '');
     setBodyHtml(existing.bodyHtml || '');
     setVertical(existing.industry_vertical ?? '');
     setTags((existing.tags ?? []).join(','));
+    setPendingAssets(initialImages);
+    pendingAssetsRef.current = initialImages;
     setEditorSeed((x) => x + 1);
-  }, [
-    existing?.id,
-    existing?.title,
-    existing?.summary,
-    existing?.bodyHtml,
-    existing?.industry_vertical,
-    existing?.tags,
-  ]);
+  }, [existing, initialImages]);
 
   useEffect(() => {
     if (existing?.id) return;
@@ -208,23 +233,50 @@ export function NewReleaseForm({
   );
 
   const errorMessage = useMemo(() => {
-    if (!errorCode) return null;
-    if (errorCode === 'missing_title') return 'Title is required.';
-    if (errorCode === 'missing_body') return 'Body is required.';
-    if (errorCode === 'body_too_long')
-      return 'Body is too long (max 500,000 characters).';
-    if (errorCode === 'summary_too_long') return 'Summary must be ≤ 280 characters.';
-    if (errorCode === 'invalid_rich_text') return 'Body content was invalid. Try again.';
-    if (errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE) {
-      return TRIAL_LIMIT_COPY.errors.createDraftLimit;
+    if (errorCode === 'create_failed' && !existing?.id) {
+      return 'Could not create the draft. Try again.';
     }
-    if (errorCode === 'create_failed') return 'Could not create the draft. Try again.';
-    if (errorCode === 'invalid_pending_assets')
-      return 'Uploaded images could not be attached. Remove images and try again.';
-    if (errorCode === 'assets_failed')
-      return 'Draft was saved, but linking images failed. Save again or add them from Media Library.';
-    return 'Something went wrong. Try again.';
-  }, [errorCode]);
+    return releaseFormErrorMessage(errorCode);
+  }, [errorCode, existing?.id]);
+
+  const buildFormData = useCallback(() => {
+    const formData = new FormData();
+    if (existing?.id) {
+      formData.set('release_id', existing.id);
+    }
+    formData.set('title', title);
+    formData.set('body', bodyHtml);
+    formData.set('summary', summary);
+    formData.set('industry_vertical', vertical);
+    formData.set('tags', tags);
+    formData.set('pending_assets', JSON.stringify(pendingAssets));
+    return formData;
+  }, [
+    existing?.id,
+    title,
+    bodyHtml,
+    summary,
+    vertical,
+    tags,
+    pendingAssets,
+  ]);
+
+  const saveCurrentDraft = useCallback(async (): Promise<
+    { ok: true } | { ok: false; message: string }
+  > => {
+    if (!existing?.id) {
+      return { ok: false, message: 'No draft to save.' };
+    }
+
+    const result = await savePressReleaseDraftAction(buildFormData());
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: releaseFormErrorMessage(result.errorCode) ?? 'Could not save draft.',
+      };
+    }
+    return { ok: true };
+  }, [existing?.id, buildFormData]);
 
   const onGenerateSummary = useCallback(async () => {
     setSummaryErr(null);
@@ -366,20 +418,12 @@ export function NewReleaseForm({
   );
 
   return (
+    <>
     <form
       ref={formRef}
       action={action}
       className="rounded-xl border border-brand-border bg-white p-6 shadow-sm space-y-4"
     >
-      {savedNotice ? (
-        <div
-          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
-          role="status"
-        >
-          Draft saved.
-        </div>
-      ) : null}
-
       {errorMessage && (
         <div
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -640,12 +684,31 @@ export function NewReleaseForm({
         </div>
       </div>
 
-      <div className="pt-2">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <button type="submit" className="bb-btn-primary-sm no-underline">
           {existing?.id ? 'Save changes' : 'Create draft'}
         </button>
+        {savedNotice ? (
+          <span
+            className="text-sm font-medium text-emerald-700"
+            role="status"
+          >
+            Draft saved.
+          </span>
+        ) : null}
       </div>
     </form>
+
+    {existing?.id && publishConfig ? (
+      <ReleasePublishPanel
+        releaseId={existing.id}
+        status="draft"
+        plan={publishConfig.plan}
+        embargoUntil={publishConfig.embargoUntil}
+        beforePublish={saveCurrentDraft}
+      />
+    ) : null}
+    </>
   );
 }
 

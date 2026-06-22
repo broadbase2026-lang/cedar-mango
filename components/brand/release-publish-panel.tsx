@@ -33,11 +33,13 @@ export function ReleasePublishPanel(props: {
   status: 'draft' | 'published' | 'archived' | string;
   plan: string | null;
   embargoUntil: string | null;
+  beforePublish?: () => Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
-  const { releaseId, status, plan, embargoUntil } = props;
+  const { releaseId, status, plan, embargoUntil, beforePublish } = props;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'saving' | 'publishing'>('idle');
   const canUseEmbargo = plan === 'pro' || plan === 'agency';
 
   const { min, max } = useMemo(() => minMaxEmbargo(), []);
@@ -67,6 +69,17 @@ export function ReleasePublishPanel(props: {
             setError(null);
             startTransition(async () => {
               try {
+                if (beforePublish) {
+                  setPhase('saving');
+                  const saveResult = await beforePublish();
+                  if (!saveResult.ok) {
+                    setError(saveResult.message);
+                    setPhase('idle');
+                    return;
+                  }
+                }
+
+                setPhase('publishing');
                 const embargoUntilUtc = embargoLocal
                   ? new Date(embargoLocal).toISOString()
                   : undefined;
@@ -96,17 +109,26 @@ export function ReleasePublishPanel(props: {
                       ? json.error
                       : `Publish failed (${res.status}).`
                   );
+                  setPhase('idle');
                   return;
                 }
 
                 router.refresh();
               } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : 'Publish failed.');
+              } finally {
+                setPhase('idle');
               }
             });
           }}
         >
-          {embargoLocal && canUseEmbargo ? 'Publish with embargo' : 'Publish'}
+          {phase === 'saving'
+            ? 'Saving…'
+            : phase === 'publishing'
+              ? 'Publishing…'
+              : embargoLocal && canUseEmbargo
+                ? 'Publish with embargo'
+                : 'Publish'}
         </button>
       </div>
 

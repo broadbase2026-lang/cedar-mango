@@ -17,6 +17,8 @@ export type DraftSummary = {
   aiReadinessScore: number | null;
 };
 
+export const RELEASES_PAGE_SIZE = 20;
+
 export type BrandDashboardData = {
   metrics: {
     totalViews: number;
@@ -25,6 +27,11 @@ export type BrandDashboardData = {
     aiReadinessAvg: number | null;
   };
   releases: DashboardReleaseRow[];
+  releasesPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
   drafts: DraftSummary[];
   loadError?: string | null;
 };
@@ -43,39 +50,76 @@ type ReleaseListRow = {
   geo_readiness_score?: number | null;
 };
 
-async function loadDashboardReleases(
+async function loadDashboardDrafts(
   supabase: SupabaseClient,
   brandId: string
-): Promise<{ rows: ReleaseListRow[]; error: string | null }> {
+): Promise<DraftSummary[]> {
+  const { data, error } = await supabase
+    .from('press_releases')
+    .select('id, title, ai_readiness_score')
+    .eq('brand_id', brandId)
+    .eq('status', 'draft')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('[loadBrandDashboardData] drafts query failed', error);
+    return [];
+  }
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    title: r.title,
+    aiReadinessScore: r.ai_readiness_score,
+  }));
+}
+
+async function loadDashboardReleases(
+  supabase: SupabaseClient,
+  brandId: string,
+  page: number
+): Promise<{ rows: ReleaseListRow[]; total: number; error: string | null }> {
+  const from = (page - 1) * RELEASES_PAGE_SIZE;
+  const to = from + RELEASES_PAGE_SIZE - 1;
+
   const base = supabase
     .from('press_releases')
-    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`)
+    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`, { count: 'exact' })
     .eq('brand_id', brandId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(20);
+    .range(from, to);
 
   const withGeo = await base;
   if (!withGeo.error) {
-    return { rows: (withGeo.data ?? []) as ReleaseListRow[], error: null };
+    return {
+      rows: (withGeo.data ?? []) as ReleaseListRow[],
+      total: withGeo.count ?? 0,
+      error: null,
+    };
   }
 
   console.error('[loadBrandDashboardData] releases query failed', withGeo.error);
 
   const fallback = await supabase
     .from('press_releases')
-    .select(RELEASE_LIST_COLUMNS)
+    .select(RELEASE_LIST_COLUMNS, { count: 'exact' })
     .eq('brand_id', brandId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(20);
+    .range(from, to);
 
   if (fallback.error) {
     console.error('[loadBrandDashboardData] releases fallback failed', fallback.error);
-    return { rows: [], error: fallback.error.message };
+    return { rows: [], total: 0, error: fallback.error.message };
   }
 
-  return { rows: (fallback.data ?? []) as ReleaseListRow[], error: null };
+  return {
+    rows: (fallback.data ?? []) as ReleaseListRow[],
+    total: fallback.count ?? 0,
+    error: null,
+  };
 }
 
 const VERTICAL_LABEL: Record<string, string> = {
@@ -150,12 +194,15 @@ function bucketSparklines(
  */
 export async function loadBrandDashboardData(
   supabase: SupabaseClient,
-  brandId: string
+  brandId: string,
+  options?: { releasesPage?: number }
 ): Promise<BrandDashboardData> {
   const monthStart = startOfMonthIso();
   const weekStart = lastNDaysStart(7);
+  const requestedPage = Math.max(1, options?.releasesPage ?? 1);
 
-  const releasesPromise = loadDashboardReleases(supabase, brandId);
+  const releasesPromise = loadDashboardReleases(supabase, brandId, requestedPage);
+  const draftsPromise = loadDashboardDrafts(supabase, brandId);
 
   const [
     viewsCountRes,
@@ -199,7 +246,23 @@ export async function loadBrandDashboardData(
       .gte('viewed_at', weekStart),
   ]);
 
-  const { rows: rawReleases, error: releasesError } = await releasesPromise;
+  const [
+    { rows: rawReleases, total: releasesTotal, error: releasesError },
+    drafts,
+  ] = await Promise.all([releasesPromise, draftsPromise]);
+
+  const totalPages =
+    releasesTotal > 0
+      ? Math.ceil(releasesTotal / RELEASES_PAGE_SIZE)
+      : 1;
+  const page =
+    requestedPage > totalPages && releasesTotal > 0 ? totalPages : requestedPage;
+  const pageReleases =
+    page !== requestedPage
+      ? await loadDashboardReleases(supabase, brandId, page)
+      : { rows: rawReleases, total: releasesTotal, error: releasesError };
+  const finalReleases = pageReleases.rows;
+  const finalTotal = pageReleases.total;
 
   const activeIds = new Set<string>();
   for (const row of viewsThisMonth.data ?? []) {
@@ -217,10 +280,10 @@ export async function loadBrandDashboardData(
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
       : null;
 
-  const ids = rawReleases.map((r) => r.id);
+  const ids = finalReleases.map((r) => r.id);
   const sparkMap = bucketSparklines(sparkRowsRes.data ?? [], ids);
 
-  const releases: DashboardReleaseRow[] = rawReleases.map((r) => ({
+  const releases: DashboardReleaseRow[] = finalReleases.map((r) => ({
     id: r.id,
     title: r.title,
     status: r.status as DashboardReleaseRow['status'],
@@ -232,14 +295,6 @@ export async function loadBrandDashboardData(
       typeof r.geo_readiness_score === 'number' ? r.geo_readiness_score : null,
   }));
 
-  const drafts: DraftSummary[] = rawReleases
-    .filter((r) => r.status === 'draft')
-    .map((r) => ({
-      id: r.id,
-      title: r.title,
-      aiReadinessScore: r.ai_readiness_score,
-    }));
-
   return {
     metrics: {
       totalViews: viewsCountRes.count ?? 0,
@@ -248,7 +303,12 @@ export async function loadBrandDashboardData(
       aiReadinessAvg,
     },
     releases,
+    releasesPagination: {
+      page,
+      pageSize: RELEASES_PAGE_SIZE,
+      total: finalTotal,
+    },
     drafts,
-    loadError: releasesError,
+    loadError: pageReleases.error ?? releasesError,
   };
 }

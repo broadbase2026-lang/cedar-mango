@@ -171,6 +171,8 @@ export function JournalistDiscoverView({
   );
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const lastAppliedSeedRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (isSearchMode) return;
     const el = sentinelRef.current;
@@ -189,15 +191,18 @@ export function JournalistDiscoverView({
   }, [curated.length, isSearchMode]);
 
   // Keep the visible tile IDs stable so individual tiles can be replaced/dismissed.
+  // Rebuild the list when the refresh seed changes so the feed visibly reorders.
   useEffect(() => {
     if (!mounted) return;
 
+    const seedChanged =
+      lastAppliedSeedRef.current !== null && lastAppliedSeedRef.current !== seed;
+    lastAppliedSeedRef.current = seed;
+
     setActiveIds((prev) => {
-      // If the current list looks invalid (seed change, initial mount), reset from curated.
-      const prevSet = new Set(prev);
       const curatedSet = new Set(curated.map((r) => r.id));
-      const prevIsSubset = prev.every((id) => curatedSet.has(id));
-      if (!prev.length || !prevIsSubset) {
+      const prevIsSubset = prev.length > 0 && prev.every((id) => curatedSet.has(id));
+      if (!prev.length || !prevIsSubset || seedChanged) {
         return curated.slice(0, effectiveVisibleCount).map((r) => r.id);
       }
 
@@ -215,7 +220,7 @@ export function JournalistDiscoverView({
       }
       return next;
     });
-  }, [mounted, curated, effectiveVisibleCount]);
+  }, [mounted, curated, effectiveVisibleCount, seed]);
 
   useLenisScrollLock(open);
 
@@ -257,6 +262,7 @@ export function JournalistDiscoverView({
   function onRefresh() {
     setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
     setVisibleCount(14);
+    router.refresh();
   }
 
   function onOpenRelease(r: PressReleaseMock) {

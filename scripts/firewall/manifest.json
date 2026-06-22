@@ -1,0 +1,121 @@
+{
+  "$comment": "Broadbase Vercel WAF rules — applied with scripts/firewall/apply.sh. Rule order matters (first match wins). Requires Vercel Pro (or higher) for multiple rate-limit rules; see DEPLOY.md §2.5.",
+  "rules": [
+    {
+      "name": "Broadbase: bypass webhooks and cron",
+      "description": "Stripe/Resend webhooks and Vercel cron must not be rate-limited.",
+      "cli": {
+        "action": "bypass",
+        "conditions": [
+          { "type": "path", "op": "pre", "value": "/api/webhooks" },
+          { "type": "path", "op": "pre", "value": "/api/cron", "or": true }
+        ]
+      }
+    },
+    {
+      "name": "Broadbase: deny security probes",
+      "description": "Block common scanner paths (.env, .git, WordPress, phpMyAdmin).",
+      "cli": {
+        "action": "deny",
+        "conditions": [
+          {
+            "type": "path",
+            "op": "re",
+            "value": "(?i)^/(\\.env(\\.\\w+)?|\\.git|wp-admin|wp-login\\.php|phpmyadmin|xmlrpc\\.php)(/|$)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Broadbase: rate limit public API",
+      "description": "Throttle scraping of /api/v1 (public release feed).",
+      "cli": {
+        "action": "rate_limit",
+        "rateLimit": {
+          "window": 60,
+          "requests": 60,
+          "keys": ["ip"],
+          "algo": "fixed_window",
+          "exceededAction": "rate_limit"
+        },
+        "conditions": [{ "type": "path", "op": "pre", "value": "/api/v1" }]
+      }
+    },
+    {
+      "name": "Broadbase: rate limit API",
+      "description": "Blanket per-IP throttle for authenticated and internal API routes.",
+      "cli": {
+        "action": "rate_limit",
+        "rateLimit": {
+          "window": 60,
+          "requests": 120,
+          "keys": ["ip"],
+          "algo": "fixed_window",
+          "exceededAction": "rate_limit"
+        },
+        "conditions": [{ "type": "path", "op": "pre", "value": "/api" }]
+      }
+    },
+    {
+      "name": "Broadbase: rate limit auth pages",
+      "description": "Slow credential-stuffing and signup spam on login/signup/beta forms.",
+      "cli": {
+        "action": "rate_limit",
+        "rateLimit": {
+          "window": 60,
+          "requests": 20,
+          "keys": ["ip"],
+          "algo": "fixed_window",
+          "exceededAction": "rate_limit"
+        },
+        "conditions": [
+          { "type": "method", "op": "eq", "value": "POST" },
+          {
+            "type": "path",
+            "op": "re",
+            "value": "^/(signup|login|beta-access)(/|$)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Broadbase: rate limit server actions",
+      "description": "Throttle Next.js server actions for signup, login, and beta waitlist.",
+      "cli": {
+        "action": "rate_limit",
+        "rateLimit": {
+          "window": 60,
+          "requests": 20,
+          "keys": ["ip"],
+          "algo": "fixed_window",
+          "exceededAction": "rate_limit"
+        },
+        "conditions": [
+          {
+            "type": "server_action",
+            "op": "eq",
+            "value": "signupAction"
+          },
+          {
+            "type": "server_action",
+            "op": "eq",
+            "value": "loginAction",
+            "or": true
+          },
+          {
+            "type": "server_action",
+            "op": "eq",
+            "value": "betaWaitlistAction",
+            "or": true
+          },
+          {
+            "type": "server_action",
+            "op": "eq",
+            "value": "betaAccessAction",
+            "or": true
+          }
+        ]
+      }
+    }
+  ]
+}

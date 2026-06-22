@@ -19,6 +19,10 @@ import { richTextToPlainText, sanitizeRichTextHtml } from '@/lib/rich-text/sanit
 
 export type CreateReleaseState = { error: string | null };
 
+export type SavePressReleaseDraftResult =
+  | { ok: true; releaseId: string }
+  | { ok: false; errorCode: string };
+
 function slugify(raw: string): string {
   return raw
     .trim()
@@ -192,142 +196,185 @@ export async function createPressReleaseAction(formData: FormData) {
   }
 }
 
+async function persistPressReleaseUpdate(
+  formData: FormData
+): Promise<SavePressReleaseDraftResult> {
+  const releaseId = String(formData.get('release_id') ?? '').trim();
+  const title = String(formData.get('title') ?? '').trim();
+  const bodyRaw = String(formData.get('body') ?? '');
+  let bodyText: string;
+  let body: string;
+
+  try {
+    bodyText = richTextToPlainText(bodyRaw);
+    body = sanitizeRichTextHtml(bodyRaw).trim();
+  } catch (e) {
+    console.error('[persistPressReleaseUpdate] rich text sanitize failed', e);
+    return { ok: false, errorCode: 'invalid_rich_text' };
+  }
+
+  const summary = String(formData.get('summary') ?? '').trim() || null;
+  const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
+  const tagsRaw = String(formData.get('tags') ?? '').trim();
+  const tags =
+    tagsRaw.length > 0
+      ? tagsRaw
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 12)
+      : [];
+
+  if (!releaseId) {
+    return { ok: false, errorCode: 'missing_release' };
+  }
+  if (!title) {
+    return { ok: false, errorCode: 'missing_title' };
+  }
+  if (!bodyText) {
+    return { ok: false, errorCode: 'missing_body' };
+  }
+  if (bodyText.length > 500_000) {
+    return { ok: false, errorCode: 'body_too_long' };
+  }
+  if (summary && summary.length > 280) {
+    return { ok: false, errorCode: 'summary_too_long' };
+  }
+
+  const pendingRaw = String(formData.get('pending_assets') ?? '');
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, errorCode: 'not_signed_in' };
+  }
+
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('id')
+    .eq('owner_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (!brand) {
+    return { ok: false, errorCode: 'no_brand' };
+  }
+
+  const existing = await supabase
+    .from('press_releases')
+    .select('id, status')
+    .eq('id', releaseId)
+    .eq('brand_id', brand.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (existing.error || !existing.data) {
+    return { ok: false, errorCode: 'not_found' };
+  }
+  if (existing.data.status === 'published') {
+    return { ok: false, errorCode: 'already_published' };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { ok: false, errorCode: 'create_failed' };
+  }
+
+  const { data: subscriptionRow } = await admin
+    .from('subscriptions')
+    .select('trial_mode')
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
+  const maxImages = maxImagesForTrial(Boolean(subscription?.trial_mode));
+  const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
+  if (pendingAssets === 'invalid') {
+    return { ok: false, errorCode: 'invalid_pending_assets' };
+  }
+
+  const { error } = await supabase
+    .from('press_releases')
+    .update({
+      title,
+      body,
+      summary,
+      industry_vertical: vertical,
+      tags,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', releaseId)
+    .eq('brand_id', brand.id)
+    .is('deleted_at', null);
+
+  if (error) {
+    console.error('[persistPressReleaseUpdate] update failed', error);
+    return { ok: false, errorCode: 'create_failed' };
+  }
+
+  if (pendingAssets.length > 0) {
+    const { error: assetErr } = await attachPendingAssetsToRelease(
+      admin,
+      brand.id,
+      releaseId,
+      pendingAssets
+    );
+    if (assetErr) {
+      console.error('[persistPressReleaseUpdate] press_assets insert', assetErr);
+      return { ok: false, errorCode: 'assets_failed' };
+    }
+    revalidatePath('/brand/upload');
+  }
+
+  revalidatePath('/brand/dashboard');
+  revalidatePath('/brand/releases/new');
+  return { ok: true, releaseId };
+}
+
+export async function savePressReleaseDraftAction(
+  formData: FormData
+): Promise<SavePressReleaseDraftResult> {
+  try {
+    return await persistPressReleaseUpdate(formData);
+  } catch (e) {
+    console.error('[savePressReleaseDraftAction] unhandled exception', e);
+    return { ok: false, errorCode: 'create_failed' };
+  }
+}
+
 export async function updatePressReleaseAction(formData: FormData) {
   try {
     const releaseId = String(formData.get('release_id') ?? '').trim();
-    const title = String(formData.get('title') ?? '').trim();
-    const bodyRaw = String(formData.get('body') ?? '');
-    let bodyText: string;
-    let body: string;
+    const result = await persistPressReleaseUpdate(formData);
 
-    try {
-      bodyText = richTextToPlainText(bodyRaw);
-      body = sanitizeRichTextHtml(bodyRaw).trim();
-    } catch (e) {
-      console.error('[updatePressReleaseAction] rich text sanitize failed', e);
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=invalid_rich_text`);
-    }
-
-    const summary = String(formData.get('summary') ?? '').trim() || null;
-    const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
-    const tagsRaw = String(formData.get('tags') ?? '').trim();
-    const tags =
-      tagsRaw.length > 0
-        ? tagsRaw
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean)
-            .slice(0, 12)
-        : [];
-
-    if (!releaseId) {
-      redirect('/brand/dashboard?section=releases');
-    }
-    if (!title) {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=missing_title`);
-    }
-    if (!bodyText) {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=missing_body`);
-    }
-    if (bodyText.length > 500_000) {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=body_too_long`);
-    }
-    if (summary && summary.length > 280) {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=summary_too_long`);
-    }
-
-    const pendingRaw = String(formData.get('pending_assets') ?? '');
-
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      redirect('/login');
-    }
-
-    const { data: brand } = await supabase
-      .from('brands')
-      .select('id')
-      .eq('owner_id', user.id)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (!brand) {
-      redirect('/brand/settings');
-    }
-
-    const existing = await supabase
-      .from('press_releases')
-      .select('id, status')
-      .eq('id', releaseId)
-      .eq('brand_id', brand.id)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (existing.error || !existing.data) {
-      redirect('/brand/dashboard?section=releases');
-    }
-    if (existing.data.status === 'published') {
-      redirect('/brand/dashboard?section=releases');
-    }
-
-    let admin;
-    try {
-      admin = createAdminClient();
-    } catch {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=create_failed`);
-    }
-
-    const { data: subscriptionRow } = await admin
-      .from('subscriptions')
-      .select('trial_mode')
-      .eq('owner_id', user.id)
-      .maybeSingle();
-
-    const subscription = applyDevSubscriptionOverrides(user.id, subscriptionRow);
-    const maxImages = maxImagesForTrial(Boolean(subscription?.trial_mode));
-    const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
-    if (pendingAssets === 'invalid') {
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=invalid_pending_assets`);
-    }
-
-    const { error } = await supabase
-      .from('press_releases')
-      .update({
-        title,
-        body,
-        summary,
-        industry_vertical: vertical,
-        tags,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', releaseId)
-      .eq('brand_id', brand.id)
-      .is('deleted_at', null);
-
-    if (error) {
-      console.error('[updatePressReleaseAction] update failed', error);
-      redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=create_failed`);
-    }
-
-    if (pendingAssets.length > 0) {
-      const { error: assetErr } = await attachPendingAssetsToRelease(
-        admin,
-        brand.id,
-        releaseId,
-        pendingAssets
-      );
-      if (assetErr) {
-        console.error('[updatePressReleaseAction] press_assets insert', assetErr);
-        redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&error=assets_failed`);
+    if (!result.ok) {
+      const editParam = releaseId
+        ? `edit=${encodeURIComponent(releaseId)}&`
+        : '';
+      if (result.errorCode === 'missing_release' || result.errorCode === 'not_found') {
+        redirect('/brand/dashboard?section=releases');
       }
-      revalidatePath('/brand/upload');
+      if (result.errorCode === 'not_signed_in') {
+        redirect('/login');
+      }
+      if (result.errorCode === 'no_brand') {
+        redirect('/brand/settings');
+      }
+      if (result.errorCode === 'already_published') {
+        redirect('/brand/dashboard?section=releases');
+      }
+      redirect(
+        `/brand/releases/new?${editParam}error=${encodeURIComponent(result.errorCode)}`
+      );
     }
 
-    revalidatePath('/brand/dashboard');
-    revalidatePath('/brand/releases/new');
-    redirect(`/brand/releases/new?edit=${encodeURIComponent(releaseId)}&saved=true`);
+    redirect(
+      `/brand/releases/new?edit=${encodeURIComponent(result.releaseId)}&saved=true`
+    );
   } catch (e) {
     const digest = (e as any)?.digest;
     if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {

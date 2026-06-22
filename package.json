@@ -13,7 +13,10 @@
     "favicons": "node scripts/generate-favicon.mjs",
     "import-mbox": "tsx scripts/mbox-import/run.ts",
     "rollback-mbox": "tsx scripts/mbox-import/rollback-manifest.ts",
-    "purge-mbox-brands": "tsx scripts/mbox-import/rollback-manifest.ts --purge-brands"
+    "purge-mbox-brands": "tsx scripts/mbox-import/rollback-manifest.ts --purge-brands",
+    "firewall:apply": "bash scripts/firewall/apply.sh",
+    "firewall:apply:hobby": "node scripts/firewall/apply-rules.mjs --manifest scripts/firewall/manifest.hobby.json",
+    "firewall:overview": "bash scripts/firewall/apply.sh --overview"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.12.0",

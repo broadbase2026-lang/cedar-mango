@@ -14,9 +14,22 @@ const EMPTY_DATA: BrandDashboardData = {
     aiReadinessAvg: null,
   },
   releases: [],
+  releasesPagination: {
+    page: 1,
+    pageSize: 20,
+    total: 0,
+  },
   drafts: [],
   loadError: null,
 };
+
+function parseReleasesPage(
+  raw: string | string[] | undefined
+): number {
+  const value = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
+  const parsed = Number.parseInt(value ?? '1', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
 
 type PageProps = {
   searchParams: Record<string, string | string[] | undefined>;
@@ -39,9 +52,6 @@ export default async function BrandDashboardPage({ searchParams }: PageProps) {
   const plan = brandPlanFromSubscription(session.user.id, subscription);
 
   const brand = session.brand;
-  const data = brand
-    ? await loadBrandDashboardData(session.supabase, brand.id)
-    : EMPTY_DATA;
 
   const sectionRaw = searchParams.section;
   const section =
@@ -50,12 +60,18 @@ export default async function BrandDashboardPage({ searchParams }: PageProps) {
       : Array.isArray(sectionRaw)
         ? sectionRaw[0]
         : undefined;
+  const releasesPage = parseReleasesPage(searchParams.page);
+
+  const data = brand
+    ? await loadBrandDashboardData(session.supabase, brand.id, { releasesPage })
+    : EMPTY_DATA;
 
   return (
     <BrandDashboardView
       hasBrand={brand != null}
       data={data}
       scrollToReleasesSection={section === 'releases'}
+      preserveSectionInLinks={section === 'releases'}
       accessState={{
         isInTrial: access.isInTrial,
         trialExpired: access.trialExpired,

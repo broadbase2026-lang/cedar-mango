@@ -3,7 +3,6 @@ import { createPressReleaseAction, updatePressReleaseAction } from './actions';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { getBrandPortalSession } from '@/lib/brand/session';
 import { NewReleaseForm } from '@/components/brand/new-release-form';
-import { ReleasePublishPanel } from '@/components/brand/release-publish-panel';
 import { ReleaseAiReadinessPanel } from '@/components/brand/release-ai-readiness-panel';
 import { releaseImageFromRow, type ReleaseImageAsset } from '@/lib/brand/release-asset-model';
 import {
@@ -121,6 +120,15 @@ export default async function NewPressReleasePage({
             }
           : null
       }
+      publishConfig={
+        isEditing
+          ? {
+              plan,
+              embargoUntil: (existing?.data as { embargo_until?: string | null })
+                ?.embargo_until ?? null,
+            }
+          : null
+      }
     />
   );
 
@@ -146,13 +154,6 @@ export default async function NewPressReleasePage({
           <div className="bb-dash-split">
             <div>
               {form}
-
-              <ReleasePublishPanel
-                releaseId={existing.data.id}
-                status={existing.data.status}
-                plan={plan}
-                embargoUntil={(existing.data as any).embargo_until ?? null}
-              />
             </div>
 
             <ReleaseAiReadinessPanel

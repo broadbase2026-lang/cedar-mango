@@ -68,6 +68,58 @@ Stripe variables are **not required** for trial-only beta.
 
 4. Add domains `broadbase.app` and `www.broadbase.app`; configure DNS per Vercel instructions.
 
+### 2.5 Vercel Firewall (API abuse protection)
+
+Edge WAF rules throttle abusive traffic **before** it reaches Next.js or Supabase. Rules are version-controlled in `scripts/firewall/manifest.json` and applied with the Vercel CLI.
+
+**Plan requirements**
+
+| Plan | Custom rules | Rate-limit rules |
+|------|--------------|------------------|
+| Hobby | 3 total | 1 per project |
+| Pro | 40 | Multiple |
+
+On **Hobby**, use the reduced set in `scripts/firewall/manifest.hobby.json` (bypass + deny probes + one `/api` rate limit). On **Pro**, apply the full manifest.
+
+**One-time setup**
+
+```bash
+npm i -g vercel
+vercel login
+vercel link          # from repo root — select the broadbase.app project
+npm run firewall:apply -- --dry-run   # preview CLI flags
+npm run firewall:apply -- --yes       # stage + publish rules (Pro manifest)
+# Hobby plan (3 rules max):
+npm run firewall:apply:hobby -- --yes
+```
+
+**What the rules do** (full manifest)
+
+1. **Bypass** `/api/webhooks/*` and `/api/cron/*` — Stripe, Resend, and Vercel cron must not be throttled.
+2. **Deny** common scanner paths (`.env`, `.git`, WordPress, phpMyAdmin).
+3. **Rate limit** `/api/v1/*` — 60 requests/minute per IP (public feed).
+4. **Rate limit** `/api/*` — 120 requests/minute per IP (general API blanket).
+5. **Rate limit** `POST` to `/signup`, `/login`, `/beta-access` — 20/minute per IP.
+6. **Rate limit** server actions `signupAction`, `loginAction`, `betaWaitlistAction`, `betaAccessAction` — 20/minute per IP.
+
+**During an attack**
+
+```bash
+# Challenge all browser traffic for 1–24h (webhook bots are allowlisted)
+vercel firewall attack-mode enable --duration 6h --yes
+
+# When resolved
+vercel firewall attack-mode disable --yes
+```
+
+**Ongoing**
+
+- `npm run firewall:overview` — current firewall state
+- Edit `scripts/firewall/manifest.json`, then `npm run firewall:apply -- --yes`
+- Vercel dashboard → **Firewall** → traffic view to tune limits
+
+Automatic DDoS mitigation is enabled by default. Do **not** pause system mitigations unless debugging false positives.
+
 ## 3. Deploy
 
 ```bash

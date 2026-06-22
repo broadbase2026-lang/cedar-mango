@@ -144,7 +144,8 @@ export async function registerPressAsset(input: {
 
   revalidatePath('/brand/upload');
   revalidatePath('/brand/dashboard');
-  revalidatePath('/brand/releases/new');
+  // Do not revalidate the release editor route: it keeps draft text in client state
+  // and image uploads already update the form locally.
   return { error: null, success: true, assetId: inserted?.id };
 }
 
