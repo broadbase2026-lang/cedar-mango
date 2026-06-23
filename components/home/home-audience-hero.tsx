@@ -13,7 +13,7 @@ import {
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import { APP_NAME } from '@/constants/copy';
-import { SIGNUP_HERO_GRADIENT } from '@/components/home/feature-card-gradients';
+import { AudienceOverlayGradient } from '@/components/home/audience-overlay-gradient';
 import { AudienceRailButton } from '@/components/home/audience-rail-button';
 import { Button } from '@/components/ui/button';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
@@ -261,51 +261,53 @@ export function HomeAudienceHero({
       aria-modal="true"
       aria-labelledby="home-audience-heading"
       className={cn(
-        'fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 px-6',
+        'fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden px-6',
         'transition-opacity duration-500 ease-in-out motion-reduce:transition-none',
         overlayClosing ? 'pointer-events-none opacity-0' : 'opacity-100',
       )}
-      style={{ background: SIGNUP_HERO_GRADIENT }}
     >
-      <Image
-        src="/broadbase-logo.png"
-        alt={APP_NAME}
-        width={180}
-        height={32}
-        className="h-8 w-auto"
-        priority
-      />
-      <p
-        id="home-audience-heading"
-        className={cn(
-          radleyClassName,
-          'text-center text-2xl font-normal tracking-tight text-brand-ink md:text-3xl',
-        )}
-      >
-        Choose your character
-      </p>
-      <div
-        data-audience-overlay-buttons
-        className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center [perspective:900px]"
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
-          onClick={() => choose('journalist')}
-          disabled={overlayClosing}
+      <AudienceOverlayGradient />
+      <div className="relative z-10 flex w-full flex-col items-center gap-8">
+        <Image
+          src="/broadbase-logo.png"
+          alt={APP_NAME}
+          width={180}
+          height={32}
+          className="h-8 w-auto"
+          priority
+        />
+        <p
+          id="home-audience-heading"
+          className={cn(
+            radleyClassName,
+            'text-center text-2xl font-normal tracking-tight text-brand-ink md:text-3xl',
+          )}
         >
-          I am a journalist
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
-          onClick={() => choose('brand')}
-          disabled={overlayClosing}
+          Choose your character
+        </p>
+        <div
+          data-audience-overlay-buttons
+          className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center [perspective:900px]"
         >
-          I am a brand / agency
-        </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
+            onClick={() => choose('journalist')}
+            disabled={overlayClosing}
+          >
+            I am a journalist
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-12 w-full origin-top bg-white text-brand-ink hover:bg-white/90 sm:flex-1"
+            onClick={() => choose('brand')}
+            disabled={overlayClosing}
+          >
+            I am a brand / agency
+          </Button>
+        </div>
       </div>
     </div>
   ) : null;
