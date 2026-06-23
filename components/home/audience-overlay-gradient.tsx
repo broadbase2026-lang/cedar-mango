@@ -1,33 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Component, useEffect, useState, type ReactNode } from 'react';
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react';
-import {
-  NAV_GRADIENT_STOPS_START,
-  SIGNUP_HERO_GRADIENT,
-} from '@/components/home/feature-card-gradients';
+import { NAV_GRADIENT_STOPS_START } from '@/components/home/feature-card-gradients';
 
 const [COLOR1, COLOR2, COLOR3] = NAV_GRADIENT_STOPS_START;
 
-export function AudienceOverlayGradient() {
-  const [reducedMotion, setReducedMotion] = useState(true);
+class ShaderGradientErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
 
-  useEffect(() => {
-    setReducedMotion(
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    );
-  }, []);
-
-  if (reducedMotion) {
-    return (
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 size-full"
-        style={{ background: SIGNUP_HERO_GRADIENT }}
-      />
-    );
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
+
+function AudienceOverlayShader() {
   return (
     <div
       aria-hidden
@@ -64,9 +59,26 @@ export function AudienceOverlayGradient() {
           lightType="3d"
           brightness={1.2}
           grain="off"
-          zoomOut
         />
       </ShaderGradientCanvas>
     </div>
+  );
+}
+
+export function AudienceOverlayGradient() {
+  const [reducedMotion, setReducedMotion] = useState(true);
+
+  useEffect(() => {
+    setReducedMotion(
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
+  }, []);
+
+  if (reducedMotion) return null;
+
+  return (
+    <ShaderGradientErrorBoundary>
+      <AudienceOverlayShader />
+    </ShaderGradientErrorBoundary>
   );
 }

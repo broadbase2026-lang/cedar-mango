@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import { APP_NAME } from '@/constants/copy';
 import { AudienceOverlayGradient } from '@/components/home/audience-overlay-gradient';
+import { SIGNUP_HERO_GRADIENT } from '@/components/home/feature-card-gradients';
 import { AudienceRailButton } from '@/components/home/audience-rail-button';
 import { Button } from '@/components/ui/button';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
@@ -261,10 +262,11 @@ export function HomeAudienceHero({
       aria-modal="true"
       aria-labelledby="home-audience-heading"
       className={cn(
-        'fixed inset-0 z-[100] relative flex flex-col items-center justify-center overflow-hidden px-6',
+        'fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden px-6',
         'transition-opacity duration-500 ease-in-out motion-reduce:transition-none',
         overlayClosing ? 'pointer-events-none opacity-0' : 'opacity-100',
       )}
+      style={{ background: SIGNUP_HERO_GRADIENT }}
     >
       <AudienceOverlayGradient />
       <div className="relative z-10 flex w-full flex-col items-center gap-8">
