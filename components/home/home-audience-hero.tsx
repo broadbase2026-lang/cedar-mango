@@ -261,7 +261,7 @@ export function HomeAudienceHero({
       aria-modal="true"
       aria-labelledby="home-audience-heading"
       className={cn(
-        'fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden px-6',
+        'fixed inset-0 z-[100] relative flex flex-col items-center justify-center overflow-hidden px-6',
         'transition-opacity duration-500 ease-in-out motion-reduce:transition-none',
         overlayClosing ? 'pointer-events-none opacity-0' : 'opacity-100',
       )}

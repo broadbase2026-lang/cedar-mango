@@ -22,20 +22,24 @@ export function AudienceOverlayGradient() {
     return (
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0"
+        className="pointer-events-none absolute inset-0 z-0 size-full"
         style={{ background: SIGNUP_HERO_GRADIENT }}
       />
     );
   }
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-0 size-full"
+    >
       <ShaderGradientCanvas
-        className="absolute inset-0 h-full w-full"
-        style={{ position: 'absolute', inset: 0 }}
+        className="size-full"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         pixelDensity={1.25}
         fov={45}
         pointerEvents="none"
+        lazyLoad={false}
       >
         <ShaderGradient
           control="props"
@@ -44,16 +48,23 @@ export function AudienceOverlayGradient() {
           color1={COLOR1}
           color2={COLOR2}
           color3={COLOR3}
-          uSpeed={0.35}
-          uStrength={3.2}
-          uFrequency={4.5}
-          uDensity={1.2}
-          cDistance={28}
-          cPolarAngle={95}
+          uSpeed={0.4}
+          uStrength={4}
+          uFrequency={5.5}
+          uDensity={1.3}
+          cDistance={3.6}
+          cPolarAngle={90}
           cAzimuthAngle={180}
+          positionX={-1.4}
+          positionY={0}
+          positionZ={0}
+          rotationX={0}
+          rotationY={10}
+          rotationZ={50}
           lightType="3d"
-          brightness={1.1}
+          brightness={1.2}
           grain="off"
+          zoomOut
         />
       </ShaderGradientCanvas>
     </div>
