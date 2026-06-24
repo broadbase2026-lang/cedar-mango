@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useLayoutEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   PressReleasePreviewOverlay,
   type PressReleasePreviewContent,
@@ -10,6 +10,9 @@ import {
 import { formatMonthDayShort } from '@/lib/utils/dates';
 import {
   archiveRelease,
+  bulkArchiveReleases,
+  bulkSoftDeleteReleases,
+  bulkUnpublishReleases,
   softDeleteRelease,
   unpublishReleaseToDraft,
 } from '@/app/(brand)/brand/dashboard/actions';
@@ -250,6 +253,142 @@ export function BrandDashboardView({
   const [previewReleaseId, setPreviewReleaseId] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<PressReleasePreviewContent | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [selectedReleaseIds, setSelectedReleaseIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const releasePageKey = useMemo(
+    () =>
+      `${data.releasesPagination.page}:${data.releases.map((r) => r.id).join(',')}`,
+    [data.releases, data.releasesPagination.page]
+  );
+
+  useEffect(() => {
+    setSelectedReleaseIds(new Set());
+  }, [releasePageKey]);
+
+  const selectedReleases = useMemo(
+    () => data.releases.filter((r) => selectedReleaseIds.has(r.id)),
+    [data.releases, selectedReleaseIds]
+  );
+
+  const publishedSelected = useMemo(
+    () => selectedReleases.filter((r) => r.status === 'published'),
+    [selectedReleases]
+  );
+
+  const pageReleaseIds = useMemo(
+    () => data.releases.map((r) => r.id),
+    [data.releases]
+  );
+
+  const selectedOnPageCount = useMemo(
+    () => pageReleaseIds.filter((id) => selectedReleaseIds.has(id)).length,
+    [pageReleaseIds, selectedReleaseIds]
+  );
+
+  const allOnPageSelected =
+    pageReleaseIds.length > 0 && selectedOnPageCount === pageReleaseIds.length;
+  const someOnPageSelected =
+    selectedOnPageCount > 0 && selectedOnPageCount < pageReleaseIds.length;
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someOnPageSelected;
+    }
+  }, [someOnPageSelected]);
+
+  function toggleReleaseSelected(id: string, checked: boolean) {
+    setSelectedReleaseIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage(checked: boolean) {
+    setSelectedReleaseIds((prev) => {
+      const next = new Set(prev);
+      for (const id of pageReleaseIds) {
+        if (checked) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  function clearReleaseSelection() {
+    setSelectedReleaseIds(new Set());
+  }
+
+  async function runBulkAction(
+    action: 'delete' | 'unpublish' | 'archive',
+    ids: string[],
+    confirmMessage: string
+  ) {
+    if (ids.length === 0) return;
+    if (!confirm(confirmMessage)) return;
+
+    startTransition(async () => {
+      const res =
+        action === 'delete'
+          ? await bulkSoftDeleteReleases(ids)
+          : action === 'unpublish'
+            ? await bulkUnpublishReleases(ids)
+            : await bulkArchiveReleases(ids);
+
+      if (!res.ok) {
+        alert(res.message);
+        return;
+      }
+
+      if (res.count === 0) {
+        alert('No matching releases were updated. Check status and try again.');
+        return;
+      }
+
+      clearReleaseSelection();
+      router.refresh();
+    });
+  }
+
+  function onBulkDelete() {
+    void runBulkAction(
+      'delete',
+      selectedReleases.map((r) => r.id),
+      `Remove ${selectedReleases.length} press release${
+        selectedReleases.length === 1 ? '' : 's'
+      } from your vault? This uses soft-delete (hidden from newsroom).`
+    );
+  }
+
+  function onBulkUnpublish() {
+    void runBulkAction(
+      'unpublish',
+      publishedSelected.map((r) => r.id),
+      `Move ${publishedSelected.length} published release${
+        publishedSelected.length === 1 ? '' : 's'
+      } back to draft?`
+    );
+  }
+
+  function onBulkArchive() {
+    void runBulkAction(
+      'archive',
+      publishedSelected.map((r) => r.id),
+      `Archive ${publishedSelected.length} published release${
+        publishedSelected.length === 1 ? '' : 's'
+      }? They will no longer appear in discovery.`
+    );
+  }
 
   useEffect(() => {
     if (!previewOpen || !previewReleaseId) {
@@ -671,11 +810,62 @@ export function BrandDashboardView({
               </Link>
             </div>
 
+            {selectedReleases.length > 0 ? (
+              <div className="bb-dash-bulk-bar" role="toolbar" aria-label="Bulk actions">
+                <span className="bb-dash-bulk-summary">
+                  {selectedReleases.length} selected
+                </span>
+                <button
+                  type="button"
+                  className="bb-dash-link-sm"
+                  disabled={pending || publishedSelected.length === 0}
+                  onClick={onBulkUnpublish}
+                >
+                  Unpublish
+                </button>
+                <button
+                  type="button"
+                  className="bb-dash-link-sm"
+                  disabled={pending || publishedSelected.length === 0}
+                  onClick={onBulkArchive}
+                >
+                  Archive
+                </button>
+                <button
+                  type="button"
+                  className="bb-dash-delete border-0 bg-transparent p-0"
+                  disabled={pending}
+                  onClick={onBulkDelete}
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  className="bb-dash-link-sm"
+                  disabled={pending}
+                  onClick={clearReleaseSelection}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
+
             <div className="bb-dash-table-shell">
               <div className="bb-dash-table-scroll">
                 <table className="bb-dash-table">
                   <thead className="bb-dash-thead">
                     <tr>
+                      <th className="bb-dash-th-select">
+                        <input
+                          ref={selectAllRef}
+                          type="checkbox"
+                          className="bb-dash-row-checkbox"
+                          checked={allOnPageSelected}
+                          disabled={pending || data.releases.length === 0}
+                          onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                          aria-label="Select all releases on this page"
+                        />
+                      </th>
                       <th className="bb-dash-th">Title</th>
                       <th className="bb-dash-th">Status</th>
                       <th className="bb-dash-th">Vertical</th>
@@ -687,6 +877,18 @@ export function BrandDashboardView({
                   <tbody className="bb-dash-tbody">
                     {data.releases.map((row) => (
                       <tr key={row.id} className="bb-dash-tr">
+                        <td className="bb-dash-td-select">
+                          <input
+                            type="checkbox"
+                            className="bb-dash-row-checkbox"
+                            checked={selectedReleaseIds.has(row.id)}
+                            disabled={pending}
+                            onChange={(e) =>
+                              toggleReleaseSelected(row.id, e.target.checked)
+                            }
+                            aria-label={`Select ${row.title}`}
+                          />
+                        </td>
                         <td className="bb-dash-td-title">
                           <span className="bb-dash-title-clamp">{row.title}</span>
                         </td>

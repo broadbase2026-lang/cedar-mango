@@ -12,7 +12,15 @@ import {
   type PressReleasePreviewContent,
 } from '@/components/press-release/press-release-preview-overlay';
 import { pressReleasesMock, type PressReleaseMock } from '@/lib/journalist/mockData';
+import {
+  buildJournalistDiscoverSearchUrl,
+  JOURNALIST_SEARCH_VERTICALS,
+  type JournalistSearchFilters,
+  type JournalistSearchSince,
+  type JournalistSearchSort,
+} from '@/lib/journalist/search-filters';
 import { formatMonthDayShort } from '@/lib/utils/dates';
+import type { IndustryVertical } from '@/types';
 
 const headingFontClassName = 'font-heading';
 
@@ -26,6 +34,8 @@ type JournalistDiscoverViewProps = {
   releases?: PressReleaseMock[];
   /** When set, the feed shows FTS search results instead of the curated discover stream. */
   searchQuery?: string;
+  /** Active search refinement filters (search mode only). */
+  searchFilters?: JournalistSearchFilters;
 };
 
 type UserDiscoveryPrefs = {
@@ -104,10 +114,30 @@ function verticalBadgeClass(v: PressReleaseMock['vertical']) {
   return 'bg-fuchsia-50 text-fuchsia-900 ring-1 ring-inset ring-fuchsia-700/30';
 }
 
+const SEARCH_SINCE_OPTIONS: Array<{ value: JournalistSearchSince; label: string }> = [
+  { value: 'any', label: 'Any time' },
+  { value: 'day', label: 'Past 24 hours' },
+  { value: 'week', label: 'Past week' },
+  { value: 'month', label: 'Past month' },
+  { value: 'year', label: 'Past year' },
+];
+
+const SEARCH_SORT_OPTIONS: Array<{ value: JournalistSearchSort; label: string }> = [
+  { value: 'relevance', label: 'Most relevant' },
+  { value: 'recent', label: 'Most recent' },
+];
+
+function filterChipClass(active: boolean) {
+  return active
+    ? 'border-brand-primary bg-brand-primary/10 text-brand-primary-700'
+    : 'border-brand-border bg-white text-brand-muted hover:border-brand-primary/40 hover:text-brand-ink';
+}
+
 export function JournalistDiscoverView({
   userDisplayName,
   releases,
   searchQuery = '',
+  searchFilters = {},
 }: JournalistDiscoverViewProps) {
   const isSearchMode = searchQuery.trim().length > 0;
   const [mounted, setMounted] = useState(false);
@@ -122,6 +152,24 @@ export function JournalistDiscoverView({
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const [activeIds, setActiveIds] = useState<string[]>([]);
+
+  const activeVerticals = searchFilters.verticals ?? [];
+  const activeSince = searchFilters.since ?? 'any';
+  const activeSort = searchFilters.sort ?? 'relevance';
+
+  const pushSearch = (nextFilters: JournalistSearchFilters) => {
+    router.push(buildJournalistDiscoverSearchUrl(searchQuery, nextFilters));
+  };
+
+  const toggleVertical = (vertical: IndustryVertical) => {
+    const current = new Set(activeVerticals);
+    if (current.has(vertical)) current.delete(vertical);
+    else current.add(vertical);
+    pushSearch({
+      ...searchFilters,
+      verticals: Array.from(current),
+    });
+  };
 
   useEffect(() => {
     setSearchText(searchQuery);
@@ -385,7 +433,11 @@ export function JournalistDiscoverView({
             onSubmit={(e) => {
               e.preventDefault();
               const q = searchText.trim();
-              router.push(q ? `/journalist/discover?q=${encodeURIComponent(q)}` : '/journalist/discover');
+              router.push(
+                q
+                  ? buildJournalistDiscoverSearchUrl(q, searchFilters)
+                  : '/journalist/discover'
+              );
             }}
           >
             <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-inset ring-brand-border/60">
@@ -421,17 +473,100 @@ export function JournalistDiscoverView({
           </form>
 
           {isSearchMode && mounted ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
-              <p>
-                {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
-              </p>
-              <Link
-                href="/journalist/discover"
-                className="font-medium text-brand-primary-700 hover:underline"
-              >
-                Clear search
-              </Link>
-            </div>
+            <>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
+                <p>
+                  {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
+                </p>
+                <Link
+                  href="/journalist/discover"
+                  className="font-medium text-brand-primary-700 hover:underline"
+                >
+                  Clear search
+                </Link>
+              </div>
+
+              <div className="mt-4 space-y-4 rounded-2xl border border-brand-border bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Sort
+                  </span>
+                  {SEARCH_SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        pushSearch({
+                          ...searchFilters,
+                          sort: option.value,
+                        })
+                      }
+                      className={
+                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
+                        filterChipClass(activeSort === option.value)
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Beat
+                  </span>
+                  {JOURNALIST_SEARCH_VERTICALS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => toggleVertical(option.value)}
+                      className={
+                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
+                        filterChipClass(activeVerticals.includes(option.value))
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Recency
+                  </span>
+                  {SEARCH_SINCE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        pushSearch({
+                          ...searchFilters,
+                          since: option.value,
+                        })
+                      }
+                      className={
+                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
+                        filterChipClass(activeSince === option.value)
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Location
+                  </span>
+                  <span
+                    className="rounded-full border border-brand-border bg-brand-surface px-3 py-1 text-xs font-medium text-brand-muted/70"
+                    title="Location filtering will be available once release geography is added"
+                  >
+                    Coming soon
+                  </span>
+                </div>
+              </div>
+            </>
           ) : null}
 
           <div className="mt-5 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">

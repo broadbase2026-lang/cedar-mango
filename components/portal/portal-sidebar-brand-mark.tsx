@@ -18,10 +18,10 @@ export function PortalSidebarBrandMark({
         className="inline-flex rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
       >
         <Image
-          src="/broadbase-logo.png"
+          src="/favicon.png"
           alt={APP_NAME}
-          width={113}
-          height={20}
+          width={32}
+          height={32}
           className="bb-portal-sidebar-logo"
           priority
         />

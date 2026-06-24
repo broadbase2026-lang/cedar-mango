@@ -191,7 +191,7 @@
   }
 
   .bb-portal-sidebar-logo {
-    @apply h-5 w-auto;
+    @apply h-8 w-8;
   }
 
   .bb-portal-sidebar-title {
@@ -541,6 +541,26 @@
 
   .bb-dash-th {
     @apply px-4 py-3;
+  }
+
+  .bb-dash-th-select {
+    @apply w-10 px-3 py-3;
+  }
+
+  .bb-dash-td-select {
+    @apply w-10 px-3 py-3 align-middle;
+  }
+
+  .bb-dash-row-checkbox {
+    @apply h-4 w-4 rounded border-brand-border text-brand-primary-700 focus:ring-brand-ring;
+  }
+
+  .bb-dash-bulk-bar {
+    @apply mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-border bg-brand-surface-2/60 px-4 py-3 text-sm;
+  }
+
+  .bb-dash-bulk-summary {
+    @apply font-medium text-brand-ink;
   }
 
   .bb-dash-th-actions {

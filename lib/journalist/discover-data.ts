@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PressReleaseMock } from '@/lib/journalist/mockData';
+import {
+  publishedAfterForSince,
+  type JournalistSearchFilters,
+} from '@/lib/journalist/search-filters';
 import { pickHeroAssetUrl } from '@/lib/press-assets/pick-hero-asset';
+
+export type { JournalistSearchFilters } from '@/lib/journalist/search-filters';
 
 export type DiscoverReleaseAssetRow = {
   id: string;
@@ -213,20 +219,24 @@ export async function loadJournalistDiscoverFeedReleases(
 export async function loadJournalistDiscoverSearchRows(
   supabase: SupabaseClient,
   journalistId: string,
-  q: string
+  q: string,
+  filters: JournalistSearchFilters = {}
 ): Promise<DiscoverReleaseRow[]> {
   const trimmed = q.trim();
   if (!trimmed) return [];
 
-  const { data: raw } = await supabase
-    .from('press_releases')
-    .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
-    .textSearch('fts', trimmed, {
-      type: 'websearch',
-      config: 'english',
-    })
-    .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(50);
+  const { data: raw, error } = await supabase.rpc('search_press_releases', {
+    search_query: trimmed,
+    verticals: filters.verticals?.length ? filters.verticals : null,
+    published_after: publishedAfterForSince(filters.since),
+    sort: filters.sort ?? 'relevance',
+    result_limit: 50,
+  });
+
+  if (error) {
+    console.error('search_press_releases failed:', error.message);
+    return [];
+  }
 
   return enrichDiscoverReleaseRows(supabase, journalistId, raw ?? []);
 }

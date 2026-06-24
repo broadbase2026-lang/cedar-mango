@@ -258,3 +258,108 @@ export async function archiveRelease(
   revalidatePath('/brand/dashboard');
   return { ok: true };
 }
+
+function uniqueReleaseIds(releaseIds: string[]): string[] {
+  return Array.from(new Set(releaseIds.map((id) => id.trim()).filter(Boolean)));
+}
+
+export async function bulkSoftDeleteReleases(
+  releaseIds: string[]
+): Promise<{ ok: true; count: number } | { ok: false; message: string }> {
+  const ids = uniqueReleaseIds(releaseIds);
+  if (ids.length === 0) {
+    return { ok: false, message: 'No releases selected.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: 'Not signed in.' };
+  }
+
+  const { data, error } = await supabase
+    .from('press_releases')
+    .update({ deleted_at: new Date().toISOString() })
+    .in('id', ids)
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath('/brand/dashboard');
+  return { ok: true, count: data?.length ?? 0 };
+}
+
+export async function bulkUnpublishReleases(
+  releaseIds: string[]
+): Promise<{ ok: true; count: number } | { ok: false; message: string }> {
+  const ids = uniqueReleaseIds(releaseIds);
+  if (ids.length === 0) {
+    return { ok: false, message: 'No releases selected.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: 'Not signed in.' };
+  }
+
+  const { data, error } = await supabase
+    .from('press_releases')
+    .update({
+      status: 'draft',
+      published_at: null,
+    })
+    .in('id', ids)
+    .eq('status', 'published')
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath('/brand/dashboard');
+  return { ok: true, count: data?.length ?? 0 };
+}
+
+export async function bulkArchiveReleases(
+  releaseIds: string[]
+): Promise<{ ok: true; count: number } | { ok: false; message: string }> {
+  const ids = uniqueReleaseIds(releaseIds);
+  if (ids.length === 0) {
+    return { ok: false, message: 'No releases selected.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: 'Not signed in.' };
+  }
+
+  const { data, error } = await supabase
+    .from('press_releases')
+    .update({ status: 'archived' })
+    .in('id', ids)
+    .eq('status', 'published')
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath('/brand/dashboard');
+  return { ok: true, count: data?.length ?? 0 };
+}
