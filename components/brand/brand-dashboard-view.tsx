@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLayoutEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useTransition } from 'react';
+import {
+  PressReleasePreviewOverlay,
+  type PressReleasePreviewContent,
+} from '@/components/press-release/press-release-preview-overlay';
+import { formatMonthDayShort } from '@/lib/utils/dates';
 import {
   archiveRelease,
   softDeleteRelease,
@@ -241,6 +246,116 @@ export function BrandDashboardView({
     min: string;
     max: string;
   } | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewReleaseId, setPreviewReleaseId] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState<PressReleasePreviewContent | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewOpen || !previewReleaseId) {
+      setPreviewContent(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewContent({
+      title: 'Loading…',
+      verticalLabel: null,
+      dateLabel: null,
+      summary: null,
+      body: '',
+      bodyLoading: true,
+      heroImageUrl: null,
+      mediaAssets: [],
+    });
+
+    fetch(`/api/brand/release-preview?id=${encodeURIComponent(previewReleaseId)}`)
+      .then((res) => res.json().catch(() => null))
+      .then(
+        (
+          json:
+            | {
+                ok: true;
+                release: {
+                  title: string;
+                  verticalLabel: string | null;
+                  displayDate: string | null;
+                  summary: string | null;
+                  body: string;
+                  viewsCount: number;
+                  heroImageUrl: string | null;
+                  mediaAssets: { label: string; href: string }[];
+                  fullReleaseHref: string | null;
+                };
+              }
+            | { ok: false; error?: string }
+            | null
+        ) => {
+          if (cancelled) return;
+          if (!json || json.ok !== true) {
+            setPreviewContent({
+              title: 'Preview unavailable',
+              verticalLabel: null,
+              dateLabel: null,
+              summary: null,
+              body:
+                json && 'error' in json && typeof json.error === 'string'
+                  ? json.error
+                  : 'Could not load this release.',
+              bodyLoading: false,
+              heroImageUrl: null,
+              mediaAssets: [],
+            });
+            return;
+          }
+
+          const { release } = json;
+          setPreviewContent({
+            title: release.title,
+            verticalLabel: release.verticalLabel,
+            dateLabel: release.displayDate
+              ? formatMonthDayShort(release.displayDate)
+              : null,
+            summary: release.summary,
+            body: release.body,
+            bodyLoading: false,
+            heroImageUrl: release.heroImageUrl,
+            mediaAssets: release.mediaAssets,
+            footerMeta: `${formatInt(release.viewsCount)} views`,
+            fullReleaseHref: release.fullReleaseHref,
+            fullReleaseLabel: 'View full press release →',
+          });
+        }
+      )
+      .catch(() => {
+        if (!cancelled) {
+          setPreviewContent({
+            title: 'Preview unavailable',
+            verticalLabel: null,
+            dateLabel: null,
+            summary: null,
+            body: 'Could not load this release.',
+            bodyLoading: false,
+            heroImageUrl: null,
+            mediaAssets: [],
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewOpen, previewReleaseId]);
+
+  function onPreviewRelease(releaseId: string) {
+    setPreviewReleaseId(releaseId);
+    setPreviewOpen(true);
+  }
 
   useLayoutEffect(() => {
     if (!scrollToReleasesSection) return;
@@ -615,6 +730,14 @@ export function BrandDashboardView({
                         </td>
                         <td className="bb-dash-td-actions">
                           <div className="bb-dash-action-row">
+                            <button
+                              type="button"
+                              disabled={pending || previewLoading}
+                              onClick={() => onPreviewRelease(row.id)}
+                              className="bb-dash-link-sm"
+                            >
+                              Preview
+                            </button>
                             {row.status !== 'published' ? (
                               <Link
                                 href={`/brand/releases/new?edit=${encodeURIComponent(row.id)}`}
@@ -931,6 +1054,12 @@ export function BrandDashboardView({
           </aside>
         </div>
       </div>
+
+      <PressReleasePreviewOverlay
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        content={previewContent}
+      />
     </main>
   );
 }

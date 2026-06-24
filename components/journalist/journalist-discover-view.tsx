@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 import { TypingSearchPlaceholder } from '@/components/home/typing-search-placeholder';
-import { RichTextRender } from '@/components/rich-text/rich-text-render';
-import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
+import {
+  PressReleasePreviewOverlay,
+  type PressReleasePreviewContent,
+} from '@/components/press-release/press-release-preview-overlay';
 import { pressReleasesMock, type PressReleaseMock } from '@/lib/journalist/mockData';
 import { formatMonthDayShort } from '@/lib/utils/dates';
 
@@ -234,7 +235,22 @@ export function JournalistDiscoverView({
     });
   }, [mounted, curated, effectiveVisibleCount, seed, feedIdKey]);
 
-  useLenisScrollLock(open);
+  const previewContent = useMemo((): PressReleasePreviewContent | null => {
+    if (!selected) return null;
+    return {
+      title: selected.title,
+      verticalLabel: selected.vertical,
+      dateLabel: formatDate(selected.publishedAt),
+      summary: selected.summary || null,
+      body: previewBody,
+      bodyLoading: previewBodyLoading,
+      heroImageUrl: selected.heroImageUrl,
+      mediaAssets: selected.mediaAssets,
+      footerMeta: `Reads ${selected.engagement.pastReads} · Saves ${selected.engagement.pastSaves}`,
+      fullReleaseHref: selected.slug ? `/journalist/release/${selected.slug}` : null,
+      fullReleaseLabel: 'Open full release page →',
+    };
+  }, [selected, previewBody, previewBodyLoading]);
 
   useEffect(() => {
     if (!open || !selected?.slug) {
@@ -504,144 +520,7 @@ export function JournalistDiscoverView({
         </div>
       </div>
 
-      <Dialog.Root open={open} onOpenChange={setOpen}>
-        <AnimatePresence>
-          {open ? (
-            <Dialog.Portal forceMount>
-              <Dialog.Overlay asChild>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40 bg-black/40"
-                />
-              </Dialog.Overlay>
-              <Dialog.Content asChild onOpenAutoFocus={(e) => e.preventDefault()}>
-                <motion.div
-                  data-lenis-prevent
-                  initial={{ x: 40, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 40, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-                  className="fixed inset-y-0 right-0 z-50 flex h-dvh max-h-dvh w-full max-w-[520px] flex-col border-l border-brand-border bg-white shadow-media-soft"
-                >
-                  <div className="shrink-0 border-b border-brand-border bg-white/90 p-4 backdrop-blur">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {selected ? (
-                            <span
-                              className={
-                                'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ' +
-                                verticalBadgeClass(selected.vertical)
-                              }
-                            >
-                              {selected.vertical}
-                            </span>
-                          ) : null}
-                          {selected ? <span className="text-[11px] text-brand-muted">{formatDate(selected.publishedAt)}</span> : null}
-                        </div>
-                        <Dialog.Title className="mt-2 text-base font-semibold text-brand-ink">
-                          {selected?.title ?? 'Preview'}
-                        </Dialog.Title>
-                        <Dialog.Description className="mt-1 text-sm text-brand-muted">
-                          Full press release details and downloadable media.
-                        </Dialog.Description>
-                      </div>
-                      <Dialog.Close asChild>
-                        <button
-                          type="button"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-border bg-white text-brand-ink hover:bg-brand-surface"
-                          aria-label="Close"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </Dialog.Close>
-                    </div>
-                  </div>
-
-                  <div
-                    data-lenis-prevent
-                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-4"
-                  >
-                    {selected ? (
-                      <>
-                        <div className="overflow-hidden rounded-2xl bg-brand-surface-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={selected.heroImageUrl}
-                            alt=""
-                            className="aspect-[4/3] w-full object-cover"
-                          />
-                        </div>
-
-                        {selected.summary ? (
-                          <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
-                            <div className="text-sm font-semibold text-brand-ink">Summary</div>
-                            <div className="mt-1 text-sm text-brand-muted">{selected.summary}</div>
-                          </div>
-                        ) : null}
-
-                        <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
-                          <div className="text-sm font-semibold text-brand-ink">Body</div>
-                          {previewBodyLoading ? (
-                            <p className="mt-2 text-sm text-brand-muted">Loading release…</p>
-                          ) : (
-                            <RichTextRender
-                              html={previewBody}
-                              className="mt-2 bb-richtext text-sm leading-relaxed text-brand-ink/90"
-                            />
-                          )}
-                        </div>
-
-                        <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="text-sm font-semibold text-brand-ink">Media assets</div>
-                            <div className="text-xs text-brand-muted">
-                              Reads {selected.engagement.pastReads} · Saves {selected.engagement.pastSaves}
-                            </div>
-                          </div>
-                          <div className="mt-3 space-y-2">
-                            {selected.mediaAssets.length === 0 ? (
-                              <p className="text-sm text-brand-muted">No assets attached.</p>
-                            ) : (
-                              selected.mediaAssets.map((a) => (
-                                <a
-                                  key={a.href}
-                                  href={a.href}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="block rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-medium text-brand-primary-700 hover:bg-brand-surface"
-                                >
-                                  {a.label}
-                                </a>
-                              ))
-                            )}
-                          </div>
-                          {selected.slug ? (
-                            <div className="mt-4 border-t border-brand-border/70 pt-3">
-                              <Link
-                                href={`/journalist/release/${selected.slug}`}
-                                className="text-sm font-medium text-brand-primary-700 hover:underline"
-                              >
-                                Open full release page →
-                              </Link>
-                            </div>
-                          ) : null}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="rounded-2xl border border-brand-border bg-white p-4 text-sm text-brand-muted">
-                        Select a press release to preview.
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </Dialog.Content>
-            </Dialog.Portal>
-          ) : null}
-        </AnimatePresence>
-      </Dialog.Root>
+      <PressReleasePreviewOverlay open={open} onOpenChange={setOpen} content={previewContent} />
     </main>
   );
 }
