@@ -9,6 +9,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { JournalistChatWidget } from '@/components/journalist/journalist-chat-widget';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
 import { PortalSidebarFeedbackLink } from '@/components/portal/portal-sidebar-feedback-link';
+import { PortalSidebarBrandMark } from '@/components/portal/portal-sidebar-brand-mark';
 import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
@@ -148,10 +149,10 @@ export function JournalistPortalShell({
         <div className="bb-portal-sidebar-brand">
           <div className="flex items-start justify-between gap-3">
             {!desktopSidebarCollapsed || mobileSidebarOpen ? (
-              <div className="bb-portal-sidebar-brand-text min-w-0">
-                <div className="bb-portal-sidebar-kicker">Broadbase</div>
-                <div className="bb-portal-sidebar-title">Journalist</div>
-              </div>
+              <PortalSidebarBrandMark
+                portalLabel="Journalist"
+                homeHref="/journalist/discover"
+              />
             ) : null}
             <button
               type="button"

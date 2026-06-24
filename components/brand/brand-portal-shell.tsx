@@ -16,6 +16,7 @@ import {
 import { usePathname, useSearchParams } from 'next/navigation';
 import { PortalHamburgerButton } from '@/components/portal/portal-hamburger-button';
 import { PortalSidebarFeedbackLink } from '@/components/portal/portal-sidebar-feedback-link';
+import { PortalSidebarBrandMark } from '@/components/portal/portal-sidebar-brand-mark';
 import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
 
@@ -216,10 +217,10 @@ export function BrandPortalShell({
         <div className="bb-portal-sidebar-brand">
           <div className="flex items-start justify-between gap-3">
             {showSidebarBrandText ? (
-              <div className="bb-portal-sidebar-brand-text min-w-0">
-                <div className="bb-portal-sidebar-kicker">Broadbase</div>
-                <div className="bb-portal-sidebar-title">Brand</div>
-              </div>
+              <PortalSidebarBrandMark
+                portalLabel="Brand"
+                homeHref="/brand/dashboard"
+              />
             ) : null}
             <button
               type="button"

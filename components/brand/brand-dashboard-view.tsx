@@ -374,7 +374,11 @@ export function BrandDashboardView({
   }, [data.drafts, selectedDraftId]);
 
   const score = selectedDraft?.aiReadinessScore ?? null;
-  const critiques = critiqueForScore(score);
+  const critiques = critiqueForScore(aiResult?.score ?? score);
+  const canUseAiReadiness =
+    accessState.plan != null &&
+    accessState.plan in TIER_FEATURES &&
+    TIER_FEATURES[accessState.plan as keyof typeof TIER_FEATURES].aiWritingAssistant;
   const showSuggestions =
     accessState.plan === 'pro' ||
     accessState.plan === 'agency' ||
@@ -1011,21 +1015,36 @@ export function BrandDashboardView({
 
                   <div className="mt-6">
                     <div className="bb-dash-critique-title">Critique</div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        className="bb-btn-primary-sm"
-                        disabled={aiPending || pending}
-                        onClick={onGenerateAiReadiness}
-                      >
-                        {aiPending ? 'Generating…' : 'Generate score'}
-                      </button>
-                      {aiError && (
-                        <span className="bb-dash-muted-p" role="status">
-                          {aiError}
-                        </span>
-                      )}
-                    </div>
+                    {canUseAiReadiness ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="bb-btn-primary-sm"
+                          disabled={aiPending || pending}
+                          onClick={onGenerateAiReadiness}
+                        >
+                          {aiPending ? 'Generating…' : 'Generate score'}
+                        </button>
+                        {aiError && (
+                          <span className="bb-dash-muted-p" role="status">
+                            {aiError}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
+                        <div className="font-medium">AI readiness scoring</div>
+                        <div className="mt-1 text-neutral-700">
+                          Upgrade to Growth to generate Gemini-powered readiness scores for your drafts.
+                        </div>
+                        <Link
+                          href="/pricing?reason=ai-readiness"
+                          className="mt-2 inline-block font-medium text-brand-primary-700 hover:underline"
+                        >
+                          View pricing
+                        </Link>
+                      </div>
+                    )}
 
                     {aiResult?.summary && (
                       <p className="bb-dash-muted-p mt-4">{aiResult.summary}</p>

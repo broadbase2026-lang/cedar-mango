@@ -190,6 +190,10 @@
     @apply text-[10px] font-semibold uppercase tracking-widest text-neutral-400;
   }
 
+  .bb-portal-sidebar-logo {
+    @apply h-5 w-auto;
+  }
+
   .bb-portal-sidebar-title {
     @apply mt-1 text-sm font-semibold leading-tight text-white;
   }

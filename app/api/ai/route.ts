@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import {
   geminiJsonGenerationConfig,
   getGeminiGenerativeModel,
@@ -6,6 +7,7 @@ import {
   parsePressReleaseReadinessJson,
   type PressReleaseReadinessResult,
 } from '@/lib/ai';
+import { assertBrandAiAccess } from '@/lib/ai/brand-access';
 import {
   extractRetryAfterSeconds,
   geminiUnsupportedLocationUserMessage,
@@ -14,48 +16,49 @@ import {
 } from '@/lib/ai/gemini-errors';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
 import { calculateGeoReadinessScore } from '@/lib/utils/geoScore';
-import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { createClient } from '@/lib/supabase/server';
 import { ERROR_MESSAGES } from '@/constants/copy';
-import { createAdminClient } from '@/lib/supabase/admin';
 
-async function assertAiAccess(): Promise<
-  | { ok: true; userId: string; plan: 'pro' | 'agency' }
-  | { ok: false; status: number; error: string }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { ok: false, status: 401, error: 'Not signed in.' };
+async function persistReadinessScores(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  pressReleaseId: string,
+  aiScore: number,
+  geoScore: number
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const full = await supabase
+    .from('press_releases')
+    .update({
+      ai_readiness_score: aiScore,
+      geo_readiness_score: geoScore,
+    })
+    .eq('id', pressReleaseId)
+    .is('deleted_at', null);
+
+  if (!full.error) {
+    return { ok: true };
   }
 
-  // Plan gate: AI writing assistant is not available on Solo (starter).
-  let admin;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return { ok: false, status: 500, error: 'Server misconfigured.' };
+  const msg = full.error.message ?? '';
+  const geoColumnMissing =
+    msg.includes('geo_readiness_score') ||
+    full.error.code === '42703' ||
+    full.error.code === 'PGRST204';
+
+  if (!geoColumnMissing) {
+    return { ok: false, message: msg };
   }
 
-  const { data: subRow } = await admin
-    .from('subscriptions')
-    .select('plan, status')
-    .eq('owner_id', user.id)
-    .in('status', ['active', 'trialing'])
-    .maybeSingle();
+  const aiOnly = await supabase
+    .from('press_releases')
+    .update({ ai_readiness_score: aiScore })
+    .eq('id', pressReleaseId)
+    .is('deleted_at', null);
 
-  const sub = applyDevSubscriptionOverrides(user.id, subRow);
-  const plan = sub?.plan as 'starter' | 'pro' | 'agency' | undefined;
-  if (!plan) {
-    return { ok: false, status: 403, error: 'You need an active subscription to use AI.' };
-  }
-  if (plan === 'starter') {
-    return { ok: false, status: 403, error: ERROR_MESSAGES.aiNotAvailable };
+  if (aiOnly.error) {
+    return { ok: false, message: aiOnly.error.message };
   }
 
-  return { ok: true, userId: user.id, plan };
+  return { ok: true };
 }
 
 export async function OPTIONS() {
@@ -68,7 +71,7 @@ export async function OPTIONS() {
 
 export async function GET() {
   // Ensure Solo users see the expected 403 rather than a 405 when they hit this URL directly.
-  const access = await assertAiAccess();
+  const access = await assertBrandAiAccess();
   if (!access.ok) {
     return NextResponse.json({ ok: false, error: access.error }, { status: access.status });
   }
@@ -89,13 +92,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const access = await assertAiAccess();
+    const access = await assertBrandAiAccess();
     if (!access.ok) {
       return NextResponse.json({ ok: false, error: access.error }, { status: access.status });
     }
 
     const supabase = await createClient();
-    const admin = createAdminClient();
 
     const releaseRes = await supabase
       .from('press_releases')
@@ -118,9 +120,12 @@ export async function POST(req: Request) {
     }
 
     const pr = releaseRes.data;
-    if (pr.status !== 'draft') {
+    if (pr.status !== 'draft' && pr.status !== 'archived') {
       return NextResponse.json(
-        { ok: false, error: 'AI Readiness scoring is only available for drafts.' },
+        {
+          ok: false,
+          error: 'AI Readiness scoring is only available for draft and archived releases.',
+        },
         { status: 400 }
       );
     }
@@ -202,21 +207,22 @@ export async function POST(req: Request) {
       brandWebsite: brandRes?.data?.website ?? null,
     });
 
-    const updateRes = await supabase
-      .from('press_releases')
-      .update({
-        ai_readiness_score: readiness.score,
-        geo_readiness_score: geo.score,
-      })
-      .eq('id', pressReleaseId)
-      .is('deleted_at', null);
+    const persist = await persistReadinessScores(
+      supabase,
+      pressReleaseId,
+      readiness.score,
+      geo.score
+    );
 
-    if (updateRes.error) {
+    if (!persist.ok) {
       return NextResponse.json(
-        { ok: false, error: updateRes.error.message },
+        { ok: false, error: persist.message },
         { status: 500 }
       );
     }
+
+    revalidatePath('/brand/dashboard');
+    revalidatePath('/brand/releases/new');
 
     return NextResponse.json({ ok: true, result: readiness });
   } catch (e: unknown) {

@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { softDeleteRelease } from '@/app/(brand)/brand/dashboard/actions';
 import { RichTextEditor } from '@/components/rich-text/rich-text-editor';
 import { compressImageForUpload } from '@/lib/utils/compressImage';
 import { isImageFile } from '@/lib/utils/image-file';
@@ -128,6 +130,8 @@ export function NewReleaseForm({
     embargoUntil: string | null;
   } | null;
 }) {
+  const router = useRouter();
+  const [deletePending, startDeleteTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
@@ -417,6 +421,25 @@ export function NewReleaseForm({
     [brandId, existing?.id]
   );
 
+  function onDeleteRelease() {
+    if (!existing?.id) return;
+    if (
+      !confirm(
+        `Remove “${title.trim() || existing.title}” from your vault? This uses soft-delete (hidden from newsroom).`
+      )
+    ) {
+      return;
+    }
+    startDeleteTransition(async () => {
+      const res = await softDeleteRelease(existing.id);
+      if (!res.ok) {
+        alert(res.message);
+        return;
+      }
+      router.push('/brand/dashboard?section=releases');
+    });
+  }
+
   return (
     <>
     <form
@@ -685,7 +708,11 @@ export function NewReleaseForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <button type="submit" className="bb-btn-primary-sm no-underline">
+        <button
+          type="submit"
+          className="bb-btn-primary-sm no-underline"
+          disabled={deletePending}
+        >
           {existing?.id ? 'Save changes' : 'Create draft'}
         </button>
         {savedNotice ? (
@@ -695,6 +722,16 @@ export function NewReleaseForm({
           >
             Draft saved.
           </span>
+        ) : null}
+        {existing?.id ? (
+          <button
+            type="button"
+            className="bb-dash-delete ml-auto"
+            disabled={deletePending}
+            onClick={onDeleteRelease}
+          >
+            {deletePending ? 'Deleting…' : 'Delete'}
+          </button>
         ) : null}
       </div>
     </form>
