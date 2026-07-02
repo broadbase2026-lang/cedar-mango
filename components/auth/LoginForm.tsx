@@ -58,6 +58,18 @@ export function LoginForm({ nextPath, callbackError }: LoginFormProps) {
         />
       </div>
 
+      <label className="flex items-center gap-2">
+        <input
+          id="remember_me"
+          name="remember_me"
+          type="checkbox"
+          value="true"
+          defaultChecked
+          className="h-4 w-4 rounded border-neutral-300 accent-teal-700"
+        />
+        <span className="text-sm text-neutral-700">Remember me</span>
+      </label>
+
       {callbackError ? (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
           {callbackError}

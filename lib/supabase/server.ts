@@ -1,9 +1,17 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  sessionOnlyAuthCookieOptions,
+  shouldUseSessionOnlyAuthCookies,
+} from '@/lib/auth/remember-me';
 import type { SupabaseCookieToSet } from '@/lib/supabase/cookie-types';
 import { getSupabasePublicEnv } from '@/lib/supabase/env';
 
-export async function createClient() {
+type CreateClientOptions = {
+  sessionOnly?: boolean;
+};
+
+export async function createClient(options?: CreateClientOptions) {
   const cookieStore = await cookies();
   const env = getSupabasePublicEnv();
 
@@ -20,8 +28,17 @@ export async function createClient() {
       },
       setAll(cookiesToSet: SupabaseCookieToSet[]) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+          const sessionOnly =
+            options?.sessionOnly ??
+            shouldUseSessionOnlyAuthCookies((name) => cookieStore.get(name)?.value);
+          cookiesToSet.forEach(({ name, value, options: cookieOptions }) =>
+            cookieStore.set(
+              name,
+              value,
+              sessionOnly
+                ? sessionOnlyAuthCookieOptions(cookieOptions)
+                : cookieOptions
+            )
           );
         } catch {
           // Called from a Server Component — ignore if middleware refreshed session.

@@ -4,6 +4,10 @@ import { applyDevProfileOverrides } from '@/lib/auth/dev-profile-mock';
 import { isEmailConfirmed } from '@/lib/auth/email-confirmed';
 import { provisionTrialBrandForUser } from '@/lib/auth/provision-trial-brand';
 import {
+  SESSION_ONLY_AUTH_COOKIE,
+  SESSION_ONLY_MARKER_COOKIE_OPTIONS,
+} from '@/lib/auth/remember-me';
+import {
   dashboardPathForUserType,
   sanitizeInternalNextParam,
 } from '@/lib/auth/redirects';
@@ -13,6 +17,7 @@ import { getResendEnv, resendNotConfiguredMessage } from '@/lib/email/resend-env
 import { createClient } from '@/lib/supabase/server';
 import { getSupabasePublicEnv } from '@/lib/supabase/env';
 import type { UserType } from '@/types';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export type AuthActionState = {
@@ -41,7 +46,8 @@ function isSupabaseConfigError(message: string): boolean {
 }
 
 async function createAuthSupabaseClient(
-  context: 'sign-in' | 'sign-up'
+  context: 'sign-in' | 'sign-up',
+  options?: { sessionOnly?: boolean }
 ): Promise<
   { supabase: Awaited<ReturnType<typeof createClient>>; error: null } | { supabase: null; error: string }
 > {
@@ -53,7 +59,9 @@ async function createAuthSupabaseClient(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(
+      context === 'sign-in' ? { sessionOnly: options?.sessionOnly } : undefined
+    );
     return { supabase, error: null };
   } catch (err) {
     console.error('[auth action] createClient failed', err);
@@ -175,11 +183,14 @@ export async function loginAction(
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
   const nextRaw = String(formData.get('next') ?? '').trim();
+  const rememberMe = parseBool(formData.get('remember_me'));
 
   if (!email) return { error: 'Email is required.' };
   if (!password) return { error: 'Password is required.' };
 
-  const authClient = await createAuthSupabaseClient('sign-in');
+  const authClient = await createAuthSupabaseClient('sign-in', {
+    sessionOnly: !rememberMe,
+  });
   if (authClient.error || !authClient.supabase) {
     return { error: authClient.error ?? SIGN_IN_CONFIG_ERROR };
   }
@@ -227,6 +238,13 @@ export async function loginAction(
       error:
         'Your account has no profile yet. Apply migration 007 (signup trigger) or contact support.',
     };
+  }
+
+  const cookieStore = await cookies();
+  if (rememberMe) {
+    cookieStore.delete(SESSION_ONLY_AUTH_COOKIE);
+  } else {
+    cookieStore.set(SESSION_ONLY_AUTH_COOKIE, '1', SESSION_ONLY_MARKER_COOKIE_OPTIONS);
   }
 
   const safeNext = sanitizeInternalNextParam(nextRaw);

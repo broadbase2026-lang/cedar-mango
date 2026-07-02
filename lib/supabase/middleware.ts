@@ -1,5 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  sessionOnlyAuthCookieOptions,
+  shouldUseSessionOnlyAuthCookies,
+} from '@/lib/auth/remember-me';
 import type { SupabaseCookieToSet } from '@/lib/supabase/cookie-types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabasePublicEnv } from '@/lib/supabase/env';
@@ -45,12 +49,19 @@ export function createSupabaseMiddlewareClient(
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: SupabaseCookieToSet[]) {
+          const sessionOnly = shouldUseSessionOnlyAuthCookies((name) =>
+            request.cookies.get(name)?.value
+          );
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next(init);
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(
+              name,
+              value,
+              sessionOnly ? sessionOnlyAuthCookieOptions(options) : options
+            )
           );
         },
       },
