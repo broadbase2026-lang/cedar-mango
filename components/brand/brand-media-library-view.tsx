@@ -22,6 +22,7 @@ import type {
   MediaLibraryPayload,
   MediaReleaseOption,
 } from '@/lib/brand/media-library-data';
+import { ASSETS_PAGE_SIZE } from '@/lib/brand/media-library-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzone';
@@ -60,12 +61,19 @@ type Props = {
   initial: MediaLibraryPayload;
   /** When true, cap images per release for the free trial. */
   isTrial?: boolean;
+  assetsPage?: number;
 };
+
+function mediaLibraryHref(page: number): string {
+  if (page <= 1) return '/brand/upload';
+  return `/brand/upload?page=${page}`;
+}
 
 export function BrandMediaLibraryView({
   brandId,
   initial,
   isTrial = false,
+  assetsPage = 1,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -246,7 +254,11 @@ export function BrandMediaLibraryView({
     });
   }
 
-  const { assets, releases } = initial;
+  const { assets, releases, assetsPagination } = initial;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(assetsPagination.total / assetsPagination.pageSize)
+  );
 
   return (
     <main className="bb-dash-main">
@@ -388,7 +400,7 @@ export function BrandMediaLibraryView({
 
         <section className={`${card} mt-8`}>
           <h2 className="text-base font-semibold text-brand-ink">
-            Your assets ({assets.length})
+            Your assets ({assetsPagination.total})
           </h2>
           <p className={help}>
             Soft-deleting removes the row from your vault UI; the object may
@@ -517,6 +529,40 @@ export function BrandMediaLibraryView({
               </table>
             </div>
           )}
+
+          {assetsPagination.total > ASSETS_PAGE_SIZE ? (
+            <nav
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-brand-border pt-4 text-sm"
+              aria-label="Asset pages"
+            >
+              <p className="text-brand-muted">
+                Showing {(assetsPage - 1) * ASSETS_PAGE_SIZE + 1}–
+                {Math.min(assetsPage * ASSETS_PAGE_SIZE, assetsPagination.total)}{' '}
+                of {assetsPagination.total}
+              </p>
+              <div className="flex items-center gap-3">
+                {assetsPage > 1 ? (
+                  <Link
+                    href={mediaLibraryHref(assetsPage - 1)}
+                    className="font-medium text-brand-primary-700 hover:underline"
+                  >
+                    ← Previous
+                  </Link>
+                ) : null}
+                <span className="text-brand-muted">
+                  Page {assetsPage} of {totalPages}
+                </span>
+                {assetsPage < totalPages ? (
+                  <Link
+                    href={mediaLibraryHref(assetsPage + 1)}
+                    className="font-medium text-brand-primary-700 hover:underline"
+                  >
+                    Next →
+                  </Link>
+                ) : null}
+              </div>
+            </nav>
+          ) : null}
         </section>
 
         <section className="mt-8 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">

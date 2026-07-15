@@ -35,7 +35,21 @@ function isValidUrl(value: string): boolean {
 }
 
 function toDateInputValue(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10);
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function todayDateInputValue(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function dateInputToIsoUtcNoon(value: string): string {
+  // Keep the user's selected calendar day stable across timezones.
+  return new Date(`${value}T12:00:00`).toISOString();
 }
 
 export function LogPublicationModal({
@@ -66,7 +80,7 @@ export function LogPublicationModal({
     setPublishDate(
       publication
         ? toDateInputValue(publication.published_at)
-        : new Date().toISOString().slice(0, 10)
+        : todayDateInputValue()
     );
     setUrlError(null);
     setSubmitError(null);
@@ -87,7 +101,7 @@ export function LogPublicationModal({
     setSubmitError(null);
     setSubmitting(true);
 
-    const publishedAtIso = new Date(publishDate).toISOString();
+    const publishedAtIso = dateInputToIsoUtcNoon(publishDate);
 
     try {
       const endpoint = isEdit

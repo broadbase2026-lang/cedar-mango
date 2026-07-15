@@ -9,6 +9,10 @@ import {
 } from '@/components/press-release/press-release-preview-overlay';
 import { formatMonthDayShort } from '@/lib/utils/dates';
 import {
+  isoToDatetimeLocalValue,
+  minMaxEmbargoDatetimeLocal,
+} from '@/lib/utils/datetime-local';
+import {
   archiveRelease,
   bulkArchiveReleases,
   bulkSoftDeleteReleases,
@@ -100,25 +104,6 @@ function statusLabel(status: string) {
   return 'Archived';
 }
 
-function toDatetimeLocalValue(isoUtc: string): string {
-  const d = new Date(isoUtc);
-  if (!Number.isFinite(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
-
-function minMaxEmbargo() {
-  const min = new Date(Date.now() + 15 * 60 * 1000);
-  const max = new Date(Date.now());
-  max.setMonth(max.getMonth() + 12);
-  return {
-    min: min.toISOString().slice(0, 16),
-    max: max.toISOString().slice(0, 16),
-  };
-}
-
 function critiqueForScore(score: number | null): string[] {
   if (score == null) {
     return [
@@ -175,9 +160,15 @@ function DashboardReleasesPagination({
   rowCount: number;
   preserveSectionInLinks: boolean;
 }) {
+  const router = useRouter();
   const { page, pageSize, total } = pagination;
   const effectiveTotal = Math.max(total, (page - 1) * pageSize + rowCount);
   const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
+  const [pageInput, setPageInput] = useState(String(page));
+
+  useEffect(() => {
+    setPageInput(String(page));
+  }, [page]);
 
   if (totalPages <= 1) {
     return null;
@@ -185,6 +176,18 @@ function DashboardReleasesPagination({
 
   const rangeStart = (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, effectiveTotal);
+
+  function goToEnteredPage() {
+    const parsed = Number.parseInt(pageInput.trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page));
+      return;
+    }
+    const next = Math.min(totalPages, Math.max(1, parsed));
+    setPageInput(String(next));
+    if (next === page) return;
+    router.push(dashboardReleasesHref(next, preserveSectionInLinks));
+  }
 
   return (
     <nav
@@ -208,7 +211,29 @@ function DashboardReleasesPagination({
           </span>
         )}
         <span className="bb-dash-pagination-status">
-          Page {page} of {totalPages}
+          Page{' '}
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            aria-label="Go to page"
+            className="bb-dash-pagination-page-input"
+            style={{
+              width: `${Math.max(3, String(totalPages).length + 2)}ch`,
+            }}
+            value={pageInput}
+            onChange={(e) =>
+              setPageInput(e.target.value.replace(/[^\d]/g, ''))
+            }
+            onBlur={goToEnteredPage}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />{' '}
+          of {totalPages}
         </span>
         {page < totalPages ? (
           <Link
@@ -1006,11 +1031,11 @@ export function BrandDashboardView({
                                       disabled={pending || embargoBusyId === row.id}
                                       className="bb-dash-link-sm"
                                       onClick={() => {
-                                        const { min, max } = minMaxEmbargo();
+                                        const { min, max } = minMaxEmbargoDatetimeLocal();
                                         setEmbargoEdit({
                                           id: row.id,
                                           value: row.embargoUntil
-                                            ? toDatetimeLocalValue(row.embargoUntil)
+                                            ? isoToDatetimeLocalValue(row.embargoUntil)
                                             : '',
                                           min,
                                           max,
@@ -1130,7 +1155,7 @@ export function BrandDashboardView({
                     min={embargoEdit.min}
                     max={embargoEdit.max}
                     onFocus={() => {
-                      const { min, max } = minMaxEmbargo();
+                      const { min, max } = minMaxEmbargoDatetimeLocal();
                       setEmbargoEdit((e) => (e ? { ...e, min, max } : e));
                     }}
                     onChange={(e) =>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBrandPortalSession } from '@/lib/brand/session';
 import { getStripe } from '@/lib/stripe/server';
+import { isBillableStripeCustomerId } from '@/lib/stripe/customer-id';
 
 function getOrigin(req: Request) {
   const explicit = process.env.NEXT_PUBLIC_APP_URL;
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
     .limit(1);
 
   const customerId = row?.[0]?.stripe_customer_id;
-  if (!customerId) {
+  if (!isBillableStripeCustomerId(customerId)) {
     return NextResponse.json(
       {
         error:
@@ -50,17 +51,25 @@ export async function GET(req: Request) {
   const origin = getOrigin(req);
   const returnUrl = `${origin}/brand/settings`;
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: returnUrl,
-  });
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
 
-  if (!session.url) {
+    if (!session.url) {
+      return NextResponse.json(
+        { error: 'Could not start billing portal.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.redirect(session.url, 303);
+  } catch (err) {
+    console.error('[stripe/billing-portal] failed', err);
     return NextResponse.json(
-      { error: 'Could not start billing portal.' },
+      { error: 'Could not open billing portal. Try again or subscribe from pricing.' },
       { status: 500 }
     );
   }
-
-  return NextResponse.redirect(session.url, 303);
 }

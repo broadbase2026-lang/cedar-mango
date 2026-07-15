@@ -5,11 +5,9 @@
 // Validates that the authenticated journalist has an invitation
 // for the requested asset, checks that the embargo has lifted,
 // and returns a short-lived (60-second), single-use token.
-//
-// Response: { success: boolean, data?: { token: string }, error?: string }
 
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
 const RequestTokenSchema = z.object({
@@ -18,9 +16,6 @@ const RequestTokenSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // ============================================================
-    // Step 1: Authenticate user (must be journalist)
-    // ============================================================
     const auth = await createServerClient();
     const {
       data: { user },
@@ -34,11 +29,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // ============================================================
-    // Step 2: Validate request body with Zod
-    // ============================================================
-    const parsed = RequestTokenSchema.safeParse(await request.json());
+    const { data: profile } = await auth
+      .from('profiles')
+      .select('user_type')
+      .eq('id', user.id)
+      .maybeSingle();
 
+    if (profile?.user_type !== 'journalist') {
+      return Response.json(
+        { success: false, error: 'You do not have access to this asset' },
+        { status: 403 }
+      );
+    }
+
+    const { data: journalistProfile } = await auth
+      .from('journalist_profiles')
+      .select('is_inactive')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (journalistProfile?.is_inactive) {
+      return Response.json(
+        { success: false, error: 'You do not have access to this asset' },
+        { status: 403 }
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return Response.json(
+        { success: false, error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const parsed = RequestTokenSchema.safeParse(body);
     if (!parsed.success) {
       return Response.json(
         { success: false, error: 'Invalid request body' },
@@ -48,29 +75,18 @@ export async function POST(request: Request) {
 
     const { assetId } = parsed.data;
 
-    // ============================================================
-    // Step 3: Initialize Supabase service role client
-    // ============================================================
-    // Using service role because we need to write to download_tokens
-    // and check asset_invitations without RLS restrictions.
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    let admin;
+    try {
+      admin = createAdminClient();
+    } catch {
+      return Response.json(
+        { success: false, error: 'Server misconfigured.' },
+        { status: 503 }
+      );
+    }
 
-    // ============================================================
-    // Step 4: Verify user has an active (non-revoked) invitation
-    // ============================================================
-    // Check two conditions:
-    // 1. An invitation exists matching invited_user_id or invited_email
-    // 2. The invitation has not been revoked (revoked_at IS NULL)
-    //
-    // Match by user id first, then fall back to email. We avoid building
-    // an `.or()` filter string from user.email — interpolating untrusted
-    // values into PostgREST filter syntax risks filter injection. Each
-    // value is bound via `.eq()` instead.
     const baseQuery = () =>
-      supabase
+      admin
         .from('asset_invitations')
         .select('embargo_until')
         .eq('asset_id', assetId)
@@ -93,23 +109,15 @@ export async function POST(request: Request) {
     }
 
     if (invError || !invitation) {
-      // Intentionally generic: do not reveal whether asset exists or
-      // invitation exists. This prevents probing attacks.
       return Response.json(
         { success: false, error: 'You do not have access to this asset' },
         { status: 403 }
       );
     }
 
-    // ============================================================
-    // Step 5: Check embargo timestamp
-    // ============================================================
-    // If embargo_until is in the future, deny access.
     if (invitation.embargo_until) {
       const embargoTime = new Date(invitation.embargo_until).getTime();
-      const now = Date.now();
-
-      if (embargoTime > now) {
+      if (embargoTime > Date.now()) {
         return Response.json(
           {
             success: false,
@@ -121,12 +129,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // ============================================================
-    // Step 6: Create download token (expires in 60 seconds)
-    // ============================================================
     const expiresAt = new Date(Date.now() + 60000).toISOString();
 
-    const { data: token, error: tokenError } = await supabase
+    const { data: token, error: tokenError } = await admin
       .from('download_tokens')
       .insert({
         user_id: user.id,
@@ -149,9 +154,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // ============================================================
-    // Step 7: Return token to client
-    // ============================================================
     return Response.json(
       {
         success: true,

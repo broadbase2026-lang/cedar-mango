@@ -20,7 +20,10 @@ import { ReleaseFileImportDropzone } from '@/components/brand/release-file-impor
 import { ReleaseUrlImportField } from '@/components/brand/release-url-import-field';
 import { validateReleaseImportFile } from '@/lib/brand/release-import-files';
 import { registerPressAsset, softDeletePressAsset } from '@/app/(brand)/brand/upload/actions';
-import { savePressReleaseDraftAction } from '@/app/(brand)/brand/releases/new/actions';
+import {
+  createPressReleaseDraftAction,
+  savePressReleaseDraftAction,
+} from '@/app/(brand)/brand/releases/new/actions';
 import { ReleasePublishPanel } from '@/components/brand/release-publish-panel';
 import type { ReleaseImageAsset } from '@/lib/brand/release-asset-model';
 import { TRIAL_LIMIT_COPY } from '@/constants/copy';
@@ -97,6 +100,7 @@ function releaseFormErrorMessage(errorCode: string | null | undefined): string |
   if (errorCode === 'assets_failed')
     return 'Draft was saved, but linking images failed. Save again or add them from Media Library.';
   if (errorCode === 'not_signed_in') return 'You must be signed in to save.';
+  if (errorCode === 'no_brand') return 'Create a brand workspace in settings first.';
   if (errorCode === 'already_published') return 'This release is already published.';
   return 'Something went wrong. Try again.';
 }
@@ -109,7 +113,6 @@ function dragHasFiles(e: React.DragEvent): boolean {
 }
 
 export function NewReleaseForm({
-  action,
   brandId,
   errorCode,
   maxPendingImages = MAX_IMAGES_PER_PRESS_RELEASE,
@@ -118,7 +121,6 @@ export function NewReleaseForm({
   existing,
   publishConfig,
 }: {
-  action: (formData: FormData) => Promise<void>;
   brandId: string;
   errorCode?: string | null;
   maxPendingImages?: number;
@@ -132,6 +134,11 @@ export function NewReleaseForm({
 }) {
   const router = useRouter();
   const [deletePending, startDeleteTransition] = useTransition();
+  // useState (not useTransition): React 18 clears transition pending on the first
+  // await, which re-enabled this button while the server action was still running.
+  const [submitPending, setSubmitPending] = useState(false);
+  const submitLockRef = useRef(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
@@ -145,6 +152,7 @@ export function NewReleaseForm({
   const [pendingAssets, setPendingAssets] = useState<PendingAsset[]>(initialImages);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageErr, setImageErr] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
@@ -236,12 +244,14 @@ export function NewReleaseForm({
     [applyImportResult]
   );
 
+  const activeErrorCode = localError ? null : errorCode;
   const errorMessage = useMemo(() => {
+    if (localError) return localError;
     if (errorCode === 'create_failed' && !existing?.id) {
       return 'Could not create the draft. Try again.';
     }
     return releaseFormErrorMessage(errorCode);
-  }, [errorCode, existing?.id]);
+  }, [localError, errorCode, existing?.id]);
 
   const buildFormData = useCallback(() => {
     const formData = new FormData();
@@ -264,6 +274,48 @@ export function NewReleaseForm({
     tags,
     pendingAssets,
   ]);
+
+  const onFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (submitLockRef.current || submitPending || deletePending) return;
+    submitLockRef.current = true;
+    setSubmitPending(true);
+    setLocalError(null);
+
+    void (async () => {
+      try {
+        const result = existing?.id
+          ? await savePressReleaseDraftAction(buildFormData())
+          : await createPressReleaseDraftAction(buildFormData());
+
+        if (!result.ok) {
+          if (result.errorCode === 'not_signed_in') {
+            window.location.assign('/login');
+            return;
+          }
+          if (result.errorCode === 'no_brand') {
+            window.location.assign('/brand/settings');
+            return;
+          }
+          setLocalError(releaseFormErrorMessage(result.errorCode));
+          submitLockRef.current = false;
+          setSubmitPending(false);
+          return;
+        }
+
+        // Hard navigation: after a server action, Next soft `router.push` often
+        // loses to the action's revalidation refresh, so the create form stayed put
+        // while another identical draft was inserted on every click.
+        window.location.assign(
+          `/brand/releases/new?edit=${encodeURIComponent(result.releaseId)}&saved=true`
+        );
+      } catch {
+        setLocalError('Something went wrong. Try again.');
+        submitLockRef.current = false;
+        setSubmitPending(false);
+      }
+    })();
+  };
 
   const saveCurrentDraft = useCallback(async (): Promise<
     { ok: true } | { ok: false; message: string }
@@ -320,6 +372,49 @@ export function NewReleaseForm({
     }
   }, [title, bodyHtml]);
 
+  const appendUploadedImage = useCallback(
+    async (json: {
+      path: string;
+      publicUrl: string;
+      fileName: string;
+      size: number;
+    }): Promise<boolean> => {
+      const row: PendingAsset = {
+        path: json.path,
+        publicUrl: json.publicUrl,
+        fileName: json.fileName,
+        fileSizeBytes: json.size,
+      };
+
+      if (existing?.id) {
+        const reg = await registerPressAsset({
+          brandId,
+          pressReleaseId: existing.id,
+          fileName: row.fileName,
+          fileUrl: row.publicUrl,
+          fileType: 'image',
+          fileSizeBytes: row.fileSizeBytes,
+          caption: null,
+          isPublic: true,
+          isHero: false,
+        });
+        if (reg.error) {
+          setImageErr(reg.error);
+          return false;
+        }
+        if (reg.assetId) {
+          row.id = reg.assetId;
+        }
+      }
+
+      const acc = [...pendingAssetsRef.current, row];
+      pendingAssetsRef.current = acc;
+      setPendingAssets(acc);
+      return true;
+    },
+    [brandId, existing?.id]
+  );
+
   const processImageFiles = useCallback(
     async (files: FileList | File[]) => {
       const list = Array.from(files).filter(isImageFile);
@@ -330,9 +425,8 @@ export function NewReleaseForm({
       setImageErr(null);
       setImageBusy(true);
       try {
-        let acc = [...pendingAssetsRef.current];
         for (const raw of list) {
-          if (acc.length >= maxPendingImages) {
+          if (pendingAssetsRef.current.length >= maxPendingImages) {
             setImageErr(`Maximum ${maxPendingImages} images per draft.`);
             break;
           }
@@ -351,7 +445,13 @@ export function NewReleaseForm({
             body: fd,
           });
           const json = (await res.json().catch(() => null)) as
-            | { ok: true; path: string; publicUrl: string; size?: number }
+            | {
+                ok: true;
+                path: string;
+                publicUrl: string;
+                size?: number;
+                fileName?: string;
+              }
             | { error: string }
             | null;
           if (!res.ok || !json || !('ok' in json) || json.ok !== true) {
@@ -360,37 +460,13 @@ export function NewReleaseForm({
             );
             break;
           }
-          const row: PendingAsset = {
+          const ok = await appendUploadedImage({
             path: json.path,
             publicUrl: json.publicUrl,
             fileName: prepared.name,
-            fileSizeBytes: json.size ?? prepared.size,
-          };
-
-          if (existing?.id) {
-            const reg = await registerPressAsset({
-              brandId,
-              pressReleaseId: existing.id,
-              fileName: row.fileName,
-              fileUrl: row.publicUrl,
-              fileType: 'image',
-              fileSizeBytes: row.fileSizeBytes,
-              caption: null,
-              isPublic: true,
-              isHero: false,
-            });
-            if (reg.error) {
-              setImageErr(reg.error);
-              break;
-            }
-            if (reg.assetId) {
-              row.id = reg.assetId;
-            }
-          }
-
-          acc = [...acc, row];
-          pendingAssetsRef.current = acc;
-          setPendingAssets(acc);
+            size: json.size ?? prepared.size,
+          });
+          if (!ok) break;
         }
       } catch (e) {
         setImageErr(e instanceof Error ? e.message : 'Upload failed.');
@@ -398,8 +474,57 @@ export function NewReleaseForm({
         setImageBusy(false);
       }
     },
-    [brandId, maxPendingImages, existing?.id]
+    [brandId, maxPendingImages, appendUploadedImage]
   );
+
+  const onUploadImageFromUrl = useCallback(async () => {
+    const trimmed = imageUrl.trim();
+    if (!trimmed || imageBusy) return;
+
+    if (pendingAssetsRef.current.length >= maxPendingImages) {
+      setImageErr(`Maximum ${maxPendingImages} images per draft.`);
+      return;
+    }
+
+    setImageErr(null);
+    setImageBusy(true);
+    try {
+      const res = await fetch('/api/storage/press-assets-public/upload-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, url: trimmed }),
+      });
+      const json = (await res.json().catch(() => null)) as
+        | {
+            ok: true;
+            path: string;
+            publicUrl: string;
+            fileName: string;
+            size: number;
+          }
+        | { error: string }
+        | null;
+      if (!res.ok || !json || !('ok' in json) || json.ok !== true) {
+        setImageErr(
+          json && 'error' in json
+            ? json.error
+            : `Upload from URL failed (${res.status}).`
+        );
+        return;
+      }
+      const ok = await appendUploadedImage({
+        path: json.path,
+        publicUrl: json.publicUrl,
+        fileName: json.fileName,
+        size: json.size,
+      });
+      if (ok) setImageUrl('');
+    } catch (e) {
+      setImageErr(e instanceof Error ? e.message : 'Upload from URL failed.');
+    } finally {
+      setImageBusy(false);
+    }
+  }, [imageUrl, imageBusy, maxPendingImages, brandId, appendUploadedImage]);
 
   const removePendingAsset = useCallback(
     (asset: PendingAsset) => {
@@ -444,7 +569,7 @@ export function NewReleaseForm({
     <>
     <form
       ref={formRef}
-      action={action}
+      onSubmit={onFormSubmit}
       className="rounded-xl border border-brand-border bg-white p-6 shadow-sm space-y-4"
     >
       {errorMessage && (
@@ -453,7 +578,7 @@ export function NewReleaseForm({
           role="status"
         >
           <p>{errorMessage}</p>
-          {errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE ? (
+          {activeErrorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE ? (
             <p className="mt-2">
               <Link
                 href="/pricing?reason=release-limit"
@@ -632,8 +757,40 @@ export function NewReleaseForm({
             Up to {maxPendingImages} images, {MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024)}MB each before
             compression. Images are resized as JPEG (max edge 2048px).
           </p>
-          {imageErr ? <p className="mt-2 text-xs text-red-600">{imageErr}</p> : null}
         </div>
+        <div className="mt-3">
+          <p className="mb-2 text-xs text-brand-muted">Or add an image from a URL</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              disabled={imageBusy}
+              placeholder="https://example.com/photo.jpg"
+              className={
+                'min-w-0 flex-1 rounded-xl bg-white px-4 py-2.5 text-sm text-brand-ink ' +
+                'ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 ' +
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ' +
+                'disabled:cursor-not-allowed disabled:opacity-60'
+              }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void onUploadImageFromUrl();
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={imageBusy || !imageUrl.trim()}
+              onClick={() => void onUploadImageFromUrl()}
+              className="bb-btn-primary-sm whitespace-nowrap disabled:opacity-60"
+            >
+              {imageBusy ? 'Uploading…' : 'Add from URL'}
+            </button>
+          </div>
+        </div>
+        {imageErr ? <p className="mt-2 text-xs text-red-600">{imageErr}</p> : null}
         {pendingAssets.length > 0 ? (
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {pendingAssets.map((a) => (
@@ -711,9 +868,13 @@ export function NewReleaseForm({
         <button
           type="submit"
           className="bb-btn-primary-sm no-underline"
-          disabled={deletePending}
+          disabled={deletePending || submitPending}
         >
-          {existing?.id ? 'Save changes' : 'Create draft'}
+          {submitPending
+            ? 'Saving…'
+            : existing?.id
+              ? 'Save changes'
+              : 'Create draft'}
         </button>
         {savedNotice ? (
           <span

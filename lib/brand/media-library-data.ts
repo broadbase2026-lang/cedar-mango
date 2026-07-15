@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+export const ASSETS_PAGE_SIZE = 50;
+
 export type MediaReleaseOption = {
   id: string;
   title: string;
@@ -24,13 +26,23 @@ export type MediaAssetRow = {
 export type MediaLibraryPayload = {
   assets: MediaAssetRow[];
   releases: MediaReleaseOption[];
+  assetsPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
 };
 
 export async function loadMediaLibraryData(
   supabase: SupabaseClient,
-  brandId: string
+  brandId: string,
+  options?: { page?: number }
 ): Promise<MediaLibraryPayload> {
-  const [assetsRes, releasesRes] = await Promise.all([
+  const page = Math.max(1, options?.page ?? 1);
+  const from = (page - 1) * ASSETS_PAGE_SIZE;
+  const to = from + ASSETS_PAGE_SIZE - 1;
+
+  const [assetsRes, countRes, releasesRes] = await Promise.all([
     supabase
       .from('press_assets')
       .select(
@@ -38,7 +50,13 @@ export async function loadMediaLibraryData(
       )
       .eq('brand_id', brandId)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(from, to),
+    supabase
+      .from('press_assets')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_id', brandId)
+      .is('deleted_at', null),
     supabase
       .from('press_releases')
       .select('id, title, status')
@@ -53,12 +71,16 @@ export async function loadMediaLibraryData(
   if (assetsRes.error) {
     console.error('[loadMediaLibraryData] assets query failed', assetsRes.error);
   }
+  if (countRes.error) {
+    console.error('[loadMediaLibraryData] assets count failed', countRes.error);
+  }
 
   const assetsRaw = assetsRes.error ? [] : (assetsRes.data ?? []);
   const releases = releasesRes.error
     ? []
     : ((releasesRes.data ?? []) as MediaReleaseOption[]);
   const releaseMap = new Map(releases.map((r) => [r.id, r]));
+  const total = countRes.error ? assetsRaw.length : (countRes.count ?? 0);
 
   const assets: MediaAssetRow[] = assetsRaw.map((a) => {
     const rid = a.press_release_id;
@@ -79,5 +101,13 @@ export async function loadMediaLibraryData(
     };
   });
 
-  return { assets, releases };
+  return {
+    assets,
+    releases,
+    assetsPagination: {
+      page,
+      pageSize: ASSETS_PAGE_SIZE,
+      total,
+    },
+  };
 }

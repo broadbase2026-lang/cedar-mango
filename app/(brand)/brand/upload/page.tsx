@@ -78,9 +78,13 @@ export default async function BrandUploadPage({ searchParams }: PageProps) {
     );
   }
 
+  const pageRaw = first(searchParams?.page);
+  const page = Math.max(1, Number.parseInt(pageRaw ?? '1', 10) || 1);
+
   const initial = await loadMediaLibraryData(
     session.supabase,
-    session.brand.id
+    session.brand.id,
+    { page }
   );
 
   return (
@@ -95,6 +99,7 @@ export default async function BrandUploadPage({ searchParams }: PageProps) {
           brandId={session.brand.id}
           initial={initial}
           isTrial={Boolean(subscription?.trial_mode)}
+          assetsPage={page}
         />
       </div>
     </div>

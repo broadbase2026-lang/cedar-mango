@@ -49,6 +49,7 @@ export function JournalistPortfolioView({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [togglingPublic, setTogglingPublic] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const live = publications.filter((p) => !p.deleted_at);
   const totalArticles = live.length;
@@ -69,10 +70,18 @@ export function JournalistPortfolioView({
   async function handleRemove(id: string) {
     if (!window.confirm('Remove this article from your portfolio?')) return;
     setBusyId(id);
+    setActionError(null);
     try {
-      await fetch(`/api/journalist/portfolio/publications/${id}`, {
+      const res = await fetch(`/api/journalist/portfolio/publications/${id}`, {
         method: 'DELETE',
       });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setActionError(data?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
       router.refresh();
     } finally {
       setBusyId(null);
@@ -81,10 +90,18 @@ export function JournalistPortfolioView({
 
   async function handleRestore(id: string) {
     setBusyId(id);
+    setActionError(null);
     try {
-      await fetch(`/api/journalist/portfolio/publications/${id}/restore`, {
+      const res = await fetch(`/api/journalist/portfolio/publications/${id}/restore`, {
         method: 'POST',
       });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setActionError(data?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
       router.refresh();
     } finally {
       setBusyId(null);
@@ -94,12 +111,20 @@ export function JournalistPortfolioView({
   async function handleTogglePublic() {
     if (!settings) return;
     setTogglingPublic(true);
+    setActionError(null);
     try {
-      await fetch('/api/journalist/portfolio/settings', {
+      const res = await fetch('/api/journalist/portfolio/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ public: !settings.public }),
       });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setActionError(data?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
       router.refresh();
     } finally {
       setTogglingPublic(false);
@@ -114,6 +139,15 @@ export function JournalistPortfolioView({
           Add article
         </Button>
       </div>
+
+      {actionError ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-border-default bg-surface-overlay px-4 py-3 text-sm text-error"
+        >
+          {actionError}
+        </div>
+      ) : null}
 
       {/* Settings card */}
       <Card className="mt-6">

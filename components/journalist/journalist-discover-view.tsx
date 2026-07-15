@@ -30,7 +30,7 @@ type JournalistDiscoverViewProps = {
    * We keep the view resilient for loading/edge cases.
    */
   userDisplayName?: string | null;
-  /** Published releases from Supabase; falls back to mock data when empty. */
+  /** Published releases from Supabase; empty state when none (mock data in dev only). */
   releases?: PressReleaseMock[];
   /** When set, the feed shows FTS search results instead of the curated discover stream. */
   searchQuery?: string;
@@ -199,7 +199,8 @@ export function JournalistDiscoverView({
     if (isSearchMode && releases) return releases;
     const live = feedReleases ?? releases;
     if (live && live.length > 0) return live;
-    return pressReleasesMock;
+    if (process.env.NODE_ENV === 'development') return pressReleasesMock;
+    return [];
   }, [isSearchMode, feedReleases, releases]);
 
   const feedIdKey = useMemo(() => feedSource.map((r) => r.id).join(','), [feedSource]);
@@ -649,6 +650,10 @@ export function JournalistDiscoverView({
             )
           ) : visibleCount < curated.length ? (
             <div className="pb-10 text-center text-xs text-brand-muted">Loading more…</div>
+          ) : curated.length === 0 ? (
+            <div className="pb-10 text-center text-sm text-brand-muted">
+              No published releases yet. Check back soon or try search.
+            </div>
           ) : (
             <div className="pb-10 text-center text-xs text-brand-muted">You’re all caught up.</div>
           )}

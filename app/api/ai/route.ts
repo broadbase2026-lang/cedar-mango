@@ -14,10 +14,14 @@ import {
   isGeminiQuotaError,
   isGeminiUnsupportedLocationError,
 } from '@/lib/ai/gemini-errors';
+import { aiRateLimitMessage, enforceAiRateLimit } from '@/lib/ai/rate-limit';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
 import { calculateGeoReadinessScore } from '@/lib/utils/geoScore';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ERROR_MESSAGES } from '@/constants/copy';
+
+const READINESS_HOURLY_LIMIT = 30;
 
 async function persistReadinessScores(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -95,6 +99,27 @@ export async function POST(req: Request) {
     const access = await assertBrandAiAccess();
     if (!access.ok) {
       return NextResponse.json({ ok: false, error: access.error }, { status: access.status });
+    }
+
+    try {
+      const admin = createAdminClient();
+      const rl = await enforceAiRateLimit(
+        admin,
+        access.userId,
+        'ai-readiness',
+        READINESS_HOURLY_LIMIT
+      );
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { ok: false, error: aiRateLimitMessage(READINESS_HOURLY_LIMIT) },
+          { status: 429 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: 'Server misconfigured.' },
+        { status: 503 }
+      );
     }
 
     const supabase = await createClient();

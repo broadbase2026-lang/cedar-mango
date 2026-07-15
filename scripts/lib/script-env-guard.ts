@@ -33,10 +33,13 @@ export function assertScriptMutationsAllowed(): void {
 
   const prodRef = process.env.BROADBASE_PROD_SUPABASE_PROJECT_REF?.trim();
   if (!prodRef) {
-    console.warn(
-      '[script-env-guard] BROADBASE_PROD_SUPABASE_PROJECT_REF is not set; production blocking is disabled.'
+    throw new Error(
+      [
+        'BROADBASE_PROD_SUPABASE_PROJECT_REF is not set.',
+        'Set it in .env.local to your production Supabase project ref so mutating',
+        'scripts can refuse accidental production runs.',
+      ].join(' ')
     );
-    return;
   }
 
   if (targetRef !== prodRef) {

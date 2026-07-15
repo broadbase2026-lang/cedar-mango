@@ -6,6 +6,7 @@ import {
   MAX_IMAGE_UPLOAD_BYTES,
   MAX_TRIAL_IMAGES_PER_PRESS_RELEASE,
 } from '@/lib/constants/uploads';
+import { pressAssetsPublicUrl } from '@/lib/brand/press-assets-public-url';
 
 export type PendingReleaseAsset = {
   path: string;
@@ -32,16 +33,21 @@ export function parsePendingReleaseAssets(
       if (!item || typeof item !== 'object') continue;
       const o = item as Record<string, unknown>;
       const path = typeof o.path === 'string' ? o.path.trim() : '';
-      const publicUrl = typeof o.publicUrl === 'string' ? o.publicUrl.trim() : '';
       const fileName = typeof o.fileName === 'string' ? o.fileName.trim() : '';
       const fileSizeBytes =
         typeof o.fileSizeBytes === 'number' && Number.isFinite(o.fileSizeBytes)
           ? Math.round(o.fileSizeBytes)
           : 0;
-      if (!path || !publicUrl || !fileName) continue;
+      if (!path || !fileName) continue;
       const prefix = `${brandId}/`;
       if (!path.startsWith(prefix) || path.includes('..')) continue;
       if (fileSizeBytes > MAX_IMAGE_UPLOAD_BYTES) return 'invalid';
+      let publicUrl: string;
+      try {
+        publicUrl = pressAssetsPublicUrl(path);
+      } catch {
+        continue;
+      }
       out.push({ path, publicUrl, fileName, fileSizeBytes });
       if (out.length > maxImages) return 'invalid';
     }

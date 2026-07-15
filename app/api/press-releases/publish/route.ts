@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
+import {
+  releasePublishSlot,
+  reservePublishSlot,
+} from '@/lib/brand/reserve-publish-slot';
 import { ERROR_MESSAGES, PLAN_LIMITS, TRIAL_LIMIT_COPY } from '@/constants/copy';
 
 type ApiResult =
@@ -88,19 +92,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const { trialMode, releasesUsed, plan: subPlan, releasesPublishedThisPeriod } =
-    subscription;
-
-  if (trialMode && releasesUsed >= 1) {
-    return json(
-      {
-        success: false,
-        error: TRIAL_LIMIT_COPY.errors.releaseLimit,
-        data: { redirectTo: '/pricing?reason=release-limit' },
-      },
-      200
-    );
-  }
+  const { trialMode, plan: subPlan } = subscription;
+  const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
 
   // Embargo scheduling is not available on Solo (starter).
   if (parsed.data.embargo_until && subPlan === 'starter') {
@@ -116,39 +109,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, error: ERROR_MESSAGES.embargoDateMustBeFuture },
         { status: 400 }
-      );
-    }
-  }
-
-  // Monthly publish-limit enforcement (application-layer only).
-  const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
-  const publishedThisPeriod = releasesPublishedThisPeriod;
-
-  if (typeof tierLimit === 'number') {
-    // Primary enforcement: subscription counter (fast path).
-    if (publishedThisPeriod >= tierLimit) {
-      return NextResponse.json(
-        { success: false, error: ERROR_MESSAGES.publishLimitReached },
-        { status: 200 }
-      );
-    }
-
-    // Fallback enforcement: if the counter is missing/out-of-sync (common when a DB
-    // migration hasn't been applied yet), count actual published releases.
-    // We use a 31-day rolling window as an approximation of "billing period" for now.
-    const windowStartIso = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
-    const publishedCountRes = await admin
-      .from('press_releases')
-      .select('id', { count: 'exact', head: true })
-      .eq('brand_id', releaseRes.data.brand_id)
-      .eq('status', 'published')
-      .is('deleted_at', null)
-      .gte('published_at', windowStartIso);
-
-    if (!publishedCountRes.error && (publishedCountRes.count ?? 0) >= tierLimit) {
-      return NextResponse.json(
-        { success: false, error: ERROR_MESSAGES.publishLimitReached },
-        { status: 200 }
       );
     }
   }
@@ -177,6 +137,28 @@ export async function POST(req: Request) {
     );
   }
 
+  const slotReserved = await reservePublishSlot(
+    admin,
+    subscription.subscriptionId,
+    tierLimit
+  );
+  if (!slotReserved) {
+    if (trialMode) {
+      return json(
+        {
+          success: false,
+          error: TRIAL_LIMIT_COPY.errors.releaseLimit,
+          data: { redirectTo: '/pricing?reason=release-limit' },
+        },
+        200
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: ERROR_MESSAGES.publishLimitReached },
+      { status: 200 }
+    );
+  }
+
   const now = new Date().toISOString();
   const updatePayload: {
     status: 'published';
@@ -197,21 +179,8 @@ export async function POST(req: Request) {
     .is('deleted_at', null);
 
   if (error) {
+    await releasePublishSlot(admin, subscription.subscriptionId, tierLimit);
     return json({ success: false, error: error.message }, 400);
-  }
-
-  if (trialMode) {
-    await admin
-      .from('subscriptions')
-      .update({ trial_releases_used: releasesUsed + 1 })
-      .eq('id', subscription.subscriptionId);
-  }
-
-  if (typeof tierLimit === 'number') {
-    await admin
-      .from('subscriptions')
-      .update({ releases_published_this_period: publishedThisPeriod + 1 })
-      .eq('id', subscription.subscriptionId);
   }
 
   return json({ success: true, data: { id: parsed.data.releaseId } }, 200);

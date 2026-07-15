@@ -100,13 +100,17 @@ Run from the project root (loads .env.local):
   node --env-file=.env.local ./node_modules/.bin/tsx scripts/mbox-import/run.ts \\
     --mbox ${EXAMPLE_MBOX} --limit 20 --publisher-email admin@broadbase.app
 
-  # 3. Full import
+  # 3. Full import (admin@broadbase.app publisher account)
+  npm run import-mbox:admin
+
+  # Or directly:
   node --env-file=.env.local ./node_modules/.bin/tsx scripts/mbox-import/run.ts \\
-    --mbox ${EXAMPLE_MBOX}
+    --mbox ${EXAMPLE_MBOX} --publisher-email admin@broadbase.app
 
 Shorthand (same flags after --):
 
   npm run import-mbox -- --mbox ${EXAMPLE_MBOX} --dry-run --limit 5
+  npm run import-mbox:admin -- --dry-run --limit 5
 
 Options:
   --mbox <path>         Path to the mbox file (required)
@@ -120,6 +124,7 @@ Options:
 Environment (.env.local):
   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY (plain-text/PDF only)
   BROADBASE_PROD_SUPABASE_PROJECT_REF — blocks mutating scripts from targeting prod
+  BROADBASE_SCRIPT_OVERRIDE_PROD — set to the prod ref (exact match) to allow one-off prod imports
 `);
 }
 

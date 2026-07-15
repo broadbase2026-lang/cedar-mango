@@ -84,7 +84,17 @@ function formatReleasesContext(rows: RetrievedRelease[]): string {
 }
 
 export async function POST(req: Request) {
-  const parsed = ChatSchema.safeParse(await req.json());
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, ok: false, error: 'Invalid request.' },
+      { status: 400 }
+    );
+  }
+
+  const parsed = ChatSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, ok: false, error: 'Invalid request.' },
@@ -114,6 +124,23 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { success: false, ok: false, error: 'Unauthorised.' },
       { status: 401 }
+    );
+  }
+
+  const { data: journalistProfile } = await supabase
+    .from('journalist_profiles')
+    .select('is_inactive')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (journalistProfile?.is_inactive) {
+    return NextResponse.json(
+      {
+        success: false,
+        ok: false,
+        error: 'Your account is inactive. Contact support if you need help.',
+      },
+      { status: 403 }
     );
   }
 

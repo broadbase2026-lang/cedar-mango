@@ -44,6 +44,17 @@ describe('assertScriptMutationsAllowed', () => {
     restoreEnv(saved);
   });
 
+  it('blocks when prod ref is not configured', () => {
+    saved = saveEnv();
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+      'https://dev-project-ref.supabase.co';
+    delete process.env.BROADBASE_PROD_SUPABASE_PROJECT_REF;
+
+    expect(() => assertScriptMutationsAllowed()).toThrow(
+      /BROADBASE_PROD_SUPABASE_PROJECT_REF is not set/
+    );
+  });
+
   it('allows dev project when prod ref is configured', () => {
     saved = saveEnv();
     process.env.NEXT_PUBLIC_SUPABASE_URL =

@@ -15,6 +15,41 @@ export type BrandAiAccessResult =
   | { ok: true; userId: string; plan: SubscriptionPlan }
   | { ok: false; status: number; error: string };
 
+export type BrandUserAccessResult =
+  | { ok: true; userId: string }
+  | { ok: false; status: number; error: string };
+
+async function assertBrandProfile(
+  userId: string,
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<BrandUserAccessResult> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('user_type')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile?.user_type !== 'brand') {
+    return { ok: false, status: 403, error: 'Brand accounts only.' };
+  }
+
+  return { ok: true, userId };
+}
+
+/** Gate brand-only AI helpers (import, summary) — any brand account, any plan. */
+export async function assertBrandUserAccess(): Promise<BrandUserAccessResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, status: 401, error: 'Not signed in.' };
+  }
+
+  return assertBrandProfile(user.id, supabase);
+}
+
 /**
  * Gate brand-side Gemini features that require Growth or Enterprise.
  * Resolves the payable subscription row robustly (never uses maybeSingle on history).
@@ -27,6 +62,11 @@ export async function assertBrandAiAccess(): Promise<BrandAiAccessResult> {
 
   if (!user) {
     return { ok: false, status: 401, error: 'Not signed in.' };
+  }
+
+  const brandCheck = await assertBrandProfile(user.id, supabase);
+  if (!brandCheck.ok) {
+    return brandCheck;
   }
 
   let admin;

@@ -19,7 +19,7 @@ import {
   generateImportFromPdf,
   generateImportFromTextPrompt,
 } from '@/lib/migration/release-import-core';
-import { createClient } from '@/lib/supabase/server';
+import { assertBrandUserAccess } from '@/lib/ai/brand-access';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiRateLimitMessage, enforceAiRateLimit } from '@/lib/ai/rate-limit';
 
@@ -27,19 +27,19 @@ const IMPORT_HOURLY_LIMIT = 15;
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ ok: false, error: 'Not signed in.' }, { status: 401 });
+    const access = await assertBrandUserAccess();
+    if (!access.ok) {
+      return NextResponse.json(
+        { ok: false, error: access.error },
+        { status: access.status }
+      );
     }
 
     try {
       const admin = createAdminClient();
       const rl = await enforceAiRateLimit(
         admin,
-        user.id,
+        access.userId,
         'release-import',
         IMPORT_HOURLY_LIMIT
       );
@@ -50,7 +50,10 @@ export async function POST(req: Request) {
         );
       }
     } catch {
-      // Admin client unavailable — proceed without throttling (fail open).
+      return NextResponse.json(
+        { ok: false, error: 'Server misconfigured.' },
+        { status: 503 }
+      );
     }
 
     const form = await req.formData();

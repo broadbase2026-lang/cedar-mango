@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { createPressReleaseAction, updatePressReleaseAction } from './actions';
 import { applyDevSubscriptionOverrides } from '@/lib/auth/dev-profile-mock';
 import { getBrandPortalSession } from '@/lib/brand/session';
 import { NewReleaseForm } from '@/components/brand/new-release-form';
@@ -102,7 +101,6 @@ export default async function NewPressReleasePage({
 
   const form = (
     <NewReleaseForm
-      action={editId ? updatePressReleaseAction : createPressReleaseAction}
       brandId={session.brand.id}
       errorCode={errorCode}
       maxPendingImages={maxPendingImages}

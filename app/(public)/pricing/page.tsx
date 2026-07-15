@@ -6,16 +6,16 @@ import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { ButtonLink } from '@/components/ui/button';
 import {
+  PlanCheckoutButton,
+  StartTrialButton,
+} from './PricingClient';
+import {
   pricingAccentCtaClass,
   pricingAccentCtaInlineClass,
   pricingDisabledCtaClass,
   pricingDisabledCtaInlineClass,
 } from './pricing-cta-styles';
 import type { PricingPlan } from './actions';
-import {
-  createCheckoutSessionAndRedirect,
-  startFreeTrialAndRedirect,
-} from './actions';
 
 function CheckIcon() {
   return (
@@ -184,14 +184,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
     if (!hasActiveSubscription) {
       return (
-        <form action={createCheckoutSessionAndRedirect.bind(null, plan)}>
-          <button
-            type="submit"
-            className={pricingAccentCtaClass}
-          >
-            Get Started
-          </button>
-        </form>
+        <PlanCheckoutButton plan={plan} label="Get Started" />
       );
     }
 
@@ -208,16 +201,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
     }
 
     if (currentPlan && PLAN_ORDER[currentPlan] < PLAN_ORDER[plan]) {
-      return (
-        <form action={createCheckoutSessionAndRedirect.bind(null, plan)}>
-          <button
-            type="submit"
-            className={pricingAccentCtaClass}
-          >
-            Upgrade
-          </button>
-        </form>
-      );
+      return <PlanCheckoutButton plan={plan} label="Upgrade" />;
     }
 
     return (
@@ -244,11 +228,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
         Continue Trial
       </ButtonLink>
     ) : (
-      <form action={startFreeTrialAndRedirect}>
-        <button type="submit" className={pricingAccentCtaInlineClass}>
-          {PRICING_COPY.trial.cta}
-        </button>
-      </form>
+      <StartTrialButton label={PRICING_COPY.trial.cta} />
     )
   ) : (
     <button

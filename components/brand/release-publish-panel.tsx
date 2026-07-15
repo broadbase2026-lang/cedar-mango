@@ -2,25 +2,11 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-
-function toDatetimeLocalValue(isoUtc: string): string {
-  const d = new Date(isoUtc);
-  if (!Number.isFinite(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
-
-function minMaxEmbargo() {
-  const min = new Date(Date.now() + 15 * 60 * 1000);
-  const max = new Date(Date.now());
-  max.setMonth(max.getMonth() + 12);
-  return {
-    min: min.toISOString().slice(0, 16),
-    max: max.toISOString().slice(0, 16),
-  };
-}
+import { publishApiErrorMessage } from '@/lib/brand/publish-api-errors';
+import {
+  isoToDatetimeLocalValue,
+  minMaxEmbargoDatetimeLocal,
+} from '@/lib/utils/datetime-local';
 
 type PublishApiResponse = {
   success?: boolean;
@@ -42,12 +28,12 @@ export function ReleasePublishPanel(props: {
   const [phase, setPhase] = useState<'idle' | 'saving' | 'publishing'>('idle');
   const canUseEmbargo = plan === 'pro' || plan === 'agency';
 
-  const { min, max } = useMemo(() => minMaxEmbargo(), []);
+  const { min, max } = useMemo(() => minMaxEmbargoDatetimeLocal(), []);
   const [embargoLocal, setEmbargoLocal] = useState<string>(() => {
     if (!embargoUntil) return '';
     const d = new Date(embargoUntil);
     if (!Number.isFinite(d.getTime()) || d <= new Date()) return '';
-    return toDatetimeLocalValue(embargoUntil);
+    return isoToDatetimeLocalValue(embargoUntil);
   });
 
   if (status !== 'draft') return null;
@@ -105,9 +91,9 @@ export function ReleasePublishPanel(props: {
                     return;
                   }
                   setError(
-                    typeof json?.error === 'string' && json.error.length > 0
-                      ? json.error
-                      : `Publish failed (${res.status}).`
+                    publishApiErrorMessage(
+                      typeof json?.error === 'string' ? json.error : null
+                    ) || `Publish failed (${res.status}).`
                   );
                   setPhase('idle');
                   return;

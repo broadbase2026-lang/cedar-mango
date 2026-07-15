@@ -628,7 +628,11 @@
   }
 
   .bb-dash-pagination-status {
-    @apply px-2 text-sm tabular-nums text-brand-muted;
+    @apply inline-flex items-center gap-1 px-2 text-sm tabular-nums text-brand-muted;
+  }
+
+  .bb-dash-pagination-page-input {
+    @apply h-8 min-w-[3ch] rounded-md bg-white px-1.5 text-center text-sm tabular-nums text-brand-ink shadow-sm outline-none ring-1 ring-inset ring-brand-border focus-visible:ring-2 focus-visible:ring-brand-ring;
   }
 
   .bb-dash-pagination-btn {

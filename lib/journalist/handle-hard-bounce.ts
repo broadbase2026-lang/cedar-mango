@@ -74,16 +74,24 @@ export async function handleJournalistHardBounce(
     throw new Error(profileError.message);
   }
 
-  const { data: portfolio } = await admin
+  const { data: portfolio, error: portfolioReadError } = await admin
     .from('journalist_portfolio_settings')
     .select('slug')
     .eq('journalist_id', journalistId)
     .maybeSingle();
 
-  await admin
+  if (portfolioReadError) {
+    throw new Error(portfolioReadError.message);
+  }
+
+  const { error: portfolioUpdateError } = await admin
     .from('journalist_portfolio_settings')
     .update({ public: false })
     .eq('journalist_id', journalistId);
+
+  if (portfolioUpdateError) {
+    throw new Error(portfolioUpdateError.message);
+  }
 
   await admin.from('email_delivery_events').insert({
     journalist_id: journalistId,

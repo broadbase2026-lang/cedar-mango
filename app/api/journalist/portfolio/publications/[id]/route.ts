@@ -101,15 +101,24 @@ export async function DELETE(
   const supabase = await createClient();
 
   // Soft delete only — never DELETE FROM journalist_publications.
-  const { error: deleteError } = await supabase
+  const { data: publication, error: deleteError } = await supabase
     .from('journalist_publications')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', params.id);
+    .eq('id', params.id)
+    .select('id')
+    .maybeSingle();
 
   if (deleteError) {
     return NextResponse.json(
       { success: false, error: deleteError.message },
       { status: 400 }
+    );
+  }
+
+  if (!publication) {
+    return NextResponse.json(
+      { success: false, error: 'not_found' },
+      { status: 404 }
     );
   }
 

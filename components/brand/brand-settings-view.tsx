@@ -15,6 +15,7 @@ import {
   planDisplayLabel,
   subscriptionStatusLabel,
 } from '@/lib/stripe/labels';
+import { isBillableStripeCustomerId } from '@/lib/stripe/customer-id';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProfilePhotoUploader } from '@/components/profile/profile-photo-uploader';
@@ -104,7 +105,9 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
   const [brandName, setBrandName] = useState(brand?.name ?? '');
   const slugPreview = slugify(brandName) || 'your-brand';
 
-  const hasStripeCustomer = Boolean(subscription?.stripe_customer_id);
+  const hasStripeCustomer = isBillableStripeCustomerId(
+    subscription?.stripe_customer_id
+  );
   const canManagePortal = hasStripeCustomer && !betaTrialOnly;
   const showSubscribePlans =
     !betaTrialOnly &&

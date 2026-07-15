@@ -38,146 +38,171 @@ function uniqueSuffix(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
+async function persistPressReleaseCreate(
+  formData: FormData
+): Promise<SavePressReleaseDraftResult> {
+  const title = String(formData.get('title') ?? '').trim();
+  const bodyRaw = String(formData.get('body') ?? '');
+  let bodyText: string;
+  let body: string;
+
+  try {
+    bodyText = richTextToPlainText(bodyRaw);
+    body = sanitizeRichTextHtml(bodyRaw).trim();
+  } catch (e) {
+    console.error('[persistPressReleaseCreate] rich text sanitize failed', e);
+    return { ok: false, errorCode: 'invalid_rich_text' };
+  }
+
+  const summary = String(formData.get('summary') ?? '').trim() || null;
+  const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
+  const tagsRaw = String(formData.get('tags') ?? '').trim();
+  const tags =
+    tagsRaw.length > 0
+      ? tagsRaw
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 12)
+      : [];
+
+  if (!title) {
+    return { ok: false, errorCode: 'missing_title' };
+  }
+  if (!bodyText) {
+    return { ok: false, errorCode: 'missing_body' };
+  }
+  if (bodyText.length > 500_000) {
+    return { ok: false, errorCode: 'body_too_long' };
+  }
+  if (summary && summary.length > 280) {
+    return { ok: false, errorCode: 'summary_too_long' };
+  }
+
+  const pendingRaw = String(formData.get('pending_assets') ?? '');
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, errorCode: 'not_signed_in' };
+  }
+
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('id')
+    .eq('owner_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (!brand) {
+    return { ok: false, errorCode: 'no_brand' };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { ok: false, errorCode: 'create_failed' };
+  }
+
+  const payable = await resolvePayableSubscription(admin, user.id);
+  const maxImages = maxImagesForTrial(Boolean(payable?.trialMode));
+
+  if (payable?.trialMode) {
+    if (payable.releasesUsed >= 1) {
+      return { ok: false, errorCode: TRIAL_RELEASE_LIMIT_ERROR_CODE };
+    }
+
+    const { count: releaseCount, error: countErr } = await admin
+      .from('press_releases')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_id', brand.id)
+      .is('deleted_at', null);
+
+    if (!countErr && (releaseCount ?? 0) >= 1) {
+      return { ok: false, errorCode: TRIAL_RELEASE_LIMIT_ERROR_CODE };
+    }
+  }
+
+  const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
+  if (pendingAssets === 'invalid') {
+    return { ok: false, errorCode: 'invalid_pending_assets' };
+  }
+
+  const base = slugify(title) || 'release';
+  const slug = `${base}-${uniqueSuffix()}`;
+
+  const { data: created, error } = await supabase
+    .from('press_releases')
+    .insert({
+      brand_id: brand.id,
+      title,
+      slug,
+      body,
+      summary,
+      industry_vertical: vertical,
+      tags,
+      status: 'draft',
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (error || !created?.id) {
+    if (isTrialReleaseLimitError(error?.message)) {
+      return { ok: false, errorCode: TRIAL_RELEASE_LIMIT_ERROR_CODE };
+    }
+    console.error('[persistPressReleaseCreate] press_releases insert', error);
+    return { ok: false, errorCode: 'create_failed' };
+  }
+
+  if (pendingAssets.length > 0) {
+    const { error: assetErr } = await attachPendingAssetsToRelease(
+      admin,
+      brand.id,
+      created.id,
+      pendingAssets
+    );
+    if (assetErr) {
+      console.error('[persistPressReleaseCreate] press_assets insert', assetErr);
+      revalidatePath('/brand/dashboard');
+      revalidatePath('/brand/upload');
+      return { ok: false, errorCode: 'assets_failed' };
+    }
+  }
+
+  revalidatePath('/brand/dashboard');
+  revalidatePath('/brand/upload');
+  return { ok: true, releaseId: created.id };
+}
+
+export async function createPressReleaseDraftAction(
+  formData: FormData
+): Promise<SavePressReleaseDraftResult> {
+  try {
+    return await persistPressReleaseCreate(formData);
+  } catch (e) {
+    console.error('[createPressReleaseDraftAction] unhandled exception', e);
+    return { ok: false, errorCode: 'create_failed' };
+  }
+}
+
 export async function createPressReleaseAction(formData: FormData) {
   try {
-    const title = String(formData.get('title') ?? '').trim();
-    const bodyRaw = String(formData.get('body') ?? '');
-    let bodyText: string;
-    let body: string;
-
-    try {
-      bodyText = richTextToPlainText(bodyRaw);
-      body = sanitizeRichTextHtml(bodyRaw).trim();
-    } catch (e) {
-      // If sanitization blows up (malformed HTML, unexpected input), surface a normal redirect
-      // rather than letting the server action crash and appear as "Failed to fetch" client-side.
-      console.error('[createPressReleaseAction] rich text sanitize failed', e);
-      redirect('/brand/releases/new?error=invalid_rich_text');
-    }
-
-    const summary = String(formData.get('summary') ?? '').trim() || null;
-    const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
-    const tagsRaw = String(formData.get('tags') ?? '').trim();
-    const tags =
-      tagsRaw.length > 0
-        ? tagsRaw
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean)
-            .slice(0, 12)
-        : [];
-
-    if (!title) {
-      redirect('/brand/releases/new?error=missing_title');
-    }
-    if (!bodyText) {
-      redirect('/brand/releases/new?error=missing_body');
-    }
-    if (bodyText.length > 500_000) {
-      redirect('/brand/releases/new?error=body_too_long');
-    }
-    if (summary && summary.length > 280) {
-      redirect('/brand/releases/new?error=summary_too_long');
-    }
-
-    const pendingRaw = String(formData.get('pending_assets') ?? '');
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      redirect('/login');
-    }
-
-    const { data: brand } = await supabase
-      .from('brands')
-      .select('id')
-      .eq('owner_id', user.id)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (!brand) {
-      redirect('/brand/settings');
-    }
-
-    let admin;
-    try {
-      admin = createAdminClient();
-    } catch {
-      redirect('/brand/releases/new?error=create_failed');
-    }
-
-    const payable = await resolvePayableSubscription(admin, user.id);
-    const maxImages = maxImagesForTrial(Boolean(payable?.trialMode));
-
-    if (payable?.trialMode) {
-      if (payable.releasesUsed >= 1) {
-        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
+    const result = await persistPressReleaseCreate(formData);
+    if (!result.ok) {
+      if (result.errorCode === 'not_signed_in') {
+        redirect('/login');
       }
-
-      const { count: releaseCount, error: countErr } = await admin
-        .from('press_releases')
-        .select('id', { count: 'exact', head: true })
-        .eq('brand_id', brand.id)
-        .is('deleted_at', null);
-
-      if (!countErr && (releaseCount ?? 0) >= 1) {
-        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
+      if (result.errorCode === 'no_brand') {
+        redirect('/brand/settings');
       }
-    }
-
-    const pendingAssets = parsePendingReleaseAssets(pendingRaw, brand.id, maxImages);
-    if (pendingAssets === 'invalid') {
-      redirect('/brand/releases/new?error=invalid_pending_assets');
-    }
-
-    const base = slugify(title) || 'release';
-    const slug = `${base}-${uniqueSuffix()}`;
-
-    const { data: created, error } = await supabase
-      .from('press_releases')
-      .insert({
-        brand_id: brand.id,
-        title,
-        slug,
-        body,
-        summary,
-        industry_vertical: vertical,
-        tags,
-        status: 'draft',
-      })
-      .select('id')
-      .maybeSingle();
-
-    if (error || !created?.id) {
-      if (isTrialReleaseLimitError(error?.message)) {
-        redirect(`/brand/releases/new?error=${TRIAL_RELEASE_LIMIT_ERROR_CODE}`);
-      }
-      console.error('[createPressReleaseAction] press_releases insert', error);
-      redirect('/brand/releases/new?error=create_failed');
-    }
-
-    if (pendingAssets.length > 0) {
-      const { error: assetErr } = await attachPendingAssetsToRelease(
-        admin,
-        brand.id,
-        created.id,
-        pendingAssets
+      redirect(
+        `/brand/releases/new?error=${encodeURIComponent(result.errorCode)}`
       );
-      if (assetErr) {
-        console.error('[createPressReleaseAction] press_assets insert', assetErr);
-        revalidatePath('/brand/dashboard');
-        revalidatePath('/brand/upload');
-        redirect(
-          `/brand/releases/new?edit=${encodeURIComponent(created.id)}&error=assets_failed`
-        );
-      }
     }
-
-    revalidatePath('/brand/dashboard');
-    revalidatePath('/brand/upload');
     redirect(
-      `/brand/releases/new?edit=${encodeURIComponent(created.id)}&saved=true`
+      `/brand/releases/new?edit=${encodeURIComponent(result.releaseId)}&saved=true`
     );
   } catch (e) {
     // Next.js `redirect()` throws a special exception; don't swallow it,

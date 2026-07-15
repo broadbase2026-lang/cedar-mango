@@ -111,8 +111,8 @@ export default function HomePage() {
               </h2>
 
               <p className="mt-4 max-w-xl text-base text-white/70">
-                Discoverable brand assets you don’t need to blast. Measurable
-                engagement data from real journalists. All in one place.
+                Brand assets you don’t need to blast. In-built discoverability
+                for journalists and LLMs. All in one place.
               </p>
 
               <div className="mt-8">
