@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sanitizeFilename } from '@/lib/utils/sanitizeFilename';
 import { resolveUploadSubscription } from '@/lib/brand/upload-subscription';
+import { hasUnlimitedPlanLimits } from '@/lib/auth/unlimited-plan-limits';
 import { ERROR_MESSAGES, PLAN_LIMITS } from '@/constants/copy';
 import { MAX_IMAGE_UPLOAD_BYTES } from '@/lib/constants/uploads';
 import { isImageFile } from '@/lib/utils/image-file';
@@ -73,7 +74,9 @@ export async function POST(req: Request) {
   }
   const { plan } = subGate;
 
-  const allowance = PLAN_LIMITS[plan]?.storageBytes ?? null;
+  const allowance = hasUnlimitedPlanLimits(user.id)
+    ? null
+    : PLAN_LIMITS[plan]?.storageBytes ?? null;
   if (typeof allowance === 'number') {
     const usageRes = await admin
       .from('press_assets')

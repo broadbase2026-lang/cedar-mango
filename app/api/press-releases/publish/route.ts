@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
+import { hasUnlimitedPlanLimits } from '@/lib/auth/unlimited-plan-limits';
 import {
   releasePublishSlot,
   reservePublishSlot,
@@ -93,7 +94,9 @@ export async function POST(req: Request) {
   }
 
   const { trialMode, plan: subPlan } = subscription;
-  const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
+  const tierLimit = hasUnlimitedPlanLimits(user.id)
+    ? null
+    : PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
 
   // Embargo scheduling is not available on Solo (starter).
   if (parsed.data.embargo_until && subPlan === 'starter') {

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePayableSubscription } from '@/lib/brand/subscription-guards';
+import { hasUnlimitedPlanLimits } from '@/lib/auth/unlimited-plan-limits';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ERROR_MESSAGES, PLAN_LIMITS, TRIAL_LIMIT_COPY } from '@/constants/copy';
 
@@ -101,7 +102,9 @@ export async function publishRelease(
     }
   }
 
-  const tierLimit = PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
+  const tierLimit = hasUnlimitedPlanLimits(user.id)
+    ? null
+    : PLAN_LIMITS[subPlan]?.releasesPerPeriod ?? null;
   const publishedThisPeriod = releasesPublishedThisPeriod;
 
   if (typeof tierLimit === 'number') {

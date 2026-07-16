@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { sanitizeFilename } from '@/lib/utils/sanitizeFilename';
 import { resolveUploadSubscription } from '@/lib/brand/upload-subscription';
 import { fetchImageForUpload } from '@/lib/brand/fetch-image-for-upload';
+import { hasUnlimitedPlanLimits } from '@/lib/auth/unlimited-plan-limits';
 import { ERROR_MESSAGES, PLAN_LIMITS } from '@/constants/copy';
 
 export const runtime = 'nodejs';
@@ -92,7 +93,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status });
   }
 
-  const allowance = PLAN_LIMITS[plan]?.storageBytes ?? null;
+  const allowance = hasUnlimitedPlanLimits(user.id)
+    ? null
+    : PLAN_LIMITS[plan]?.storageBytes ?? null;
   if (typeof allowance === 'number') {
     const usageRes = await admin
       .from('press_assets')
