@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -27,6 +27,10 @@ function clampFontSize(px: number) {
   return Math.max(12, Math.min(24, Math.round(px)));
 }
 
+function normalizeEditorHtml(value: string | undefined): string {
+  return value?.trim() ? value : '<p></p>';
+}
+
 export function RichTextEditor({
   name,
   defaultValue = '',
@@ -36,6 +40,9 @@ export function RichTextEditor({
 }: Props) {
   const inputId = useId();
   const [html, setHtml] = useState<string>(defaultValue);
+  // Track last value we pushed to the parent so prop echoes from typing do not
+  // call setContent and reset the caret.
+  const lastEmittedRef = useRef(normalizeEditorHtml(defaultValue));
 
   const extensions = useMemo(
     () => [
@@ -64,7 +71,7 @@ export function RichTextEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions,
-    content: defaultValue || '<p></p>',
+    content: normalizeEditorHtml(defaultValue),
     editorProps: {
       attributes: {
         class:
@@ -74,6 +81,7 @@ export function RichTextEditor({
     },
     onUpdate({ editor }) {
       const next = editor.getHTML();
+      lastEmittedRef.current = next;
       setHtml(next);
       onChange?.(next);
     },
@@ -83,9 +91,26 @@ export function RichTextEditor({
     if (!editor) return;
     // Keep hidden input in sync on first paint.
     const next = editor.getHTML();
+    lastEmittedRef.current = next;
     setHtml(next);
     onChange?.(next);
   }, [editor, onChange]);
+
+  // TipTap only reads `content` at init. Apply external defaultValue updates
+  // (hydrate / import) without remounting, while ignoring parent echoes of our
+  // own onChange so typing does not jump the caret.
+  useEffect(() => {
+    if (!editor) return;
+    const next = normalizeEditorHtml(defaultValue);
+    if (next === lastEmittedRef.current) return;
+    if (next === editor.getHTML()) {
+      lastEmittedRef.current = next;
+      return;
+    }
+    editor.commands.setContent(next, { emitUpdate: false });
+    lastEmittedRef.current = next;
+    setHtml(next);
+  }, [editor, defaultValue]);
 
   function setLink() {
     if (!editor) return;

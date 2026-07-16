@@ -141,11 +141,13 @@ export function NewReleaseForm({
   const [localError, setLocalError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [vertical, setVertical] = useState<string>('');
-  const [tags, setTags] = useState('');
-  const [bodyHtml, setBodyHtml] = useState('');
+  // Seed from `existing` on first paint so TipTap mounts with body content on cold
+  // loads (e.g. Cmd+click new tab). A post-mount hydrate+remount race left body empty.
+  const [title, setTitle] = useState(() => existing?.title || '');
+  const [summary, setSummary] = useState(() => existing?.summary || '');
+  const [vertical, setVertical] = useState(() => existing?.industry_vertical ?? '');
+  const [tags, setTags] = useState(() => (existing?.tags ?? []).join(','));
+  const [bodyHtml, setBodyHtml] = useState(() => existing?.bodyHtml || '');
   const [editorSeed, setEditorSeed] = useState(0);
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [summaryErr, setSummaryErr] = useState<string | null>(null);
@@ -157,7 +159,7 @@ export function NewReleaseForm({
   const [importBusy, setImportBusy] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
   const pendingAssetsRef = useRef<PendingAsset[]>([]);
-  const hydratedReleaseIdRef = useRef<string | null>(null);
+  const hydratedReleaseIdRef = useRef<string | null>(existing?.id ?? null);
 
   const applyImportResult = useCallback((result: ReleaseImportResult) => {
     setTitle(result.title || '');
@@ -177,8 +179,9 @@ export function NewReleaseForm({
       hydratedReleaseIdRef.current = null;
       return;
     }
-    // Hydrate from the server once per release. Avoid re-applying when image uploads
-    // or other actions revalidate the page — that would wipe unsaved editor state.
+    // First paint already seeds from `existing`. Re-apply only when the edit target
+    // changes (e.g. client nav to another draft). Skip on revalidate so unsaved
+    // editor state is not wiped after image uploads.
     if (hydratedReleaseIdRef.current === existing.id) return;
     hydratedReleaseIdRef.current = existing.id;
 
