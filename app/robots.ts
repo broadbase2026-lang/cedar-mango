@@ -1,31 +1,47 @@
 import type { MetadataRoute } from 'next';
+import { appBaseUrl } from '@/lib/seo/app-base-url';
 
 const ALLOW: string[] = [
   '/',
   '/release/*',
+  '/releases',
+  '/releases/*',
   '/newsroom/*',
+  '/pricing',
+  '/geo',
   '/rss.xml',
   '/sitemap.xml',
   '/llms.txt',
+  '/ai.txt',
   '/api/v1/*',
 ];
 
 const DISALLOW: string[] = [
-  '/(auth)/*',
-  '/(brand)/*',
-  '/(journalist)/*',
-  '/api/webhooks/*',
+  '/brand/',
+  '/login',
+  '/signup',
+  '/journalist/discover',
+  '/journalist/folders',
+  '/journalist/search',
+  '/journalist/settings',
+  '/journalist/feedback',
+  '/journalist/release/',
+  '/portfolio',
+  '/settings/portfolio',
+  '/api/webhooks/',
   '/api/digest',
   '/api/download',
   '/api/ai',
-  '/api/journalist/*',
+  '/api/journalist/',
 ];
 
 const LLM_CRAWLERS: string[] = [
   'GPTBot',
   'ClaudeBot',
-  'anthropic-ai',
+  'Google-Extended',
   'PerplexityBot',
+  'Bytespider',
+  'anthropic-ai',
   'Amazonbot',
   'YouBot',
   'cohere-ai',
@@ -45,6 +61,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: DISALLOW,
       })),
     ],
-    sitemap: `${process.env.NEXT_PUBLIC_APP_URL}/sitemap.xml`,
+    sitemap: `${appBaseUrl()}/sitemap.xml`,
   };
 }

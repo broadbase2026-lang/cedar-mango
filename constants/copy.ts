@@ -241,7 +241,7 @@ export const GEO_PAGE = {
     'Every release is included in a public JSON API feed, an RSS feed, and a dynamic XML sitemap — the three formats that AI crawlers prefer when indexing structured content.',
   PILLAR_2_TITLE: 'Schema.org structured data',
   PILLAR_2_BODY:
-    'Each release page carries schema.org PressRelease JSON-LD, including a speakable specification that tells AI systems exactly which fields carry the core announcement. Brand pages carry NewsMediaOrganization markup.',
+    'Each release page carries schema.org NewsArticle JSON-LD, including a speakable specification that tells AI systems exactly which fields carry the core announcement. Brand pages carry NewsMediaOrganization markup.',
   PILLAR_3_TITLE: 'Entity linking',
   PILLAR_3_BODY:
     'Your brand name, website URL, industry vertical, and publication date are embedded as structured attributes on every release. This allows AI models to confidently attribute content to the correct brand.',
@@ -335,13 +335,29 @@ Each release includes a headline, a structured summary (up to 280 characters),
 tags, publication date, industry vertical, and a brand profile with website URL.
 Full release body text is available on individual release pages.
 
+## HTML archive and directories
+
+- Full archive (searchable): {NEXT_PUBLIC_APP_URL}/releases
+  Query params: q (full-text search), page (integer).
+- Vertical directories:
+  - F&B: {NEXT_PUBLIC_APP_URL}/releases/fnb
+  - Travel: {NEXT_PUBLIC_APP_URL}/releases/travel
+  - Culture: {NEXT_PUBLIC_APP_URL}/releases/culture
+  - Fashion: {NEXT_PUBLIC_APP_URL}/releases/fashion
+  - Lifestyle: {NEXT_PUBLIC_APP_URL}/releases/lifestyle
+- Individual release pages: {NEXT_PUBLIC_APP_URL}/release/[slug]
+- Brand newsrooms: {NEXT_PUBLIC_APP_URL}/newsroom/[brand-slug]
+
 ## Machine-readable endpoints
 
 - Releases JSON feed: {NEXT_PUBLIC_APP_URL}/api/v1/releases
   Paginated JSON. Query params: page (integer), vertical (fnb|travel|culture|fashion|lifestyle|other), limit (max 50).
+  Returns body-free projections suitable for crawlers; body text is on HTML release pages.
 - Individual release JSON: {NEXT_PUBLIC_APP_URL}/api/v1/releases/[slug]
 - RSS feed: {NEXT_PUBLIC_APP_URL}/rss.xml (50 most recent published releases)
 - XML sitemap: {NEXT_PUBLIC_APP_URL}/sitemap.xml
+- This file: {NEXT_PUBLIC_APP_URL}/llms.txt
+- AI crawler guidance: {NEXT_PUBLIC_APP_URL}/ai.txt
 
 ## Content schema
 

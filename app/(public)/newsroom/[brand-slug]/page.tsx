@@ -1,9 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { unstable_noStore as noStore } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
+import { appBaseUrl } from '@/lib/seo/app-base-url';
 
 type PageProps = {
   params: { 'brand-slug': string };
@@ -11,16 +13,57 @@ type PageProps = {
 
 export const revalidate = 60;
 
-export default async function NewsroomPage({ params }: PageProps) {
-  const slug = params['brand-slug'];
+async function loadNewsroomBrand(slug: string) {
   const admin = createAdminClient();
-
   const { data: brand } = await admin
     .from('brands')
     .select('id, name, slug, logo_url, website, description, created_at')
     .eq('slug', slug)
     .is('deleted_at', null)
     .maybeSingle();
+  return brand;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const brand = await loadNewsroomBrand(params['brand-slug']);
+  if (!brand) {
+    return { title: 'Newsroom not found' };
+  }
+
+  const base = appBaseUrl();
+  const url = `${base}/newsroom/${brand.slug}`;
+  const title = `${brand.name} — Press Releases & Newsroom`;
+  const description =
+    brand.description?.trim() ||
+    `Press releases and newsroom for ${brand.name} on Broadbase.`;
+  const images = brand.logo_url
+    ? [{ url: brand.logo_url, alt: brand.name }]
+    : undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url,
+      images,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: images?.map((img) => img.url),
+    },
+  };
+}
+
+export default async function NewsroomPage({ params }: PageProps) {
+  const slug = params['brand-slug'];
+  const admin = createAdminClient();
+  const brand = await loadNewsroomBrand(slug);
 
   if (!brand?.id) {
     notFound();
@@ -44,6 +87,9 @@ export default async function NewsroomPage({ params }: PageProps) {
     noStore();
   }
 
+  const base = appBaseUrl();
+  const newsroomUrl = `${base}/newsroom/${brand.slug}`;
+
   const knowsAbout = Array.from(
     new Set(
       (releases ?? [])
@@ -56,7 +102,7 @@ export default async function NewsroomPage({ params }: PageProps) {
     '@context': 'https://schema.org',
     '@type': 'NewsMediaOrganization',
     name: brand.name,
-    url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/newsroom/${brand.slug}`,
+    url: newsroomUrl,
     logo: brand.logo_url ?? undefined,
     description: brand.description ?? undefined,
     sameAs: brand.website ? [brand.website] : [],
@@ -65,14 +111,63 @@ export default async function NewsroomPage({ params }: PageProps) {
     knowsAbout,
   };
 
+  const breadcrumbList = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${base}/`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Releases',
+        item: `${base}/releases`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: brand.name,
+        item: newsroomUrl,
+      },
+    ],
+  };
+
   return (
     <main className="min-h-screen bg-surface-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
+      />
       <PublicSiteHeader />
       <div className="bb-container max-w-4xl py-10">
+        <nav aria-label="Breadcrumb" className="mb-4 text-sm text-text-secondary">
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link href="/" className="hover:underline">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link href="/releases" className="hover:underline">
+                Releases
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="text-text-primary" aria-current="page">
+              {brand.name}
+            </li>
+          </ol>
+        </nav>
+
         <div className="mb-8">
           <h1 className="font-heading text-3xl font-normal text-text-primary">
             {brand.name}

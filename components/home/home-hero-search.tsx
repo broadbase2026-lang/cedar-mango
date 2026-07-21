@@ -24,7 +24,7 @@ export function HomeHeroSearch() {
         e.preventDefault();
         const trimmed = query.trim();
         if (trimmed) {
-          router.push(`/release?q=${encodeURIComponent(trimmed)}`);
+          router.push(`/releases?q=${encodeURIComponent(trimmed)}`);
         }
       }}
     >

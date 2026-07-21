@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { appBaseUrl } from '@/lib/seo/app-base-url';
+import { ARCHIVE_DIRECTORY_VERTICALS } from '@/lib/seo/verticals';
 
 export const revalidate = 3600;
 
@@ -14,22 +16,42 @@ type BrandRow = {
   updated_at: string | null;
 };
 
-function baseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? '';
-}
-
 function staticEntries(): MetadataRoute.Sitemap {
+  const base = appBaseUrl();
+  const verticalEntries: MetadataRoute.Sitemap =
+    ARCHIVE_DIRECTORY_VERTICALS.map((vertical) => ({
+      url: `${base}/releases/${vertical}`,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    }));
+
   return [
     {
-      url: `${baseUrl()}/`,
+      url: `${base}/`,
       changeFrequency: 'weekly',
       priority: 0.5,
     },
+    {
+      url: `${base}/releases`,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: `${base}/pricing`,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${base}/geo`,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    ...verticalEntries,
   ];
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = baseUrl();
+  const base = appBaseUrl();
 
   try {
     const admin = createAdminClient();

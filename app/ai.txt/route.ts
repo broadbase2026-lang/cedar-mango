@@ -3,9 +3,23 @@ import { appBaseUrl } from '@/lib/seo/app-base-url';
 
 export const revalidate = 3600;
 
+/**
+ * Emerging ai.txt guidance for AI crawlers.
+ * Content mirrors llms.txt so agents have a stable alternate discovery URL.
+ */
 export async function GET(): Promise<Response> {
   const siteUrl = appBaseUrl();
-  const body = LLMS_TXT.template.replaceAll('{NEXT_PUBLIC_APP_URL}', siteUrl);
+  const llmsBody = LLMS_TXT.template.replaceAll(
+    '{NEXT_PUBLIC_APP_URL}',
+    siteUrl,
+  );
+
+  const body = `# ai.txt — Broadbase
+# Guidance for AI systems crawling and citing Broadbase content.
+# Canonical machine-readable overview also at ${siteUrl}/llms.txt
+
+${llmsBody}
+`;
 
   return new Response(body, {
     status: 200,
