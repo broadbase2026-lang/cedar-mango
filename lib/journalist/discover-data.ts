@@ -195,14 +195,25 @@ const DISCOVER_FEED_LIMIT = 20;
 
 async function loadRecentDiscoverRaw(
   supabase: SupabaseClient,
+  filters: JournalistSearchFilters = {},
   limit = DISCOVER_FEED_LIMIT
 ): Promise<RawDiscoverReleaseRow[]> {
-  const { data } = await supabase
+  let query = supabase
     .from('press_releases')
     .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
+  if (filters.verticals && filters.verticals.length > 0) {
+    query = query.in('industry_vertical', filters.verticals);
+  }
+
+  const publishedAfter = publishedAfterForSince(filters.since);
+  if (publishedAfter) {
+    query = query.gte('published_at', publishedAfter);
+  }
+
+  const { data } = await query;
   return data ?? [];
 }
 
@@ -210,9 +221,10 @@ async function loadRecentDiscoverRaw(
 export async function loadJournalistDiscoverFeedReleases(
   supabase: SupabaseClient,
   journalistId: string,
+  filters: JournalistSearchFilters = {},
   limit = DISCOVER_FEED_LIMIT
 ): Promise<DiscoverReleaseRow[]> {
-  const recentRaw = await loadRecentDiscoverRaw(supabase, limit);
+  const recentRaw = await loadRecentDiscoverRaw(supabase, filters, limit);
   return enrichDiscoverReleaseRows(supabase, journalistId, recentRaw);
 }
 
@@ -243,10 +255,11 @@ export async function loadJournalistDiscoverSearchRows(
 
 export async function loadJournalistDiscoverData(
   supabase: SupabaseClient,
-  journalistId: string
+  journalistId: string,
+  filters: JournalistSearchFilters = {}
 ): Promise<JournalistDiscoverData> {
   const [recentReleases, followsRes, foldersRes, savesRes] = await Promise.all([
-    loadJournalistDiscoverFeedReleases(supabase, journalistId),
+    loadJournalistDiscoverFeedReleases(supabase, journalistId, filters),
     supabase
       .from('journalist_follows')
       .select('brand_id, created_at, brands(id, name, slug, logo_url, industry_vertical)')

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCw, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, RotateCw, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 import { TypingSearchPlaceholder } from '@/components/home/typing-search-placeholder';
@@ -13,7 +13,7 @@ import {
 } from '@/components/press-release/press-release-preview-overlay';
 import { pressReleasesMock, type PressReleaseMock } from '@/lib/journalist/mockData';
 import {
-  buildJournalistDiscoverSearchUrl,
+  buildJournalistDiscoverUrl,
   JOURNALIST_SEARCH_VERTICALS,
   type JournalistSearchFilters,
   type JournalistSearchSince,
@@ -34,7 +34,7 @@ type JournalistDiscoverViewProps = {
   releases?: PressReleaseMock[];
   /** When set, the feed shows FTS search results instead of the curated discover stream. */
   searchQuery?: string;
-  /** Active search refinement filters (search mode only). */
+  /** Active sort / beat / recency filters for the discover feed. */
   searchFilters?: JournalistSearchFilters;
 };
 
@@ -127,10 +127,61 @@ const SEARCH_SORT_OPTIONS: Array<{ value: JournalistSearchSort; label: string }>
   { value: 'recent', label: 'Most recent' },
 ];
 
-function filterChipClass(active: boolean) {
-  return active
+function filterPillClass(active: boolean, open: boolean) {
+  return active || open
     ? 'border-brand-primary bg-brand-primary/10 text-brand-primary-700'
     : 'border-brand-border bg-white text-brand-muted hover:border-brand-primary/40 hover:text-brand-ink';
+}
+
+type FilterDropdownId = 'sort' | 'beat' | 'recency';
+
+function DiscoverFilterPill({
+  id,
+  label,
+  active,
+  open,
+  onToggle,
+  children,
+}: {
+  id: FilterDropdownId;
+  label: string;
+  active: boolean;
+  open: boolean;
+  onToggle: (id: FilterDropdownId) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => onToggle(id)}
+        className={
+          'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition ' +
+          filterPillClass(active, open)
+        }
+      >
+        {label}
+        <ChevronDown className={'h-3.5 w-3.5 transition ' + (open ? 'rotate-180' : '')} />
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          className="absolute left-0 z-30 mt-2 min-w-[11.5rem] overflow-hidden rounded-xl border border-brand-border bg-white py-1 shadow-lg"
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function dropdownOptionClass(selected: boolean) {
+  return (
+    'flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-sm transition hover:bg-brand-surface ' +
+    (selected ? 'font-medium text-brand-ink' : 'text-brand-muted')
+  );
 }
 
 export function JournalistDiscoverView({
@@ -156,20 +207,56 @@ export function JournalistDiscoverView({
   const activeVerticals = searchFilters.verticals ?? [];
   const activeSince = searchFilters.since ?? 'any';
   const activeSort = searchFilters.sort ?? 'relevance';
+  const [openFilter, setOpenFilter] = useState<FilterDropdownId | null>(null);
+  const filterBarRef = useRef<HTMLDivElement | null>(null);
 
-  const pushSearch = (nextFilters: JournalistSearchFilters) => {
-    router.push(buildJournalistDiscoverSearchUrl(searchQuery, nextFilters));
+  const pushFilters = (nextFilters: JournalistSearchFilters, options?: { keepOpen?: boolean }) => {
+    if (!options?.keepOpen) setOpenFilter(null);
+    router.push(buildJournalistDiscoverUrl(searchQuery, nextFilters));
   };
 
   const toggleVertical = (vertical: IndustryVertical) => {
     const current = new Set(activeVerticals);
     if (current.has(vertical)) current.delete(vertical);
     else current.add(vertical);
-    pushSearch({
-      ...searchFilters,
-      verticals: Array.from(current),
-    });
+    pushFilters(
+      {
+        ...searchFilters,
+        verticals: Array.from(current),
+      },
+      { keepOpen: true }
+    );
   };
+
+  const sortLabel =
+    SEARCH_SORT_OPTIONS.find((o) => o.value === activeSort)?.label ?? 'Most relevant';
+  const sinceLabel =
+    SEARCH_SINCE_OPTIONS.find((o) => o.value === activeSince)?.label ?? 'Any time';
+  const beatPillLabel =
+    activeVerticals.length === 0
+      ? 'Beat'
+      : activeVerticals.length === 1
+        ? JOURNALIST_SEARCH_VERTICALS.find((v) => v.value === activeVerticals[0])?.label ?? 'Beat'
+        : `Beat · ${activeVerticals.length}`;
+  const recencyPillLabel = activeSince === 'any' ? 'Recency' : sinceLabel;
+
+  useEffect(() => {
+    if (!openFilter) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!filterBarRef.current?.contains(event.target as Node)) {
+        setOpenFilter(null);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenFilter(null);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [openFilter]);
 
   useEffect(() => {
     setSearchText(searchQuery);
@@ -207,13 +294,19 @@ export function JournalistDiscoverView({
 
   const curated = useMemo(() => {
     if (!mounted) return [];
+    // Search results keep server ranking (relevance or recent from the RPC).
     if (isSearchMode) return feedSource;
+    if (activeSort === 'recent') {
+      return [...feedSource].sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
+    }
     const scored = feedSource
       .map((r) => ({ r, s: scoreRelease(r, prefs, seed) }))
       .sort((a, b) => b.s - a.s)
       .map(({ r }) => r);
     return scored;
-  }, [mounted, prefs, seed, feedSource, isSearchMode]);
+  }, [mounted, prefs, seed, feedSource, isSearchMode, activeSort]);
 
   const effectiveVisibleCount = isSearchMode ? curated.length : visibleCount;
 
@@ -339,7 +432,15 @@ export function JournalistDiscoverView({
   async function onRefresh() {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/journalist/discover-feed', { cache: 'no-store' });
+      const params = new URLSearchParams();
+      if (activeVerticals.length > 0) params.set('beat', activeVerticals.join(','));
+      if (activeSince !== 'any') params.set('since', activeSince);
+      if (activeSort !== 'relevance') params.set('sort', activeSort);
+      const qs = params.toString();
+      const res = await fetch(
+        qs ? `/api/journalist/discover-feed?${qs}` : '/api/journalist/discover-feed',
+        { cache: 'no-store' }
+      );
       const json = (await res.json().catch(() => null)) as
         | { ok: true; releases: PressReleaseMock[] }
         | { ok: false; error?: string }
@@ -433,12 +534,7 @@ export function JournalistDiscoverView({
             className="rounded-2xl bg-transparent p-0"
             onSubmit={(e) => {
               e.preventDefault();
-              const q = searchText.trim();
-              router.push(
-                q
-                  ? buildJournalistDiscoverSearchUrl(q, searchFilters)
-                  : '/journalist/discover'
-              );
+              router.push(buildJournalistDiscoverUrl(searchText.trim(), searchFilters));
             }}
           >
             <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-inset ring-brand-border/60">
@@ -473,101 +569,118 @@ export function JournalistDiscoverView({
             </div>
           </form>
 
-          {isSearchMode && mounted ? (
-            <>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
-                <p>
-                  {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
-                </p>
-                <Link
-                  href="/journalist/discover"
-                  className="font-medium text-brand-primary-700 hover:underline"
-                >
-                  Clear search
-                </Link>
-              </div>
-
-              <div className="mt-4 space-y-4 rounded-2xl border border-brand-border bg-white p-4 shadow-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                    Sort
-                  </span>
-                  {SEARCH_SORT_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        pushSearch({
-                          ...searchFilters,
-                          sort: option.value,
-                        })
-                      }
-                      className={
-                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
-                        filterChipClass(activeSort === option.value)
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                    Beat
-                  </span>
-                  {JOURNALIST_SEARCH_VERTICALS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => toggleVertical(option.value)}
-                      className={
-                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
-                        filterChipClass(activeVerticals.includes(option.value))
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                    Recency
-                  </span>
-                  {SEARCH_SINCE_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        pushSearch({
-                          ...searchFilters,
-                          since: option.value,
-                        })
-                      }
-                      className={
-                        'rounded-full border px-3 py-1 text-xs font-medium transition ' +
-                        filterChipClass(activeSince === option.value)
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                    Location
-                  </span>
-                  <span
-                    className="rounded-full border border-brand-border bg-brand-surface px-3 py-1 text-xs font-medium text-brand-muted/70"
-                    title="Location filtering will be available once release geography is added"
+          {mounted ? (
+            <div ref={filterBarRef} className="mt-4 flex flex-wrap items-center gap-2">
+              <DiscoverFilterPill
+                id="sort"
+                label={sortLabel}
+                active={activeSort !== 'relevance'}
+                open={openFilter === 'sort'}
+                onToggle={(id) => setOpenFilter((prev) => (prev === id ? null : id))}
+              >
+                {SEARCH_SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={activeSort === option.value}
+                    onClick={() =>
+                      pushFilters({
+                        ...searchFilters,
+                        sort: option.value,
+                      })
+                    }
+                    className={dropdownOptionClass(activeSort === option.value)}
                   >
-                    Coming soon
-                  </span>
-                </div>
-              </div>
-            </>
+                    {option.label}
+                    {activeSort === option.value ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                  </button>
+                ))}
+              </DiscoverFilterPill>
+
+              <DiscoverFilterPill
+                id="beat"
+                label={beatPillLabel}
+                active={activeVerticals.length > 0}
+                open={openFilter === 'beat'}
+                onToggle={(id) => setOpenFilter((prev) => (prev === id ? null : id))}
+              >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={activeVerticals.length === 0}
+                  onClick={() =>
+                    pushFilters({
+                      ...searchFilters,
+                      verticals: [],
+                    })
+                  }
+                  className={dropdownOptionClass(activeVerticals.length === 0)}
+                >
+                  Any beat
+                  {activeVerticals.length === 0 ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                </button>
+                {JOURNALIST_SEARCH_VERTICALS.map((option) => {
+                  const selected = activeVerticals.includes(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => toggleVertical(option.value)}
+                      className={dropdownOptionClass(selected)}
+                    >
+                      {option.label}
+                      {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                    </button>
+                  );
+                })}
+              </DiscoverFilterPill>
+
+              <DiscoverFilterPill
+                id="recency"
+                label={recencyPillLabel}
+                active={activeSince !== 'any'}
+                open={openFilter === 'recency'}
+                onToggle={(id) => setOpenFilter((prev) => (prev === id ? null : id))}
+              >
+                {SEARCH_SINCE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={activeSince === option.value}
+                    onClick={() =>
+                      pushFilters({
+                        ...searchFilters,
+                        since: option.value,
+                      })
+                    }
+                    className={dropdownOptionClass(activeSince === option.value)}
+                  >
+                    {option.label}
+                    {activeSince === option.value ? (
+                      <Check className="h-3.5 w-3.5 shrink-0" />
+                    ) : null}
+                  </button>
+                ))}
+              </DiscoverFilterPill>
+            </div>
+          ) : null}
+
+          {isSearchMode && mounted ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
+              <p>
+                {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
+              </p>
+              <Link
+                href="/journalist/discover"
+                className="font-medium text-brand-primary-700 hover:underline"
+              >
+                Clear search
+              </Link>
+            </div>
           ) : null}
 
           <div className="mt-5 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">

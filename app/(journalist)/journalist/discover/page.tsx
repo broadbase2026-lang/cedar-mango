@@ -51,10 +51,18 @@ export default async function JournalistDiscoverPage({ searchParams }: PageProps
     );
   }
 
-  const discoverData = await loadJournalistDiscoverData(session.supabase, session.user.id);
+  const discoverData = await loadJournalistDiscoverData(
+    session.supabase,
+    session.user.id,
+    searchFilters
+  );
   const releases = mapDiscoverRowsToFeed(discoverData.recentReleases);
 
   return (
-    <JournalistDiscoverView userDisplayName={session.displayName} releases={releases} />
+    <JournalistDiscoverView
+      userDisplayName={session.displayName}
+      releases={releases}
+      searchFilters={searchFilters}
+    />
   );
 }

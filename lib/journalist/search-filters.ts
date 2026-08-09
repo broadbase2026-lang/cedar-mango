@@ -74,15 +74,13 @@ export function publishedAfterForSince(since: JournalistSearchSince | undefined)
   return new Date(now - offsets[since]).toISOString();
 }
 
-export function buildJournalistDiscoverSearchUrl(
+export function buildJournalistDiscoverUrl(
   q: string,
   filters: JournalistSearchFilters
 ): string {
-  const trimmed = q.trim();
-  if (!trimmed) return '/journalist/discover';
-
   const params = new URLSearchParams();
-  params.set('q', trimmed);
+  const trimmed = q.trim();
+  if (trimmed) params.set('q', trimmed);
 
   if (filters.verticals && filters.verticals.length > 0) {
     params.set('beat', filters.verticals.join(','));
@@ -94,5 +92,6 @@ export function buildJournalistDiscoverSearchUrl(
     params.set('sort', filters.sort);
   }
 
-  return `/journalist/discover?${params.toString()}`;
+  const qs = params.toString();
+  return qs ? `/journalist/discover?${qs}` : '/journalist/discover';
 }
