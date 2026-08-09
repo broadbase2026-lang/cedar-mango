@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { publishApiErrorMessage } from '@/lib/brand/publish-api-errors';
+import { DEFAULT_RELEASES_LIST_HREF } from '@/lib/brand/release-editor-url';
 import {
   isoToDatetimeLocalValue,
   minMaxEmbargoDatetimeLocal,
@@ -20,8 +21,17 @@ export function ReleasePublishPanel(props: {
   plan: string | null;
   embargoUntil: string | null;
   beforePublish?: () => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** After a successful publish, navigate here (preserves list page). */
+  returnTo?: string;
 }) {
-  const { releaseId, status, plan, embargoUntil, beforePublish } = props;
+  const {
+    releaseId,
+    status,
+    plan,
+    embargoUntil,
+    beforePublish,
+    returnTo = DEFAULT_RELEASES_LIST_HREF,
+  } = props;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +109,7 @@ export function ReleasePublishPanel(props: {
                   return;
                 }
 
+                router.push(returnTo);
                 router.refresh();
               } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : 'Publish failed.');

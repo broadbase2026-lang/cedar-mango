@@ -26,6 +26,10 @@ import {
 } from '@/app/(brand)/brand/releases/new/actions';
 import { ReleasePublishPanel } from '@/components/brand/release-publish-panel';
 import type { ReleaseImageAsset } from '@/lib/brand/release-asset-model';
+import {
+  DEFAULT_RELEASES_LIST_HREF,
+  editReleaseHref,
+} from '@/lib/brand/release-editor-url';
 import { TRIAL_LIMIT_COPY } from '@/constants/copy';
 import { TRIAL_RELEASE_LIMIT_ERROR_CODE } from '@/lib/brand/trial-release-limit';
 
@@ -120,6 +124,7 @@ export function NewReleaseForm({
   savedNotice = false,
   existing,
   publishConfig,
+  returnTo = DEFAULT_RELEASES_LIST_HREF,
 }: {
   brandId: string;
   errorCode?: string | null;
@@ -131,6 +136,8 @@ export function NewReleaseForm({
     plan: string | null;
     embargoUntil: string | null;
   } | null;
+  /** Dashboard list URL (including page) to return to after publish/delete. */
+  returnTo?: string;
 }) {
   const router = useRouter();
   const [deletePending, startDeleteTransition] = useTransition();
@@ -310,7 +317,7 @@ export function NewReleaseForm({
         // loses to the action's revalidation refresh, so the create form stayed put
         // while another identical draft was inserted on every click.
         window.location.assign(
-          `/brand/releases/new?edit=${encodeURIComponent(result.releaseId)}&saved=true`
+          editReleaseHref(result.releaseId, { saved: true, next: returnTo })
         );
       } catch {
         setLocalError('Something went wrong. Try again.');
@@ -564,7 +571,7 @@ export function NewReleaseForm({
         alert(res.message);
         return;
       }
-      router.push('/brand/dashboard?section=releases');
+      router.push(returnTo);
     });
   }
 
@@ -907,6 +914,7 @@ export function NewReleaseForm({
         plan={publishConfig.plan}
         embargoUntil={publishConfig.embargoUntil}
         beforePublish={saveCurrentDraft}
+        returnTo={returnTo}
       />
     ) : null}
     </>

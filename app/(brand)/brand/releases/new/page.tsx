@@ -4,6 +4,7 @@ import { getBrandPortalSession } from '@/lib/brand/session';
 import { NewReleaseForm } from '@/components/brand/new-release-form';
 import { ReleaseAiReadinessPanel } from '@/components/brand/release-ai-readiness-panel';
 import { releaseImageFromRow, type ReleaseImageAsset } from '@/lib/brand/release-asset-model';
+import { resolveReleaseEditorReturnTo } from '@/lib/brand/release-editor-url';
 import {
   MAX_IMAGES_PER_PRESS_RELEASE,
   MAX_TRIAL_IMAGES_PER_PRESS_RELEASE,
@@ -45,6 +46,7 @@ export default async function NewPressReleasePage({
   const plan = (subscription as any)?.plan ?? null;
 
   const editId = first(searchParams?.edit) ?? null;
+  const returnTo = resolveReleaseEditorReturnTo(first(searchParams?.next));
   const existing = editId
     ? await session.supabase
         .from('press_releases')
@@ -59,7 +61,7 @@ export default async function NewPressReleasePage({
 
   // Only allow editing draft/archived content from this UI. Published releases are immutable here.
   if (editId && (!existing?.data || existing.data.status === 'published')) {
-    redirect('/brand/dashboard?section=releases');
+    redirect(returnTo);
   }
 
   const errorRaw = searchParams?.error;
@@ -106,6 +108,7 @@ export default async function NewPressReleasePage({
       maxPendingImages={maxPendingImages}
       savedNotice={savedNotice}
       initialImages={existingImages}
+      returnTo={returnTo}
       existing={
         editId && existing?.data
           ? {

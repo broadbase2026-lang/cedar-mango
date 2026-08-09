@@ -26,6 +26,7 @@ import type {
   BrandDashboardData,
   DraftSummary,
 } from '@/lib/brand/dashboard-data';
+import { editReleaseHref } from '@/lib/brand/release-editor-url';
 import type { PressReleaseReadinessResult } from '@/lib/ai';
 import { TIER_FEATURES } from '@/constants/copy';
 
@@ -971,7 +972,12 @@ export function BrandDashboardView({
                             </button>
                             {row.status !== 'published' ? (
                               <Link
-                                href={`/brand/releases/new?edit=${encodeURIComponent(row.id)}`}
+                                href={editReleaseHref(row.id, {
+                                  next: dashboardReleasesHref(
+                                    data.releasesPagination.page,
+                                    preserveSectionInLinks
+                                  ),
+                                })}
                                 className="bb-dash-link-sm"
                               >
                                 Edit
