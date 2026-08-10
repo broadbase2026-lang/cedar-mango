@@ -107,8 +107,9 @@ export default function HomePage() {
               <h2
                 className={`${headingFontClassName} mt-5 text-4xl font-normal tracking-tight md:text-5xl`}
               >
-                Your brand assets, found by journalists <em>and</em> AI
-                agents.
+                Your brand assets, found by journalists
+                <br />
+                <em>and</em> AI agents.
               </h2>
 
               <p className="mt-4 max-w-xl text-base text-white/70">
