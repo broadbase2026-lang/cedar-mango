@@ -1,11 +1,22 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GeminiChatHistory, ResearchAssistantMessage } from '@/lib/ai/types';
 
+type ChatSource = {
+  title: string;
+  slug: string;
+  brand_name: string | null;
+};
+
 type ChatApiResponse =
-  | { ok: true; reply: string; history: GeminiChatHistory }
+  | { ok: true; reply: string; history: GeminiChatHistory; sources?: ChatSource[] }
   | { ok: false; error: string };
+
+type DisplayMessage = ResearchAssistantMessage & {
+  sources?: ChatSource[];
+};
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(16).slice(2)}-${Date.now().toString(16)}`;
@@ -17,7 +28,7 @@ export function JournalistChatWidget() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<GeminiChatHistory>([]);
-  const [messages, setMessages] = useState<ResearchAssistantMessage[]>(() => [
+  const [messages, setMessages] = useState<DisplayMessage[]>(() => [
     {
       // Stable ID to avoid SSR/CSR hydration mismatch.
       id: 'model-initial',
@@ -26,7 +37,7 @@ export function JournalistChatWidget() {
         {
           type: 'text',
           text:
-            'Hi — I can help summarize releases, extract key facts, and draft outreach angles. What are you working on?',
+            'Hi — I can search Broadbase releases and help with story angles, comparisons, and follow-ups. Ask about a brand, category, or venue.',
         },
       ],
     },
@@ -47,7 +58,7 @@ export function JournalistChatWidget() {
     setError(null);
     setPending(true);
 
-    const userMessage: ResearchAssistantMessage = {
+    const userMessage: DisplayMessage = {
       id: uid('user'),
       role: 'user',
       parts: [{ type: 'text', text: msg }],
@@ -66,14 +77,17 @@ export function JournalistChatWidget() {
         return;
       }
       setHistory(json.history);
-      const modelMessage: ResearchAssistantMessage = {
+      const sources = (json.sources ?? []).filter((s) => s.slug && s.title);
+      const modelMessage: DisplayMessage = {
         id: uid('model'),
         role: 'model',
         parts: [{ type: 'text', text: json.reply }],
+        sources: sources.length > 0 ? sources : undefined,
       };
       setMessages((m) => [...m, modelMessage]);
-    } catch (e: any) {
-      setError(e?.message ?? 'Request failed.');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Request failed.';
+      setError(message);
     } finally {
       setPending(false);
     }
@@ -86,7 +100,7 @@ export function JournalistChatWidget() {
           <div className="flex items-center justify-between border-b border-brand-border bg-brand-surface px-3 py-2">
             <div>
               <div className="text-sm font-semibold text-brand-ink">Research assistant</div>
-              <div className="text-xs text-brand-muted">Gemini (text-only for now)</div>
+              <div className="text-xs text-brand-muted">Searches your Broadbase archive</div>
             </div>
             <button
               type="button"
@@ -100,17 +114,41 @@ export function JournalistChatWidget() {
           <div ref={listRef} data-lenis-prevent className="max-h-[360px] overflow-y-auto overscroll-contain p-3 text-sm">
             <div className="space-y-3">
               {messages.map((m) => {
-                const textPart = m.parts.find((p: any) => p.type === 'text') as any;
+                const textPart = m.parts.find((p) => p.type === 'text');
                 const bubble =
                   m.role === 'user'
                     ? 'ml-auto bg-teal-50 text-teal-900 ring-1 ring-inset ring-teal-700'
                     : 'mr-auto bg-white text-brand-ink ring-1 ring-inset ring-brand-border';
                 return (
-                  <div
-                    key={m.id}
-                    className={'max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ' + bubble}
-                  >
-                    {textPart?.text ?? ''}
+                  <div key={m.id} className="space-y-1.5">
+                    <div
+                      className={
+                        'max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm leading-relaxed ' +
+                        bubble
+                      }
+                    >
+                      {textPart && 'text' in textPart ? textPart.text : ''}
+                    </div>
+                    {m.role === 'model' && m.sources && m.sources.length > 0 ? (
+                      <div className="mr-auto max-w-[85%] space-y-1 pl-0.5">
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-brand-muted">
+                          Sources
+                        </div>
+                        <ul className="space-y-1">
+                          {m.sources.map((s) => (
+                            <li key={s.slug}>
+                              <Link
+                                href={`/journalist/release/${s.slug}`}
+                                className="block truncate text-xs text-teal-800 hover:underline"
+                                title={s.brand_name ? `${s.title} · ${s.brand_name}` : s.title}
+                              >
+                                {s.brand_name ? `${s.brand_name}: ${s.title}` : s.title}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -152,7 +190,7 @@ export function JournalistChatWidget() {
               </button>
             </div>
             <div className="mt-2 text-[11px] text-brand-muted">
-              Tip: paste a press release excerpt and ask for a 3-bullet brief.
+              Tip: ask about a brand, category, or venue in the archive.
             </div>
           </div>
         </div>
@@ -168,4 +206,3 @@ export function JournalistChatWidget() {
     </div>
   );
 }
-

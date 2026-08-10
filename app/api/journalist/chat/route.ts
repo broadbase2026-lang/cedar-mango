@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
+  geminiChatGenerationConfig,
   getGeminiGenerativeModel,
   JOURNALIST_RESEARCH_ASSISTANT_SYSTEM,
   type GeminiChatHistory,
@@ -26,10 +27,78 @@ const ChatSchema = z.object({
 });
 
 const MAX_HISTORY_CHARS = 10_000;
+const BODY_EXCERPT_CHARS = 1200;
+
+const SEARCH_STOPWORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'can',
+  'could',
+  'do',
+  'does',
+  'for',
+  'from',
+  'give',
+  'help',
+  'how',
+  'i',
+  'in',
+  'into',
+  'is',
+  'it',
+  'me',
+  'my',
+  'of',
+  'on',
+  'or',
+  'please',
+  'show',
+  'tell',
+  'that',
+  'the',
+  'their',
+  'there',
+  'these',
+  'this',
+  'to',
+  'what',
+  'when',
+  'where',
+  'which',
+  'who',
+  'why',
+  'with',
+  'would',
+  'you',
+  'your',
+  'find',
+  'looking',
+  'about',
+  'any',
+  'some',
+  'get',
+  'need',
+  'want',
+  'angles',
+  'angle',
+  'story',
+  'stories',
+  'coverage',
+  'press',
+  'release',
+  'releases',
+]);
 
 type RetrievedRelease = {
   title: string;
   summary: string | null;
+  body: string | null;
   brand_name: string | null;
   published_at: string | null;
   industry_vertical: string | null;
@@ -56,6 +125,35 @@ function brandNameFromRow(brands: unknown): string | null {
   return typeof name === 'string' ? name : null;
 }
 
+/** Derive a short FTS query from conversational user messages. */
+function extractSearchQuery(message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed) return trimmed;
+
+  const tokens = trimmed
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'-]+/gu, ' ')
+    .split(/\s+/)
+    .map((t) => t.replace(/^['-]+|['-]+$/g, ''))
+    .filter((t) => t.length >= 2 && !SEARCH_STOPWORDS.has(t));
+
+  const unique: string[] = [];
+  for (const t of tokens) {
+    if (!unique.includes(t)) unique.push(t);
+    if (unique.length >= 8) break;
+  }
+
+  return unique.length > 0 ? unique.join(' ') : trimmed;
+}
+
+function excerptBody(body: string | null): string | null {
+  if (!body) return null;
+  const collapsed = body.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return null;
+  if (collapsed.length <= BODY_EXCERPT_CHARS) return collapsed;
+  return `${collapsed.slice(0, BODY_EXCERPT_CHARS).trimEnd()}…`;
+}
+
 function formatReleasesContext(rows: RetrievedRelease[]): string {
   if (rows.length === 0) {
     return 'No matching press releases found for this query.';
@@ -67,6 +165,7 @@ function formatReleasesContext(rows: RetrievedRelease[]): string {
     const tags =
       Array.isArray(r.tags) && r.tags.length > 0 ? r.tags.join(', ') : '—';
     const summary = r.summary?.trim() ? r.summary : '—';
+    const excerpt = excerptBody(r.body) ?? '—';
     const pub = r.published_at ?? '—';
     const vertical = r.industry_vertical ?? '—';
     const brand = r.brand_name ?? '—';
@@ -77,6 +176,7 @@ function formatReleasesContext(rows: RetrievedRelease[]): string {
       `   Vertical: ${vertical}`,
       `   Tags: ${tags}`,
       `   Summary: ${summary}`,
+      `   Excerpt: ${excerpt}`,
       `   Slug: ${r.slug}`
     );
   }
@@ -210,11 +310,15 @@ export async function POST(req: Request) {
     );
   }
 
+  const searchQuery = extractSearchQuery(messageText);
+
   const { data: rawRows, error: searchError } = await supabase
     .from('press_releases')
-    .select('title, slug, summary, published_at, industry_vertical, tags, brands(name)')
-    .textSearch('fts', messageText, {
-      type: 'plain',
+    .select(
+      'title, slug, summary, body, published_at, industry_vertical, tags, brands(name)'
+    )
+    .textSearch('fts', searchQuery, {
+      type: 'websearch',
       config: 'english',
     })
     .order('published_at', { ascending: false, nullsFirst: false })
@@ -232,6 +336,7 @@ export async function POST(req: Request) {
       return {
         title: '',
         summary: null,
+        body: null,
         brand_name: null,
         published_at: null,
         industry_vertical: null,
@@ -242,6 +347,7 @@ export async function POST(req: Request) {
     const title = typeof row.title === 'string' ? row.title : '';
     const slug = typeof row.slug === 'string' ? row.slug : '';
     const summary = typeof row.summary === 'string' ? row.summary : null;
+    const bodyText = typeof row.body === 'string' ? row.body : null;
     const published_at =
       typeof row.published_at === 'string' ? row.published_at : null;
     const industry_vertical =
@@ -253,6 +359,7 @@ export async function POST(req: Request) {
       title,
       slug,
       summary,
+      body: bodyText,
       published_at,
       industry_vertical,
       tags,
@@ -280,6 +387,7 @@ export async function POST(req: Request) {
     const model = getGeminiGenerativeModel({
       tier: 'flash',
       systemInstruction,
+      generationConfig: geminiChatGenerationConfig(),
     });
 
     const chat = model.startChat({ history });

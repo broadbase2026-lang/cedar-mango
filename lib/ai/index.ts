@@ -15,6 +15,7 @@ export {
 export {
   DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_GEMINI_PRO_MODEL,
+  geminiChatGenerationConfig,
   geminiJsonGenerationConfig,
   getGeminiApiKey,
   resolveGeminiModelId,

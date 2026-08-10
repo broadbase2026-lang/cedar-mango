@@ -44,3 +44,16 @@ export function geminiJsonGenerationConfig(
     thinkingConfig: { thinkingBudget: 0 },
   };
 }
+
+/**
+ * Free-form chat replies on Gemini 2.5 Flash.
+ * Disables thinking so the output budget is not consumed by internal tokens.
+ */
+export function geminiChatGenerationConfig(
+  maxOutputTokens = 2048
+): BroadbaseGenerationConfig {
+  return {
+    maxOutputTokens,
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+}
