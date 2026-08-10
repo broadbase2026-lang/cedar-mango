@@ -130,9 +130,10 @@ function extractSearchQuery(message: string): string {
   const trimmed = message.trim();
   if (!trimmed) return trimmed;
 
+  // Avoid Unicode property escapes (`\p{L}`) — tsc defaults to ES5 and rejects the `u` flag.
   const tokens = trimmed
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s'-]+/gu, ' ')
+    .replace(/[^a-z0-9\s'-]+/g, ' ')
     .split(/\s+/)
     .map((t) => t.replace(/^['-]+|['-]+$/g, ''))
     .filter((t) => t.length >= 2 && !SEARCH_STOPWORDS.has(t));
