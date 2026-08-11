@@ -25,6 +25,8 @@ export function publishApiErrorMessage(
       return ERROR_MESSAGES.embargoNotAvailable;
     case ERROR_MESSAGES.embargoDateMustBeFuture:
       return ERROR_MESSAGES.embargoDateMustBeFuture;
+    case ERROR_MESSAGES.publishedAtMustBePastOrNow:
+      return ERROR_MESSAGES.publishedAtMustBePastOrNow;
     case TRIAL_LIMIT_COPY.errors.releaseLimit:
       return TRIAL_LIMIT_COPY.errors.releaseLimit;
     case 'Only draft releases can be published.':

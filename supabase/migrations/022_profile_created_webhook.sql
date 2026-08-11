@@ -32,7 +32,7 @@ begin
   end if;
 
   perform net.http_post(
-    url := 'https://broadbase.app/api/webhooks/profile-created',
+    url := 'https://www.broadbase.app/api/webhooks/profile-created',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'x-webhook-secret', '19c7b8864ea250eae1ef096e910e42467d035fd0fbdea5a315a5d972a8db5bff'

@@ -6,6 +6,7 @@ import { publishApiErrorMessage } from '@/lib/brand/publish-api-errors';
 import { DEFAULT_RELEASES_LIST_HREF } from '@/lib/brand/release-editor-url';
 import {
   isoToDatetimeLocalValue,
+  minMaxBackdateDatetimeLocal,
   minMaxEmbargoDatetimeLocal,
 } from '@/lib/utils/datetime-local';
 
@@ -38,13 +39,15 @@ export function ReleasePublishPanel(props: {
   const [phase, setPhase] = useState<'idle' | 'saving' | 'publishing'>('idle');
   const canUseEmbargo = plan === 'pro' || plan === 'agency';
 
-  const { min, max } = useMemo(() => minMaxEmbargoDatetimeLocal(), []);
+  const embargoBounds = useMemo(() => minMaxEmbargoDatetimeLocal(), []);
+  const backdateBounds = useMemo(() => minMaxBackdateDatetimeLocal(), []);
   const [embargoLocal, setEmbargoLocal] = useState<string>(() => {
     if (!embargoUntil) return '';
     const d = new Date(embargoUntil);
     if (!Number.isFinite(d.getTime()) || d <= new Date()) return '';
     return isoToDatetimeLocalValue(embargoUntil);
   });
+  const [publishedAtLocal, setPublishedAtLocal] = useState('');
 
   if (status !== 'draft') return null;
 
@@ -54,7 +57,8 @@ export function ReleasePublishPanel(props: {
         <div>
           <div className="text-sm font-semibold text-brand-ink">Publish</div>
           <div className="mt-1 text-xs text-brand-muted">
-            Publishing makes this release visible in your newsroom. You can optionally set an embargo.
+            Publishing makes this release visible in your newsroom. You can
+            optionally backdate it or set an embargo.
           </div>
         </div>
         <button
@@ -79,12 +83,16 @@ export function ReleasePublishPanel(props: {
                 const embargoUntilUtc = embargoLocal
                   ? new Date(embargoLocal).toISOString()
                   : undefined;
+                const publishedAtUtc = publishedAtLocal
+                  ? new Date(publishedAtLocal).toISOString()
+                  : undefined;
                 const res = await fetch('/api/press-releases/publish', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     releaseId,
                     ...(embargoUntilUtc ? { embargo_until: embargoUntilUtc } : {}),
+                    ...(publishedAtUtc ? { published_at: publishedAtUtc } : {}),
                   }),
                 });
 
@@ -129,6 +137,25 @@ export function ReleasePublishPanel(props: {
         </button>
       </div>
 
+      <div className="mt-4 space-y-2">
+        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-brand-muted">
+          Publication date (optional)
+        </label>
+        <input
+          type="datetime-local"
+          value={publishedAtLocal}
+          min={backdateBounds.min}
+          max={backdateBounds.max}
+          onChange={(e) => setPublishedAtLocal(e.target.value)}
+          className="flex h-11 w-full max-w-sm rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+        />
+        <p className="text-xs text-brand-muted">
+          Leave blank to use the current time, or choose a past date to
+          backdate. Times are shown in your browser&apos;s local timezone and
+          stored in UTC.
+        </p>
+      </div>
+
       {canUseEmbargo ? (
         <div className="mt-4 space-y-2">
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-brand-muted">
@@ -137,8 +164,8 @@ export function ReleasePublishPanel(props: {
           <input
             type="datetime-local"
             value={embargoLocal}
-            min={min}
-            max={max}
+            min={embargoBounds.min}
+            max={embargoBounds.max}
             onChange={(e) => setEmbargoLocal(e.target.value)}
             className="flex h-11 w-full max-w-sm rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
           />

@@ -48,6 +48,8 @@ export const ERROR_MESSAGES = {
   embargoNotAvailable:
     'Embargo scheduling is available on Growth and Enterprise plans.',
   embargoDateMustBeFuture: 'Embargo date must be in the future.',
+  publishedAtMustBePastOrNow:
+    'Publication date must be now or in the past.',
   embargoLiftConfirm:
     'Lift embargo? This release will become publicly visible immediately.',
   bodyTooLongForAi:

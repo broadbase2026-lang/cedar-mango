@@ -49,6 +49,7 @@ type ExistingRelease = {
   id: string;
   title: string;
   summary: string | null;
+  imageLink: string | null;
   bodyHtml: string;
   industry_vertical: string | null;
   tags: string[];
@@ -94,6 +95,8 @@ function releaseFormErrorMessage(errorCode: string | null | undefined): string |
   if (errorCode === 'body_too_long')
     return 'Body is too long (max 500,000 characters).';
   if (errorCode === 'summary_too_long') return 'Summary must be ≤ 280 characters.';
+  if (errorCode === 'invalid_image_link')
+    return 'Image link must be a valid http(s) URL.';
   if (errorCode === 'invalid_rich_text') return 'Body content was invalid. Try again.';
   if (errorCode === TRIAL_RELEASE_LIMIT_ERROR_CODE) {
     return TRIAL_LIMIT_COPY.errors.createDraftLimit;
@@ -152,6 +155,7 @@ export function NewReleaseForm({
   // loads (e.g. Cmd+click new tab). A post-mount hydrate+remount race left body empty.
   const [title, setTitle] = useState(() => existing?.title || '');
   const [summary, setSummary] = useState(() => existing?.summary || '');
+  const [imageLink, setImageLink] = useState(() => existing?.imageLink || '');
   const [vertical, setVertical] = useState(() => existing?.industry_vertical ?? '');
   const [tags, setTags] = useState(() => (existing?.tags ?? []).join(','));
   const [bodyHtml, setBodyHtml] = useState(() => existing?.bodyHtml || '');
@@ -194,6 +198,7 @@ export function NewReleaseForm({
 
     setTitle(existing.title || '');
     setSummary(existing.summary || '');
+    setImageLink(existing.imageLink || '');
     setBodyHtml(existing.bodyHtml || '');
     setVertical(existing.industry_vertical ?? '');
     setTags((existing.tags ?? []).join(','));
@@ -271,6 +276,7 @@ export function NewReleaseForm({
     formData.set('title', title);
     formData.set('body', bodyHtml);
     formData.set('summary', summary);
+    formData.set('image_link', imageLink);
     formData.set('industry_vertical', vertical);
     formData.set('tags', tags);
     formData.set('pending_assets', JSON.stringify(pendingAssets));
@@ -280,6 +286,7 @@ export function NewReleaseForm({
     title,
     bodyHtml,
     summary,
+    imageLink,
     vertical,
     tags,
     pendingAssets,
@@ -686,6 +693,27 @@ export function NewReleaseForm({
           <span>{summaryErr ? <span className="text-red-600">{summaryErr}</span> : null}</span>
           <span className="tabular-nums">{summary.length}/280</span>
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <label
+          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-brand-muted"
+          htmlFor="image_link"
+        >
+          Image link (optional)
+        </label>
+        <input
+          id="image_link"
+          name="image_link"
+          type="url"
+          value={imageLink}
+          onChange={(e) => setImageLink(e.target.value)}
+          placeholder="https://example.com/photo.jpg"
+          className="flex h-11 w-full rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+        />
+        <p className="text-xs text-brand-muted">
+          Optional external image URL for this release.
+        </p>
       </div>
 
       <div className="space-y-1">

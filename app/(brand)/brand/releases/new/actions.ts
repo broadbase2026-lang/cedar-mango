@@ -38,6 +38,18 @@ function uniqueSuffix(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
+const MAX_IMAGE_LINK_LENGTH = 2048;
+
+function isValidImageLink(raw: string): boolean {
+  if (raw.length > MAX_IMAGE_LINK_LENGTH) return false;
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 async function persistPressReleaseCreate(
   formData: FormData
 ): Promise<SavePressReleaseDraftResult> {
@@ -55,6 +67,8 @@ async function persistPressReleaseCreate(
   }
 
   const summary = String(formData.get('summary') ?? '').trim() || null;
+  const imageLinkRaw = String(formData.get('image_link') ?? '').trim();
+  const imageLink = imageLinkRaw || null;
   const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
   const tagsRaw = String(formData.get('tags') ?? '').trim();
   const tags =
@@ -77,6 +91,9 @@ async function persistPressReleaseCreate(
   }
   if (summary && summary.length > 280) {
     return { ok: false, errorCode: 'summary_too_long' };
+  }
+  if (imageLink && !isValidImageLink(imageLink)) {
+    return { ok: false, errorCode: 'invalid_image_link' };
   }
 
   const pendingRaw = String(formData.get('pending_assets') ?? '');
@@ -141,6 +158,7 @@ async function persistPressReleaseCreate(
       slug,
       body,
       summary,
+      image_link: imageLink,
       industry_vertical: vertical,
       tags,
       status: 'draft',
@@ -239,6 +257,8 @@ async function persistPressReleaseUpdate(
   }
 
   const summary = String(formData.get('summary') ?? '').trim() || null;
+  const imageLinkRaw = String(formData.get('image_link') ?? '').trim();
+  const imageLink = imageLinkRaw || null;
   const vertical = String(formData.get('industry_vertical') ?? '').trim() || null;
   const tagsRaw = String(formData.get('tags') ?? '').trim();
   const tags =
@@ -264,6 +284,9 @@ async function persistPressReleaseUpdate(
   }
   if (summary && summary.length > 280) {
     return { ok: false, errorCode: 'summary_too_long' };
+  }
+  if (imageLink && !isValidImageLink(imageLink)) {
+    return { ok: false, errorCode: 'invalid_image_link' };
   }
 
   const pendingRaw = String(formData.get('pending_assets') ?? '');
@@ -328,6 +351,7 @@ async function persistPressReleaseUpdate(
       title,
       body,
       summary,
+      image_link: imageLink,
       industry_vertical: vertical,
       tags,
       updated_at: new Date().toISOString(),

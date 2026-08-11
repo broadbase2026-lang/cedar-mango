@@ -23,6 +23,9 @@ const BodySchema = z.object({
   embargo_until: z
     .union([z.string().datetime(), z.string().min(1)])
     .optional(),
+  published_at: z
+    .union([z.string().datetime(), z.string().min(1)])
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -116,6 +119,18 @@ export async function POST(req: Request) {
     }
   }
 
+  let publishedAtIso: string | undefined;
+  if (parsed.data.published_at) {
+    const publishedAt = new Date(parsed.data.published_at);
+    if (!Number.isFinite(publishedAt.getTime()) || publishedAt > new Date()) {
+      return NextResponse.json(
+        { success: false, error: ERROR_MESSAGES.publishedAtMustBePastOrNow },
+        { status: 400 }
+      );
+    }
+    publishedAtIso = publishedAt.toISOString();
+  }
+
   if (releaseRes.data.status !== 'draft') {
     return json(
       { success: false, error: 'Only draft releases can be published.' },
@@ -162,14 +177,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const now = new Date().toISOString();
   const updatePayload: {
     status: 'published';
     published_at: string;
     embargo_until?: string;
   } = {
     status: 'published',
-    published_at: now,
+    published_at: publishedAtIso ?? new Date().toISOString(),
   };
   if (parsed.data.embargo_until) {
     updatePayload.embargo_until = parsed.data.embargo_until;

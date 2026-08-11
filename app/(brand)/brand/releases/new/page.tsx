@@ -51,7 +51,7 @@ export default async function NewPressReleasePage({
     ? await session.supabase
         .from('press_releases')
         .select(
-          'id, title, summary, body, industry_vertical, tags, status, embargo_until, ai_readiness_score'
+          'id, title, summary, body, image_link, industry_vertical, tags, status, embargo_until, ai_readiness_score'
         )
         .eq('id', editId)
         .eq('brand_id', session.brand.id)
@@ -115,6 +115,10 @@ export default async function NewPressReleasePage({
               id: existing.data.id,
               title: existing.data.title ?? '',
               summary: existing.data.summary ?? null,
+              imageLink:
+                typeof existing.data.image_link === 'string'
+                  ? existing.data.image_link
+                  : null,
               bodyHtml: existing.data.body ?? '',
               industry_vertical: existing.data.industry_vertical ?? null,
               tags: Array.isArray(existing.data.tags) ? existing.data.tags : [],

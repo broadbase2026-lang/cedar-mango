@@ -20,3 +20,11 @@ export function minMaxEmbargoDatetimeLocal(): { min: string; max: string } {
   max.setMonth(max.getMonth() + 12);
   return { min: toDatetimeLocalValue(min), max: toDatetimeLocalValue(max) };
 }
+
+/** Min (−20 years) and max (now) for backdating publish datetime-local inputs. */
+export function minMaxBackdateDatetimeLocal(): { min: string; max: string } {
+  const max = new Date();
+  const min = new Date();
+  min.setFullYear(min.getFullYear() - 20);
+  return { min: toDatetimeLocalValue(min), max: toDatetimeLocalValue(max) };
+}
