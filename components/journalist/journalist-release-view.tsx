@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { FolderRow } from '@/lib/journalist/discover-data';
-import type { JournalistReleaseDetail } from '@/lib/journalist/release-data';
+import type { JournalistReleaseDetail, JournalistReleaseAsset } from '@/lib/journalist/release-data';
 import { toggleSaveReleaseToFolder } from '@/lib/journalist/actions';
 import { BrandPublisherProfile } from '@/components/journalist/brand-publisher-profile';
+import { DownloadAssetButton } from '@/components/DownloadAssetButton';
 import { pickHeroAsset } from '@/lib/press-assets/pick-hero-asset';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { formatDateLong } from '@/lib/utils/dates';
@@ -13,6 +14,38 @@ type Props = {
   folders: FolderRow[];
   publicationNameSuggestions: string[];
 };
+
+function ReleaseAssetRow({ asset }: { asset: JournalistReleaseAsset }) {
+  if (asset.privateDownload) {
+    return (
+      <div className="rounded-lg border border-brand-border/70 p-3 text-sm">
+        <div className="truncate font-medium text-brand-ink">{asset.file_name}</div>
+        <div className="mt-1 text-xs text-brand-muted">{asset.file_type}</div>
+        {asset.caption ? (
+          <div className="mt-1 text-xs text-brand-muted">{asset.caption}</div>
+        ) : null}
+        <div className="mt-3">
+          <DownloadAssetButton
+            assetId={asset.id}
+            fileName={asset.file_name}
+            embargoUntil={asset.privateDownload.embargoUntil}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={`/api/analytics/asset-download?assetId=${encodeURIComponent(asset.id)}`}
+      className="block rounded-lg border border-brand-border/70 p-3 text-sm hover:bg-brand-surface-2"
+    >
+      <div className="truncate font-medium text-brand-ink">{asset.file_name}</div>
+      <div className="mt-1 text-xs text-brand-muted">{asset.file_type}</div>
+      {asset.caption ? <div className="mt-1 text-xs text-brand-muted">{asset.caption}</div> : null}
+    </a>
+  );
+}
 
 export function JournalistReleaseView({ release, folders, publicationNameSuggestions }: Props) {
   const hero = pickHeroAsset(release.assets);
@@ -124,19 +157,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
                 {release.assets.length === 0 ? (
                   <p className="text-sm text-brand-muted">No assets attached.</p>
                 ) : (
-                  release.assets.map((a) => (
-                    <a
-                      key={a.id}
-                      href={a.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block rounded-lg border border-brand-border/70 p-3 text-sm hover:bg-brand-surface-2"
-                    >
-                      <div className="truncate font-medium text-brand-ink">{a.file_name}</div>
-                      <div className="mt-1 text-xs text-brand-muted">{a.file_type}</div>
-                      {a.caption ? <div className="mt-1 text-xs text-brand-muted">{a.caption}</div> : null}
-                    </a>
-                  ))
+                  release.assets.map((a) => <ReleaseAssetRow key={a.id} asset={a} />)
                 )}
               </div>
             </div>

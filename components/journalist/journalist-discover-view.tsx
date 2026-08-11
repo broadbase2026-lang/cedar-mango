@@ -429,6 +429,26 @@ export function JournalistDiscoverView({
     };
   }, [open, selected]);
 
+  useEffect(() => {
+    if (!open || !selected?.id) return;
+    const releaseId = selected.id;
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        releaseId
+      )
+    ) {
+      return;
+    }
+
+    void fetch('/api/analytics/release-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pressReleaseId: releaseId }),
+    }).catch(() => {
+      // Analytics must not affect preview UX.
+    });
+  }, [open, selected?.id]);
+
   async function onRefresh() {
     setRefreshing(true);
     try {

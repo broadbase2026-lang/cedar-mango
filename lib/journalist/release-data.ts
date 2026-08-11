@@ -8,6 +8,10 @@ export type JournalistReleaseAsset = {
   caption: string | null;
   is_hero: boolean;
   created_at: string;
+  /** Set when the journalist has a private-bucket invitation for this asset. */
+  privateDownload?: {
+    embargoUntil: string | null;
+  } | null;
 };
 
 export type BrandRecentRelease = {
@@ -32,12 +36,48 @@ export type JournalistReleaseDetail = {
   saved_folder_ids: string[];
 };
 
+async function loadAssetInvitationsForJournalist(input: {
+  supabase: SupabaseClient;
+  journalistId: string;
+  journalistEmail: string | null | undefined;
+  assetIds: string[];
+}): Promise<Map<string, { embargoUntil: string | null }>> {
+  const { supabase, journalistId, journalistEmail, assetIds } = input;
+  const out = new Map<string, { embargoUntil: string | null }>();
+
+  if (assetIds.length === 0) return out;
+
+  const base = () =>
+    supabase
+      .from('asset_invitations')
+      .select('asset_id, embargo_until')
+      .in('asset_id', assetIds)
+      .is('revoked_at', null);
+
+  const byUser = await base().eq('invited_user_id', journalistId);
+  for (const row of byUser.data ?? []) {
+    out.set(row.asset_id, { embargoUntil: row.embargo_until ?? null });
+  }
+
+  if (journalistEmail) {
+    const byEmail = await base().eq('invited_email', journalistEmail);
+    for (const row of byEmail.data ?? []) {
+      if (!out.has(row.asset_id)) {
+        out.set(row.asset_id, { embargoUntil: row.embargo_until ?? null });
+      }
+    }
+  }
+
+  return out;
+}
+
 export async function loadJournalistReleaseBySlug(input: {
   supabase: SupabaseClient;
   journalistId: string;
+  journalistEmail?: string | null;
   slug: string;
 }): Promise<JournalistReleaseDetail | null> {
-  const { supabase, journalistId, slug } = input;
+  const { supabase, journalistId, journalistEmail, slug } = input;
 
   const { data: pr } = await supabase
     .from('press_releases')
@@ -86,6 +126,17 @@ export async function loadJournalistReleaseBySlug(input: {
       : Promise.resolve({ data: [] } as any),
   ]);
 
+  const assetRows = (assets ?? []) as Omit<
+    JournalistReleaseAsset,
+    'privateDownload'
+  >[];
+  const invitationByAsset = await loadAssetInvitationsForJournalist({
+    supabase,
+    journalistId,
+    journalistEmail,
+    assetIds: assetRows.map((a) => a.id),
+  });
+
   return {
     id: pr.id,
     title: pr.title,
@@ -115,7 +166,15 @@ export async function loadJournalistReleaseBySlug(input: {
       slug: row.slug,
       published_at: row.published_at ?? null,
     })),
-    assets: (assets ?? []) as JournalistReleaseAsset[],
+    assets: assetRows.map((a) => {
+      const invitation = invitationByAsset.get(a.id);
+      return {
+        ...a,
+        privateDownload: invitation
+          ? { embargoUntil: invitation.embargoUntil }
+          : null,
+      };
+    }),
     saved_folder_ids: (saves ?? []).map((s) => s.folder_id),
   };
 }

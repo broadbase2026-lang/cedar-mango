@@ -211,7 +211,7 @@ function bucketSparklines(
 }
 
 /**
- * Loads dashboard aggregates from `release_views`, `asset_downloads`, and `press_releases`.
+ * Loads dashboard aggregates from `release_views`, `asset_download_events`, and `press_releases`.
  * There is no `analytics_events` table in this schema; these tables back measurable engagement.
  */
 export async function loadBrandDashboardData(
@@ -239,7 +239,7 @@ export async function loadBrandDashboardData(
       .select('*', { count: 'exact', head: true })
       .eq('brand_id', brandId),
     supabase
-      .from('asset_downloads')
+      .from('asset_download_events')
       .select('*', { count: 'exact', head: true })
       .eq('brand_id', brandId),
     supabase
@@ -249,10 +249,10 @@ export async function loadBrandDashboardData(
       .not('journalist_id', 'is', null)
       .gte('viewed_at', monthStart),
     supabase
-      .from('asset_downloads')
-      .select('journalist_id')
+      .from('asset_download_events')
+      .select('user_id')
       .eq('brand_id', brandId)
-      .not('journalist_id', 'is', null)
+      .not('user_id', 'is', null)
       .gte('downloaded_at', monthStart),
     supabase
       .from('press_releases')
@@ -291,7 +291,7 @@ export async function loadBrandDashboardData(
     if (row.journalist_id) activeIds.add(row.journalist_id);
   }
   for (const row of downloadsThisMonth.data ?? []) {
-    if (row.journalist_id) activeIds.add(row.journalist_id);
+    if (row.user_id) activeIds.add(row.user_id);
   }
 
   const scores = (draftScoresRes.data ?? [])

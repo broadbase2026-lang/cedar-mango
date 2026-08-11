@@ -6,6 +6,22 @@ import { ERROR_MESSAGES } from '@/constants/copy';
 
 export const runtime = 'nodejs';
 
+function pressReleaseIdFromDownloadRow(
+  row: { press_assets: unknown }
+): string | null {
+  const nested = row.press_assets;
+  const asset = Array.isArray(nested) ? nested[0] : nested;
+  if (
+    asset &&
+    typeof asset === 'object' &&
+    'press_release_id' in asset &&
+    typeof (asset as { press_release_id: unknown }).press_release_id === 'string'
+  ) {
+    return (asset as { press_release_id: string }).press_release_id;
+  }
+  return null;
+}
+
 function csvEscape(v: string): string {
   if (v.includes('"') || v.includes(',') || v.includes('\n') || v.includes('\r')) {
     return `"${v.replace(/"/g, '""')}"`;
@@ -65,8 +81,8 @@ export async function GET() {
       .order('viewed_at', { ascending: false })
       .limit(5000),
     admin
-      .from('asset_downloads')
-      .select('downloaded_at, press_release_id')
+      .from('asset_download_events')
+      .select('downloaded_at, press_assets(press_release_id)')
       .eq('brand_id', brand.id)
       .order('downloaded_at', { ascending: false })
       .limit(5000),
@@ -81,7 +97,10 @@ export async function GET() {
 
   const ids = new Set<string>();
   for (const r of viewsRes.data ?? []) ids.add(r.press_release_id);
-  for (const r of downloadsRes.data ?? []) ids.add(r.press_release_id);
+  for (const r of downloadsRes.data ?? []) {
+    const pressReleaseId = pressReleaseIdFromDownloadRow(r);
+    if (pressReleaseId) ids.add(pressReleaseId);
+  }
 
   const idList = Array.from(ids);
   const titlesMap = new Map<string, string>();
@@ -113,7 +132,8 @@ export async function GET() {
   }
 
   for (const row of downloadsRes.data ?? []) {
-    const title = titlesMap.get(row.press_release_id) ?? '';
+    const pressReleaseId = pressReleaseIdFromDownloadRow(row);
+    const title = pressReleaseId ? titlesMap.get(pressReleaseId) ?? '' : '';
     lines.push(
       [
         csvEscape(title),

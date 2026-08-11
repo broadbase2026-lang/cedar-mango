@@ -59,8 +59,8 @@ export default async function BrandAnalyticsPage() {
       .order('viewed_at', { ascending: false })
       .limit(200),
     session.supabase
-      .from('asset_downloads')
-      .select('downloaded_at, press_release_id')
+      .from('asset_download_events')
+      .select('downloaded_at')
       .eq('brand_id', session.brand.id)
       .gte('downloaded_at', fromIso)
       .order('downloaded_at', { ascending: false })

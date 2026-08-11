@@ -137,10 +137,11 @@ CREATE TABLE download_tokens (
 CREATE INDEX download_tokens_user_id_idx
   ON download_tokens (user_id);
 
--- Fast lookup for active (non-expired, non-consumed) tokens
+-- Fast lookup for unconsumed tokens; expiry is checked at query time
+-- (now() cannot appear in index predicates — it is not IMMUTABLE).
 CREATE INDEX download_tokens_valid_idx
   ON download_tokens (expires_at)
-  WHERE consumed_at IS NULL AND expires_at > now();
+  WHERE consumed_at IS NULL;
 
 CREATE INDEX download_tokens_asset_id_idx
   ON download_tokens (asset_id);

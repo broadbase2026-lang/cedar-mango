@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { JournalistReleaseView } from '@/components/journalist/journalist-release-view';
+import { recordReleaseView } from '@/lib/analytics/record-release-view';
 import { getJournalistPortalSession } from '@/lib/journalist/session';
 import { loadJournalistReleaseBySlug } from '@/lib/journalist/release-data';
 import { loadFolderList } from '@/lib/journalist/folders-data';
@@ -18,6 +19,7 @@ export default async function JournalistReleasePage({ params }: PageProps) {
     loadJournalistReleaseBySlug({
       supabase: session.supabase,
       journalistId: session.user.id,
+      journalistEmail: session.user.email,
       slug,
     }),
     loadFolderList({ supabase: session.supabase, journalistId: session.user.id }),
@@ -29,6 +31,15 @@ export default async function JournalistReleasePage({ params }: PageProps) {
   ]);
 
   if (!release) notFound();
+
+  if (release.brand?.id) {
+    void recordReleaseView({
+      supabase: session.supabase,
+      journalistId: session.user.id,
+      pressReleaseId: release.id,
+      brandId: release.brand.id,
+    });
+  }
 
   const publicationNameSuggestions = Array.from(
     new Set(
