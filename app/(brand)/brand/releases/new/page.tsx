@@ -47,17 +47,56 @@ export default async function NewPressReleasePage({
 
   const editId = first(searchParams?.edit) ?? null;
   const returnTo = resolveReleaseEditorReturnTo(first(searchParams?.next));
-  const existing = editId
-    ? await session.supabase
+
+  // Prefer selecting image_link; if migration 023 is not applied yet, PostgREST
+  // errors and we fall back so drafts remain editable.
+  const RELEASE_SELECT_WITH_IMAGE_LINK =
+    'id, title, summary, body, image_link, industry_vertical, tags, status, embargo_until, ai_readiness_score';
+  const RELEASE_SELECT_BASE =
+    'id, title, summary, body, industry_vertical, tags, status, embargo_until, ai_readiness_score';
+
+  let existing: {
+    data: {
+      id: string;
+      title: string | null;
+      summary: string | null;
+      body: string | null;
+      image_link?: string | null;
+      industry_vertical: string | null;
+      tags: string[] | null;
+      status: string | null;
+      embargo_until: string | null;
+      ai_readiness_score: number | null;
+    } | null;
+    error: { message?: string } | null;
+  } | null = null;
+
+  if (editId) {
+    const primary = await session.supabase
+      .from('press_releases')
+      .select(RELEASE_SELECT_WITH_IMAGE_LINK)
+      .eq('id', editId)
+      .eq('brand_id', session.brand.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (primary.error) {
+      console.error(
+        '[NewPressReleasePage] draft select failed; retrying without image_link',
+        primary.error
+      );
+      const fallback = await session.supabase
         .from('press_releases')
-        .select(
-          'id, title, summary, body, image_link, industry_vertical, tags, status, embargo_until, ai_readiness_score'
-        )
+        .select(RELEASE_SELECT_BASE)
         .eq('id', editId)
         .eq('brand_id', session.brand.id)
         .is('deleted_at', null)
-        .maybeSingle()
-    : null;
+        .maybeSingle();
+      existing = fallback;
+    } else {
+      existing = primary;
+    }
+  }
 
   // Only allow editing draft/archived content from this UI. Published releases are immutable here.
   if (editId && (!existing?.data || existing.data.status === 'published')) {

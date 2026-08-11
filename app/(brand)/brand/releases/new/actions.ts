@@ -50,6 +50,17 @@ function isValidImageLink(raw: string): boolean {
   }
 }
 
+function isMissingImageLinkColumnError(message: string | undefined): boolean {
+  if (!message) return false;
+  const lower = message.toLowerCase();
+  return lower.includes('image_link') && (
+    lower.includes('does not exist') ||
+    lower.includes('could not find') ||
+    lower.includes('schema cache') ||
+    lower.includes('column')
+  );
+}
+
 async function persistPressReleaseCreate(
   formData: FormData
 ): Promise<SavePressReleaseDraftResult> {
@@ -150,21 +161,52 @@ async function persistPressReleaseCreate(
   const base = slugify(title) || 'release';
   const slug = `${base}-${uniqueSuffix()}`;
 
-  const { data: created, error } = await supabase
-    .from('press_releases')
-    .insert({
-      brand_id: brand.id,
-      title,
-      slug,
-      body,
-      summary,
-      image_link: imageLink,
-      industry_vertical: vertical,
-      tags,
-      status: 'draft',
-    })
-    .select('id')
-    .maybeSingle();
+  let created: { id: string } | null = null;
+  let error: { message?: string } | null = null;
+
+  {
+    const primary = await supabase
+      .from('press_releases')
+      .insert({
+        brand_id: brand.id,
+        title,
+        slug,
+        body,
+        summary,
+        image_link: imageLink,
+        industry_vertical: vertical,
+        tags,
+        status: 'draft',
+      })
+      .select('id')
+      .maybeSingle();
+
+    if (primary.error && isMissingImageLinkColumnError(primary.error.message)) {
+      console.error(
+        '[persistPressReleaseCreate] image_link column missing; retrying without it',
+        primary.error
+      );
+      const fallback = await supabase
+        .from('press_releases')
+        .insert({
+          brand_id: brand.id,
+          title,
+          slug,
+          body,
+          summary,
+          industry_vertical: vertical,
+          tags,
+          status: 'draft',
+        })
+        .select('id')
+        .maybeSingle();
+      created = fallback.data;
+      error = fallback.error;
+    } else {
+      created = primary.data;
+      error = primary.error;
+    }
+  }
 
   if (error || !created?.id) {
     if (isTrialReleaseLimitError(error?.message)) {
@@ -345,7 +387,7 @@ async function persistPressReleaseUpdate(
     return { ok: false, errorCode: 'invalid_pending_assets' };
   }
 
-  const { error } = await supabase
+  const { error: primaryError } = await supabase
     .from('press_releases')
     .update({
       title,
@@ -359,6 +401,28 @@ async function persistPressReleaseUpdate(
     .eq('id', releaseId)
     .eq('brand_id', brand.id)
     .is('deleted_at', null);
+
+  let error = primaryError;
+  if (error && isMissingImageLinkColumnError(error.message)) {
+    console.error(
+      '[persistPressReleaseUpdate] image_link column missing; retrying without it',
+      error
+    );
+    const fallback = await supabase
+      .from('press_releases')
+      .update({
+        title,
+        body,
+        summary,
+        industry_vertical: vertical,
+        tags,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', releaseId)
+      .eq('brand_id', brand.id)
+      .is('deleted_at', null);
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('[persistPressReleaseUpdate] update failed', error);
