@@ -26,6 +26,7 @@ export type JournalistReleaseDetail = {
   title: string;
   slug: string;
   summary: string | null;
+  image_link: string | null;
   body: string;
   published_at: string | null;
   industry_vertical: string | null;
@@ -79,11 +80,49 @@ export async function loadJournalistReleaseBySlug(input: {
 }): Promise<JournalistReleaseDetail | null> {
   const { supabase, journalistId, journalistEmail, slug } = input;
 
-  const { data: pr } = await supabase
-    .from('press_releases')
-    .select('id, title, slug, summary, body, published_at, industry_vertical, tags, brand_id')
-    .eq('slug', slug)
-    .maybeSingle();
+  // Prefer selecting image_link; if migration 023 is not applied yet, PostgREST
+  // fails the whole select — retry without it so the release page still loads.
+  const selectWithImageLink =
+    'id, title, slug, summary, image_link, body, published_at, industry_vertical, tags, brand_id';
+  const selectWithoutImageLink =
+    'id, title, slug, summary, body, published_at, industry_vertical, tags, brand_id';
+
+  type ReleaseRow = {
+    id: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    image_link?: string | null;
+    body: string;
+    published_at: string | null;
+    industry_vertical: string | null;
+    tags: string[] | null;
+    brand_id: string | null;
+  };
+
+  let pr: ReleaseRow | null = null;
+
+  {
+    const first = await supabase
+      .from('press_releases')
+      .select(selectWithImageLink)
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (first.data) {
+      pr = first.data as ReleaseRow;
+    } else if (first.error) {
+      const msg = (first.error.message ?? '').toLowerCase();
+      if (msg.includes('image_link')) {
+        const fallback = await supabase
+          .from('press_releases')
+          .select(selectWithoutImageLink)
+          .eq('slug', slug)
+          .maybeSingle();
+        pr = (fallback.data as ReleaseRow | null) ?? null;
+      }
+    }
+  }
 
   if (!pr) return null;
 
@@ -142,6 +181,10 @@ export async function loadJournalistReleaseBySlug(input: {
     title: pr.title,
     slug: pr.slug,
     summary: pr.summary ?? null,
+    image_link:
+      typeof pr.image_link === 'string' && pr.image_link.trim()
+        ? pr.image_link.trim()
+        : null,
     body: pr.body,
     published_at: pr.published_at ?? null,
     industry_vertical: pr.industry_vertical ?? null,

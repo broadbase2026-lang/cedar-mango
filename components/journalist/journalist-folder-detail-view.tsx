@@ -23,7 +23,7 @@ export function JournalistFolderDetailView({ folder }: Props) {
             </p>
           </div>
           <div>
-            <Link href="/journalist/folders" prefetch={false} className="bb-dash-link-sm">
+            <Link href="/journalist/folders" prefetch={false} className="bb-pill-btn no-underline">
               ← Back to folders
             </Link>
           </div>

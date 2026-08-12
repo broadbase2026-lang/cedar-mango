@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
+import { stripLeadingTitleFromHtml } from '@/lib/rich-text/strip-leading-title';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
 
 export type PressReleasePreviewContent = {
@@ -12,6 +13,7 @@ export type PressReleasePreviewContent = {
   verticalLabel: string | null;
   dateLabel: string | null;
   summary: string | null;
+  imageLink?: string | null;
   body: string;
   bodyLoading: boolean;
   heroImageUrl: string | null;
@@ -123,18 +125,46 @@ export function PressReleasePreviewOverlay({
                             'rounded-2xl border border-brand-border bg-white p-4'
                           }
                         >
-                          <div className="text-sm font-semibold text-brand-ink">Summary</div>
-                          <div className="mt-1 text-sm text-brand-muted">{content.summary}</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                            Summary
+                          </div>
+                          <div className="mt-2 text-sm text-brand-ink">{content.summary}</div>
+                        </div>
+                      ) : null}
+
+                      {content.imageLink ? (
+                        <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                            Image link
+                          </div>
+                          <div className="mt-3 overflow-hidden rounded-xl bg-brand-surface-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={content.imageLink}
+                              alt=""
+                              className="aspect-[4/3] w-full object-cover"
+                            />
+                          </div>
+                          <a
+                            href={content.imageLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 block truncate text-sm font-medium text-brand-primary-700 hover:underline"
+                          >
+                            {content.imageLink}
+                          </a>
                         </div>
                       ) : null}
 
                       <div className="mt-4 rounded-2xl border border-brand-border bg-white p-4">
-                        <div className="text-sm font-semibold text-brand-ink">Body</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                          Body
+                        </div>
                         {content.bodyLoading ? (
                           <p className="mt-2 text-sm text-brand-muted">Loading release…</p>
                         ) : (
                           <RichTextRender
-                            html={content.body}
+                            html={stripLeadingTitleFromHtml(content.body, content.title)}
                             className="mt-2 bb-richtext text-sm leading-relaxed text-brand-ink/90"
                           />
                         )}

@@ -379,14 +379,19 @@ export function JournalistDiscoverView({
 
   const previewContent = useMemo((): PressReleasePreviewContent | null => {
     if (!selected) return null;
+    const imageLink = selected.imageLink || null;
+    // Avoid duplicating the same URL as both hero and image-link field.
+    const heroFromAssets =
+      imageLink && selected.heroImageUrl === imageLink ? null : selected.heroImageUrl;
     return {
       title: selected.title,
       verticalLabel: selected.vertical,
       dateLabel: formatDate(selected.publishedAt),
       summary: selected.summary || null,
+      imageLink,
       body: previewBody,
       bodyLoading: previewBodyLoading,
-      heroImageUrl: selected.heroImageUrl,
+      heroImageUrl: heroFromAssets,
       mediaAssets: selected.mediaAssets,
       footerMeta: `Reads ${selected.engagement.pastReads} · Saves ${selected.engagement.pastSaves}`,
       fullReleaseHref: selected.slug ? `/journalist/release/${selected.slug}` : null,

@@ -21,6 +21,7 @@ export type DiscoverReleaseRow = {
   title: string;
   slug: string;
   summary: string | null;
+  image_link: string | null;
   published_at: string | null;
   industry_vertical: string | null;
   brand: {
@@ -88,6 +89,7 @@ type RawDiscoverReleaseRow = {
   title: string;
   slug: string;
   summary: string | null;
+  image_link?: string | null;
   published_at: string | null;
   industry_vertical: string | null;
   brand_id: string | null;
@@ -99,6 +101,29 @@ async function enrichDiscoverReleaseRows(
   recentRaw: RawDiscoverReleaseRow[]
 ): Promise<DiscoverReleaseRow[]> {
   const recentReleaseIds = recentRaw.map((r) => r.id);
+
+  const imageLinkByReleaseId = new Map<string, string>();
+  for (const r of recentRaw) {
+    if (typeof r.image_link === 'string' && r.image_link.trim()) {
+      imageLinkByReleaseId.set(r.id, r.image_link.trim());
+    }
+  }
+
+  // Search RPC rows omit image_link; fill from press_releases when the field wasn't selected.
+  const rawHasImageLinkField = recentRaw.some((r) => 'image_link' in r);
+  if (!rawHasImageLinkField && recentReleaseIds.length > 0) {
+    const { data: imageLinkRows, error: imageLinkError } = await supabase
+      .from('press_releases')
+      .select('id, image_link')
+      .in('id', recentReleaseIds);
+    if (!imageLinkError) {
+      for (const row of imageLinkRows ?? []) {
+        if (typeof row.image_link === 'string' && row.image_link.trim()) {
+          imageLinkByReleaseId.set(row.id, row.image_link.trim());
+        }
+      }
+    }
+  }
 
   const heroMap = new Map<string, string>();
   const assetsByReleaseId = new Map<string, DiscoverReleaseAssetRow[]>();
@@ -181,6 +206,7 @@ async function enrichDiscoverReleaseRows(
     title: r.title,
     slug: r.slug,
     summary: r.summary ?? null,
+    image_link: imageLinkByReleaseId.get(r.id) ?? null,
     published_at: r.published_at ?? null,
     industry_vertical: r.industry_vertical ?? null,
     brand: r.brand_id ? brandMap.get(r.brand_id) ?? null : null,
@@ -198,9 +224,14 @@ async function loadRecentDiscoverRaw(
   filters: JournalistSearchFilters = {},
   limit = DISCOVER_FEED_LIMIT
 ): Promise<RawDiscoverReleaseRow[]> {
+  const selectWithImageLink =
+    'id, title, slug, summary, image_link, published_at, industry_vertical, brand_id';
+  const selectWithoutImageLink =
+    'id, title, slug, summary, published_at, industry_vertical, brand_id';
+
   let query = supabase
     .from('press_releases')
-    .select('id, title, slug, summary, published_at, industry_vertical, brand_id')
+    .select(selectWithImageLink)
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -213,8 +244,31 @@ async function loadRecentDiscoverRaw(
     query = query.gte('published_at', publishedAfter);
   }
 
-  const { data } = await query;
-  return data ?? [];
+  const first = await query;
+  if (!first.error) {
+    return (first.data ?? []) as RawDiscoverReleaseRow[];
+  }
+
+  const msg = (first.error.message ?? '').toLowerCase();
+  if (!msg.includes('image_link')) {
+    return [];
+  }
+
+  let fallback = supabase
+    .from('press_releases')
+    .select(selectWithoutImageLink)
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (filters.verticals && filters.verticals.length > 0) {
+    fallback = fallback.in('industry_vertical', filters.verticals);
+  }
+  if (publishedAfter) {
+    fallback = fallback.gte('published_at', publishedAfter);
+  }
+
+  const second = await fallback;
+  return (second.data ?? []) as RawDiscoverReleaseRow[];
 }
 
 /** Latest published releases for the discover masonry feed. */
@@ -372,7 +426,9 @@ export function mapDiscoverRowsToFeed(rows: DiscoverReleaseRow[]): PressReleaseM
       beats,
       heroImageUrl:
         row.hero_image_url ??
+        row.image_link ??
         `https://picsum.photos/seed/${encodeURIComponent(row.id)}/1200/1400`,
+      imageLink: row.image_link,
       summary: row.summary ?? '',
       body: row.summary ?? '',
       publishedAt: row.published_at ?? new Date().toISOString(),

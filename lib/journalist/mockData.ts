@@ -8,6 +8,7 @@ export type PressReleaseMock = {
   region: 'SG' | 'HK' | 'JP' | 'AU' | 'SEA' | 'APAC' | 'US' | 'EU';
   beats: Array<'Culture' | 'F&B' | 'Travel'>;
   heroImageUrl: string;
+  imageLink?: string | null;
   summary: string;
   body: string;
   publishedAt: string; // ISO

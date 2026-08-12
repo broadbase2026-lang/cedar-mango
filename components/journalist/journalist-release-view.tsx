@@ -6,6 +6,7 @@ import { BrandPublisherProfile } from '@/components/journalist/brand-publisher-p
 import { DownloadAssetButton } from '@/components/DownloadAssetButton';
 import { pickHeroAsset } from '@/lib/press-assets/pick-hero-asset';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
+import { stripLeadingTitleFromHtml } from '@/lib/rich-text/strip-leading-title';
 import { formatDateLong } from '@/lib/utils/dates';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
 
@@ -14,6 +15,9 @@ type Props = {
   folders: FolderRow[];
   publicationNameSuggestions: string[];
 };
+
+const fieldEyebrowClass =
+  'text-xs font-semibold uppercase tracking-wide text-brand-muted';
 
 function ReleaseAssetRow({ asset }: { asset: JournalistReleaseAsset }) {
   if (asset.privateDownload) {
@@ -49,6 +53,7 @@ function ReleaseAssetRow({ asset }: { asset: JournalistReleaseAsset }) {
 
 export function JournalistReleaseView({ release, folders, publicationNameSuggestions }: Props) {
   const hero = pickHeroAsset(release.assets);
+  const bodyHtml = stripLeadingTitleFromHtml(release.body, release.title);
 
   return (
     <main className="bb-dash-main">
@@ -68,8 +73,8 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
               Published {formatDateLong(release.published_at)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/journalist/discover" prefetch={false} className="bb-dash-link-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/journalist/discover" prefetch={false} className="bb-pill-btn no-underline">
               ← Back
             </Link>
             <LogPublicationButton
@@ -78,7 +83,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
               publicationNameSuggestions={publicationNameSuggestions}
             />
             <details className="relative">
-              <summary className="cursor-pointer text-xs font-medium text-brand-primary-700 hover:underline">
+              <summary className="bb-pill-btn cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                 Save to folder
               </summary>
               <div className="absolute right-0 z-30 mt-2 w-64 rounded-lg border border-brand-border bg-white p-2 shadow-media-soft">
@@ -130,11 +135,38 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
               </div>
             ) : null}
 
+            {release.summary ? (
+              <div className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
+                <div className={fieldEyebrowClass}>Summary</div>
+                <p className="mt-2 text-sm font-medium text-brand-ink">{release.summary}</p>
+              </div>
+            ) : null}
+
+            {release.image_link ? (
+              <div className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
+                <div className={fieldEyebrowClass}>Image link</div>
+                <div className="mt-3 overflow-hidden rounded-lg border border-brand-border/70 bg-brand-surface-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={release.image_link}
+                    alt=""
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                </div>
+                <a
+                  href={release.image_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 block truncate text-sm font-medium text-brand-primary-700 hover:underline"
+                >
+                  {release.image_link}
+                </a>
+              </div>
+            ) : null}
+
             <article className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
-              {release.summary ? (
-                <p className="text-sm font-medium text-brand-ink">{release.summary}</p>
-              ) : null}
-              <RichTextRender html={release.body} className="mt-4 bb-richtext" />
+              <div className={fieldEyebrowClass}>Body</div>
+              <RichTextRender html={bodyHtml} className="mt-3 bb-richtext" />
             </article>
           </div>
 
@@ -150,9 +182,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
             ) : null}
 
             <div className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Assets
-              </div>
+              <div className={fieldEyebrowClass}>Assets</div>
               <div className="mt-3 space-y-2">
                 {release.assets.length === 0 ? (
                   <p className="text-sm text-brand-muted">No assets attached.</p>
@@ -167,4 +197,3 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
     </main>
   );
 }
-

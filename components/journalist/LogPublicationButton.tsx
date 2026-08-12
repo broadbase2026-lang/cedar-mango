@@ -42,8 +42,8 @@ export function LogPublicationButton({
           if (!disabled) setOpen(true);
         }}
         className={cn(
-          'inline-flex items-center gap-1.5 text-xs font-medium text-brand-primary-700 hover:underline',
-          'disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline disabled:hover:no-underline',
+          'bb-pill-btn',
+          'disabled:hover:bg-white',
           className
         )}
       >
