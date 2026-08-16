@@ -9,6 +9,8 @@ import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { stripLeadingTitleFromHtml } from '@/lib/rich-text/strip-leading-title';
 import { formatDateLong } from '@/lib/utils/dates';
 import { LogPublicationButton } from '@/components/journalist/LogPublicationButton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ButtonLink } from '@/components/ui/button';
 
 type Props = {
   release: JournalistReleaseDetail;
@@ -88,7 +90,15 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
               </summary>
               <div className="absolute right-0 z-30 mt-2 w-64 rounded-lg border border-brand-border bg-white p-2 shadow-media-soft">
                 {folders.length === 0 ? (
-                  <div className="p-2 text-xs text-brand-muted">Create a folder first (Folders →).</div>
+                  <EmptyState
+                    compact
+                    heading="Create a folder first"
+                    action={
+                      <ButtonLink href="/journalist/folders" size="sm">
+                        Go to Folders
+                      </ButtonLink>
+                    }
+                  />
                 ) : (
                   <div className="space-y-1">
                     {folders.map((f) => {
@@ -101,7 +111,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
                             type="submit"
                             className={
                               'w-full rounded-md px-2 py-2 text-left text-xs hover:bg-brand-surface-2 ' +
-                              (savedHere ? 'text-teal-900' : 'text-brand-ink')
+                              (savedHere ? 'text-accent-hover' : 'text-brand-ink')
                             }
                           >
                             {savedHere ? '✓ ' : ''}
@@ -149,7 +159,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={release.image_link}
-                    alt=""
+                    alt={release.title}
                     className="aspect-[16/9] w-full object-cover"
                   />
                 </div>
@@ -166,7 +176,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
 
             <article className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
               <div className={fieldEyebrowClass}>Body</div>
-              <RichTextRender html={bodyHtml} className="mt-3 bb-richtext" />
+              <RichTextRender html={bodyHtml} className="mt-3 bb-richtext max-w-prose" />
             </article>
           </div>
 
@@ -185,7 +195,7 @@ export function JournalistReleaseView({ release, folders, publicationNameSuggest
               <div className={fieldEyebrowClass}>Assets</div>
               <div className="mt-3 space-y-2">
                 {release.assets.length === 0 ? (
-                  <p className="text-sm text-brand-muted">No assets attached.</p>
+                  <EmptyState compact heading="No assets attached" />
                 ) : (
                   release.assets.map((a) => <ReleaseAssetRow key={a.id} asset={a} />)
                 )}

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import type { FolderDetailRow } from '@/lib/journalist/folders-data';
 import { removeFromFolder } from '@/app/(journalist)/journalist/folders/actions';
 import { formatMonthDayShort } from '@/lib/utils/dates';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ButtonLink } from '@/components/ui/button';
 
 type Props = {
   folder: FolderDetailRow;
@@ -31,7 +33,16 @@ export function JournalistFolderDetailView({ folder }: Props) {
 
         <section className="mt-6 rounded-xl border border-brand-border bg-white p-5 shadow-sm">
           {folder.items.length === 0 ? (
-            <p className="text-sm text-brand-muted">Nothing saved in this folder yet.</p>
+            <EmptyState
+              compact
+              heading="Nothing saved in this folder yet"
+              body="Open Discover and save a release here to find it later."
+              action={
+                <ButtonLink href="/journalist/discover" size="sm">
+                  Browse Discover
+                </ButtonLink>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {folder.items.map((it) => (

@@ -123,60 +123,13 @@ function TestimonialCard({
 export function TestimonialCarousel({
   heading,
   className,
-  testimonials,
+  testimonials = [],
 }: {
   heading?: string;
   className?: string;
   testimonials?: Testimonial[];
 }) {
-  const items = useMemo<Testimonial[]>(
-    () =>
-      testimonials ?? [
-        {
-          imageAlt: 'Alicia Tan',
-          quote:
-            'Broadbase replaces the cold pitch cycle with a clean, editor-first workflow.',
-          name: 'Alicia Tan',
-          title: 'Lifestyle Editor',
-        },
-        {
-          imageAlt: 'Marcus Lee',
-          quote:
-            'The asset library is actually usable. I can find what I need in seconds.',
-          name: 'Marcus Lee',
-          title: 'Senior Reporter',
-        },
-        {
-          imageAlt: 'Priya Nair',
-          quote:
-            'Press kits that don’t feel like a PDF dump. It’s curated, current, and fast.',
-          name: 'Priya Nair',
-          title: 'Features Director',
-        },
-        {
-          imageAlt: 'Sophie Wong',
-          quote:
-            'We finally see what journalists engage with—and what to improve next.',
-          name: 'Sophie Wong',
-          title: 'Brand Comms Lead',
-        },
-        {
-          imageAlt: 'Jon Park',
-          quote:
-            'Search is the difference. I can filter by beat and get the newest releases instantly.',
-          name: 'Jon Park',
-          title: 'Digital Editor',
-        },
-        {
-          imageAlt: 'Nina Cho',
-          quote:
-            'Publishing once and staying discoverable is a game changer for lean teams.',
-          name: 'Nina Cho',
-          title: 'PR Manager',
-        },
-      ],
-    [testimonials],
-  );
+  const items = useMemo<Testimonial[]>(() => testimonials, [testimonials]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -236,6 +189,8 @@ export function TestimonialCarousel({
   const playTicker = () => {
     tweenRef.current?.play();
   };
+
+  if (items.length === 0) return null;
 
   return (
     <section

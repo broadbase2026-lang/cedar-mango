@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import {
   brandPlanFromSubscription,
   fetchBrandOwnerSubscription,
@@ -12,6 +11,8 @@ import {
   type GeoScoreBand,
 } from '@/lib/utils/geoScore';
 import { richTextToPlainText } from '@/lib/rich-text/sanitize';
+import { ButtonLink } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { GeoScoreBadge } from '@/components/brand/geo-score-badge';
 
 type GeoReleasePanel = {
@@ -138,12 +139,9 @@ export default async function BrandAnalyticsPage() {
             </p>
           </div>
           {canExport ? (
-            <Link
-              href="/api/analytics/export"
-              className="bb-btn-primary-sm no-underline"
-            >
+            <ButtonLink href="/api/analytics/export" size="sm">
               Export CSV
-            </Link>
+            </ButtonLink>
           ) : null}
         </div>
 
@@ -175,7 +173,7 @@ export default async function BrandAnalyticsPage() {
           </div>
           <div className="mt-4 grid gap-2 text-sm">
             {views.length === 0 && downloads.length === 0 ? (
-              <div className="text-brand-muted">No analytics events yet.</div>
+              <EmptyState compact heading="No analytics events yet" />
             ) : (
               <>
                 {views.slice(0, 12).map((v, i) => (
@@ -208,9 +206,7 @@ export default async function BrandAnalyticsPage() {
           </p>
           <div className="mt-4 space-y-3">
             {geoReleases.length === 0 ? (
-              <div className="text-sm text-brand-muted">
-                No published releases yet.
-              </div>
+              <EmptyState compact heading="No published releases yet" />
             ) : (
               geoReleases.map((g) => (
                 <details

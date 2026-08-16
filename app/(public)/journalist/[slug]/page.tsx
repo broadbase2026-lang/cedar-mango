@@ -7,6 +7,7 @@ import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import type {
   JournalistPortfolioSettings,
   JournalistPublication,
@@ -255,7 +256,10 @@ export default async function JournalistPortfolioPage({ params }: PageProps) {
 
         <section className="mt-10 space-y-4">
           {publications.length === 0 ? (
-            <p className="text-text-secondary">No articles published yet.</p>
+            <EmptyState
+              compact
+              heading="No articles published yet"
+            />
           ) : (
             publications.map((article) => (
               <Card key={article.id}>

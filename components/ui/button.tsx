@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 type ButtonVariant = 'primary' | 'accent' | 'ghost' | 'destructive';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -9,7 +10,7 @@ function cn(...parts: Array<string | undefined | false | null>) {
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors ' +
+  'inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page ' +
   'disabled:pointer-events-none disabled:opacity-50';
 
@@ -17,10 +18,11 @@ const variants: Record<ButtonVariant, string> = {
   primary:
     'bg-primary-base text-text-primary shadow-media-soft hover:bg-primary-hover active:bg-primary-active',
   accent:
-    'bg-accent text-text-inverse shadow-media-soft hover:bg-accent-hover',
+    'bg-accent text-text-inverse shadow-media-soft hover:bg-accent-hover active:bg-accent-hover',
   ghost:
-    'border border-border-default bg-transparent text-text-primary hover:bg-surface-overlay',
-  destructive: 'bg-error text-text-inverse shadow-media-soft hover:bg-red-600',
+    'border border-border-default bg-transparent text-text-primary hover:bg-surface-overlay active:bg-surface-overlay',
+  destructive:
+    'bg-error text-text-inverse shadow-media-soft hover:bg-red-600 active:bg-red-700',
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -44,17 +46,38 @@ export function buttonClassName({
 }
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  ButtonStyleProps;
+  ButtonStyleProps & {
+    loading?: boolean;
+  };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'accent', size = 'md', type, ...props }, ref) => {
+  (
+    {
+      className,
+      variant = 'accent',
+      size = 'md',
+      type,
+      loading,
+      disabled,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
     return (
       <button
         ref={ref}
         type={type ?? 'button'}
         className={buttonClassName({ variant, size, className })}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
-      />
+      >
+        {loading ? (
+          <LoadingSpinner className="h-4 w-4 text-current" />
+        ) : null}
+        {children}
+      </button>
     );
   },
 );

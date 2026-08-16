@@ -10,14 +10,22 @@
 */
 @layer base {
   :root {
-    /* Media-Modern tokens (RGB channels; used by Tailwind rgb(var(--x)) ) */
-    --brand-surface: 248 250 252; /* slate-50 */
-    --brand-surface-2: 241 245 249; /* slate-100 */
-    --brand-dark: 7 12 23; /* near-slate-950 */
-    --brand-ink: 15 23 42; /* slate-900 */
-    --brand-muted: 71 85 105; /* slate-600 */
-    --brand-border: 226 232 240; /* slate-200 */
-    --brand-ring: 14 165 233; /* sky-500 */
+    /* Semantic surfaces (RGB channels; used by Tailwind rgb(var(--x)) ) */
+    --brand-surface: 249 250 251; /* surface-raised */
+    --brand-surface-2: 243 244 246; /* surface-overlay */
+    --brand-dark: 7 12 23;
+    --brand-ink: 26 26 26; /* text-primary */
+    --brand-muted: 107 114 128; /* text-secondary */
+    --brand-border: 229 231 235; /* border-default */
+
+    /* Single action color — accent. brand-primary / brand-ring alias this. */
+    --color-accent: 14 165 121;
+    --color-accent-hover: 12 144 104;
+    --color-accent-subtle: 230 247 242;
+    --brand-primary: 14 165 121;
+    --brand-primary-600: 14 165 121;
+    --brand-primary-700: 12 144 104;
+    --brand-ring: 14 165 121;
 
     /* Top navigation bar (public + portal) */
     --bb-top-nav: #ffb81a;
@@ -30,11 +38,7 @@
     --bb-nav-h: 4rem;
     --bb-floating-nav-offset: 3.25rem;
 
-    /* Primary CTA (teal-forward) */
-    --brand-primary: 13 148 136; /* teal-600 */
-    --brand-primary-600: 13 148 136; /* teal-600 */
-    --brand-primary-700: 15 118 110; /* teal-700 */
-
+    /* Side identity (gold / coral) — not the action color. */
     --color-primary-subtle: #fff8e7;
     --color-primary-base: #ffecbd;
     --color-primary-hover: #ffd875;
@@ -118,7 +122,7 @@
   }
 
   .bb-home-tinted-panel {
-    @apply mx-auto w-full max-w-6xl overflow-hidden rounded-3xl;
+    @apply mx-auto w-full max-w-6xl overflow-hidden rounded-panel;
   }
 
   .bb-nav-link {
@@ -126,7 +130,7 @@
   }
 
   .bb-nav-link--active {
-    @apply text-white underline underline-offset-4 hover:text-white;
+    @apply text-brand-ink underline underline-offset-4 hover:text-brand-ink;
   }
 
   .bb-hero-parallax-illustration {
@@ -215,15 +219,15 @@
   }
 
   .bb-portal-nav-link {
-    @apply flex items-center gap-3 rounded-lg border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-neutral-400 no-underline transition-colors hover:bg-white/10 hover:text-white;
+    @apply flex items-center gap-3 rounded-control border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-neutral-400 no-underline transition-colors hover:bg-white/10 hover:text-white;
   }
 
   .bb-portal-nav-link-icon {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-white/10 text-white;
   }
 
   .bb-portal-nav-link--active .bb-portal-nav-link-icon {
-    @apply bg-accent/15 text-accent;
+    @apply bg-accent/15 text-accent-hover;
   }
 
   .bb-portal-nav-link-label {
@@ -243,7 +247,7 @@
   }
 
   .bb-portal-nav-link--active {
-    @apply border-b-2 border-accent bg-accent-subtle font-semibold text-accent;
+    @apply border-b-2 border-accent-hover bg-accent-subtle font-semibold text-accent-hover;
   }
 
   .bb-portal-main {
@@ -399,7 +403,7 @@
   }
 
   .bb-portal-profile-trigger {
-    @apply flex h-10 max-w-[200px] items-center gap-2 rounded-lg border border-brand-border bg-white px-3 text-left text-sm text-brand-ink shadow-sm transition hover:border-brand-border/80;
+    @apply flex h-10 max-w-[200px] items-center gap-2 rounded-control border border-brand-border bg-white px-3 text-left text-sm text-brand-ink shadow-sm transition hover:border-brand-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
   }
 
   .bb-portal-profile-avatar {
@@ -415,7 +419,7 @@
   }
 
   .bb-portal-profile-menu {
-    @apply absolute right-0 z-20 mt-1 w-56 rounded-lg border border-brand-border bg-white py-1.5 text-sm shadow-media-soft transition;
+    @apply absolute right-0 z-20 mt-1 w-56 rounded-control border border-brand-border bg-white py-1.5 text-sm shadow-media-soft transition;
   }
 
   .bb-portal-profile-menu--closed {
@@ -431,7 +435,7 @@
   }
 
   .bb-portal-profile-logout-btn {
-    @apply w-full rounded-md px-2 py-2 text-left text-sm text-brand-ink hover:bg-brand-surface-2;
+    @apply w-full rounded-control px-2 py-2 text-left text-sm text-brand-ink hover:bg-brand-surface-2;
   }
 
   .bb-portal-children {
@@ -448,7 +452,7 @@
   }
 
   .bb-dash-empty-icon {
-    @apply mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary/20 to-brand-ring/10 shadow-media-soft;
+    @apply mx-auto flex h-16 w-16 items-center justify-center rounded-panel bg-gradient-to-br from-accent/20 to-accent/10 shadow-media-soft;
   }
 
   .bb-dash-empty-heading {
@@ -468,15 +472,15 @@
   }
 
   .bb-dash-empty-releases-frame {
-    @apply mx-auto overflow-hidden rounded-3xl bg-gradient-to-br from-brand-dark via-slate-900 to-brand-primary-700 p-px shadow-media-soft;
+    @apply mx-auto overflow-hidden rounded-panel bg-gradient-to-br from-brand-dark via-slate-900 to-accent-hover p-px shadow-media-soft;
   }
 
   .bb-dash-empty-releases-inner {
-    @apply rounded-[23px] bg-white px-10 py-12;
+    @apply rounded-panel bg-white px-10 py-12;
   }
 
   .bb-dash-empty-releases-icon {
-    @apply mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-surface-2 text-2xl;
+    @apply mx-auto flex h-14 w-14 items-center justify-center rounded-panel bg-brand-surface-2 text-2xl;
   }
 
   .bb-dash-empty-releases-heading {
@@ -504,7 +508,7 @@
   }
 
   .bb-dash-metric-card {
-    @apply rounded-xl border border-brand-border bg-white p-5 shadow-sm;
+    @apply rounded-card border border-brand-border bg-white p-5 shadow-sm;
   }
 
   .bb-dash-metric-label {
@@ -524,7 +528,7 @@
   }
 
   .bb-dash-table-shell {
-    @apply mt-4 overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm;
+    @apply mt-4 overflow-hidden rounded-card border border-brand-border bg-white shadow-sm;
   }
 
   .bb-dash-table-scroll {
@@ -556,7 +560,7 @@
   }
 
   .bb-dash-bulk-bar {
-    @apply mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-border bg-brand-surface-2/60 px-4 py-3 text-sm;
+    @apply mt-4 flex flex-wrap items-center gap-3 rounded-card border border-brand-border bg-brand-surface-2/60 px-4 py-3 text-sm;
   }
 
   .bb-dash-bulk-summary {
@@ -588,7 +592,7 @@
   }
 
   .bb-dash-ai-card {
-    @apply rounded-xl border border-brand-border bg-white p-5 shadow-sm;
+    @apply rounded-card border border-brand-border bg-white p-5 shadow-sm;
   }
 
   .bb-dash-link {
@@ -605,7 +609,7 @@
   }
 
   .bb-dash-select {
-    @apply mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-ink;
+    @apply mt-1.5 w-full rounded-control border border-brand-border bg-white px-3 py-2 text-sm text-brand-ink;
   }
 
   .bb-sparkline {
@@ -637,11 +641,11 @@
   }
 
   .bb-dash-pagination-page-input {
-    @apply h-8 min-w-[3ch] rounded-md bg-white px-1.5 text-center text-sm tabular-nums text-brand-ink shadow-sm outline-none ring-1 ring-inset ring-brand-border focus-visible:ring-2 focus-visible:ring-brand-ring;
+    @apply h-8 min-w-[3ch] rounded-control bg-white px-1.5 text-center text-sm tabular-nums text-brand-ink shadow-sm outline-none ring-1 ring-inset ring-brand-border focus-visible:ring-2 focus-visible:ring-brand-ring;
   }
 
   .bb-dash-pagination-btn {
-    @apply inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-brand-ink no-underline ring-1 ring-inset ring-brand-border transition-colors hover:bg-brand-surface-2;
+    @apply inline-flex h-9 items-center justify-center rounded-control bg-white px-3 text-sm font-medium text-brand-ink no-underline ring-1 ring-inset ring-brand-border transition-colors hover:bg-brand-surface-2;
   }
 
   .bb-dash-pagination-btn-disabled {
@@ -697,7 +701,7 @@
   }
 
   .bb-dash-meter-fill {
-    @apply h-full rounded-full bg-gradient-to-r from-brand-primary to-teal-400 transition-[width];
+    @apply h-full rounded-full bg-gradient-to-r from-accent to-accent-hover transition-[width];
   }
 
   .bb-dash-critique-title {
@@ -706,15 +710,6 @@
 
   .bb-dash-critique-list {
     @apply mt-2 list-disc space-y-2 pl-4 text-sm leading-snug text-brand-ink;
-  }
-
-  /* Primary actions — mirrors components/ui/button so CTAs style without a separate chunk */
-  .bb-btn-primary-sm {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-brand-primary px-3 text-sm font-medium text-white shadow-media-soft transition-colors hover:bg-brand-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface disabled:pointer-events-none disabled:opacity-50;
-  }
-
-  .bb-btn-primary-md {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium text-white shadow-media-soft transition-colors bg-brand-primary hover:bg-brand-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface disabled:pointer-events-none disabled:opacity-50;
   }
 
   .bb-dash-empty-icon-glyph {
@@ -892,7 +887,7 @@
   }
 
   .legal-prose :where(.legal-table) {
-    @apply mb-6 w-full border-collapse overflow-hidden rounded-xl border border-brand-border text-sm;
+    @apply mb-6 w-full border-collapse overflow-hidden rounded-card border border-brand-border text-sm;
   }
 
   .legal-prose :where(.legal-table th) {

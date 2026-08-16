@@ -155,9 +155,12 @@ export function LogPublicationModal({
 
   return (
     <>
-      <Modal open={isOpen}>
+      <Modal open={isOpen} onClose={onClose} titleId="log-publication-title">
         <form onSubmit={handleSubmit} className="p-6">
-          <h2 className="font-heading text-lg text-text-primary">
+          <h2
+            id="log-publication-title"
+            className="font-heading text-lg text-text-primary pr-8"
+          >
             {isEdit ? 'Edit article' : 'I published this'}
           </h2>
 

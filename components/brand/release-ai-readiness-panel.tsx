@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PressReleaseReadinessResult } from '@/lib/ai';
 import { TIER_FEATURES } from '@/constants/copy';
+import { Button } from '@/components/ui/button';
 
 type ReleaseAiReadinessPanelProps = {
   releaseId: string;
@@ -172,14 +173,14 @@ export function ReleaseAiReadinessPanel({
           <div className="bb-dash-critique-title">Critique</div>
           {canUseAiReadiness ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
+              <Button
                 type="button"
-                className="bb-btn-primary-sm"
-                disabled={aiPending}
+                size="sm"
+                loading={aiPending}
                 onClick={onGenerateAiReadiness}
               >
                 {aiPending ? 'Generating…' : 'Generate score'}
-              </button>
+              </Button>
               {aiError && (
                 <span className="bb-dash-muted-p" role="status">
                   {aiError}

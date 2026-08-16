@@ -20,6 +20,8 @@ import {
   type JournalistSearchSort,
 } from '@/lib/journalist/search-filters';
 import { formatMonthDayShort } from '@/lib/utils/dates';
+import { EmptyState } from '@/components/ui/empty-state';
+import { DiscoverFeedSkeleton } from '@/components/ui/skeleton';
 import type { IndustryVertical } from '@/types';
 
 const headingFontClassName = 'font-heading';
@@ -201,6 +203,7 @@ export function JournalistDiscoverView({
   const [searchText, setSearchText] = useState(searchQuery);
   const [feedReleases, setFeedReleases] = useState<PressReleaseMock[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const router = useRouter();
   const [activeIds, setActiveIds] = useState<string[]>([]);
 
@@ -473,10 +476,15 @@ export function JournalistDiscoverView({
 
       if (res.ok && json && json.ok === true && Array.isArray(json.releases)) {
         setFeedReleases(json.releases);
+        setFeedError(null);
+      } else {
+        setFeedError('Could not refresh the feed. Try again in a moment.');
       }
 
       setSeed(`${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`);
       setVisibleCount(14);
+    } catch {
+      setFeedError('Could not refresh the feed. Try again in a moment.');
     } finally {
       setRefreshing(false);
     }
@@ -552,8 +560,10 @@ export function JournalistDiscoverView({
         </div>
 
         <div className="mt-6">
-          {!mounted ? (
-            <div className="pb-10 text-center text-sm text-brand-muted">Loading…</div>
+          {feedError ? (
+            <div className="mb-4 rounded-control border border-error/30 bg-error-subtle px-3 py-2 text-sm text-error" role="alert">
+              {feedError}
+            </div>
           ) : null}
           <form
             className="rounded-2xl bg-transparent p-0"
@@ -570,7 +580,7 @@ export function JournalistDiscoverView({
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Search releases…"
                   aria-label="Search press releases"
-                  className="h-14 w-full rounded-none bg-transparent px-5 text-base text-brand-ink outline-none placeholder:text-brand-muted/80 sm:placeholder:text-transparent"
+                  className="h-14 w-full rounded-none bg-transparent px-5 text-base text-brand-ink outline-none placeholder:text-brand-muted/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:placeholder:text-transparent"
                 />
                 {searchText.trim().length ? null : (
                   <div className="pointer-events-none absolute inset-y-0 left-0 hidden h-14 items-center px-5 text-base text-brand-muted/80 sm:flex">
@@ -694,7 +704,13 @@ export function JournalistDiscoverView({
             </div>
           ) : null}
 
-          {isSearchMode && mounted ? (
+          {!mounted ? (
+            <div className="mt-5">
+              <DiscoverFeedSkeleton />
+            </div>
+          ) : (
+            <>
+          {isSearchMode ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-muted">
               <p>
                 {visible.length} result{visible.length === 1 ? '' : 's'} for &ldquo;{searchQuery}&rdquo;
@@ -728,7 +744,7 @@ export function JournalistDiscoverView({
                         onOpenRelease(r);
                       }
                     }}
-                    className="group relative w-full rounded-2xl border border-brand-border bg-white text-left shadow-sm transition hover:-translate-y-[1px] hover:shadow-media-soft focus:outline-none focus:ring-2 focus:ring-teal-700/30"
+                    className="group relative w-full rounded-2xl border border-brand-border bg-white text-left shadow-sm transition hover:-translate-y-[1px] hover:shadow-media-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >
                     <button
                       type="button"
@@ -738,7 +754,7 @@ export function JournalistDiscoverView({
                         e.stopPropagation();
                         onDismissRelease(r.id);
                       }}
-                      className="absolute right-2 top-2 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-brand-border bg-white/90 text-brand-ink shadow-sm backdrop-blur transition hover:bg-brand-surface group-hover:inline-flex focus:outline-none focus:ring-2 focus:ring-teal-700/30"
+                      className="absolute right-2 top-2 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-brand-border bg-white/90 text-brand-ink shadow-sm backdrop-blur transition hover:bg-brand-surface group-hover:inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -746,7 +762,7 @@ export function JournalistDiscoverView({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={r.heroImageUrl}
-                        alt=""
+                        alt={r.title}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                         loading="lazy"
                       />
@@ -780,20 +796,26 @@ export function JournalistDiscoverView({
           {!isSearchMode ? <div ref={sentinelRef} className="h-10" /> : null}
           {isSearchMode ? (
             visible.length === 0 ? (
-              <div className="pb-10 text-center text-sm text-brand-muted">
-                No releases found for &ldquo;{searchQuery}&rdquo;.
-              </div>
+              <EmptyState
+                compact
+                heading={`No releases found for “${searchQuery}”`}
+                body="Try a different keyword or clear your filters."
+              />
             ) : (
               <div className="pb-10" />
             )
           ) : visibleCount < curated.length ? (
             <div className="pb-10 text-center text-xs text-brand-muted">Loading more…</div>
           ) : curated.length === 0 ? (
-            <div className="pb-10 text-center text-sm text-brand-muted">
-              No published releases yet. Check back soon or try search.
-            </div>
+            <EmptyState
+              compact
+              heading="No published releases yet"
+              body="Check back soon or try search."
+            />
           ) : (
             <div className="pb-10 text-center text-xs text-brand-muted">You’re all caught up.</div>
+          )}
+            </>
           )}
         </div>
       </div>

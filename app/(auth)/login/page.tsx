@@ -36,15 +36,15 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           priority
         />
       </Link>
-      <h1 className="mt-2 text-center text-xl font-semibold text-neutral-900">Log in</h1>
-      <p className="mt-1 text-center text-sm text-neutral-600">
+      <h1 className="mt-2 text-center text-xl font-semibold text-text-primary">Log in</h1>
+      <p className="mt-1 text-center text-sm text-text-secondary">
         Use the email and password for your brand or journalist account.
       </p>
       <div className="mt-8">
         <LoginForm nextPath={nextPath} callbackError={callbackError} />
       </div>
       <p className="mt-6 text-center text-xs">
-        <Link href="/" className="text-teal-700 underline">
+        <Link href="/" className="text-accent underline">
           Back to home
         </Link>
       </p>

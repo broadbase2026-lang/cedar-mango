@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
+import { EmptyState } from '@/components/ui/empty-state';
 import { appBaseUrl } from '@/lib/seo/app-base-url';
 
 type PageProps = {
@@ -189,7 +190,10 @@ export default async function NewsroomPage({ params }: PageProps) {
 
         <section className="space-y-4">
           {(releases ?? []).length === 0 ? (
-            <p className="text-text-secondary">No published releases yet.</p>
+            <EmptyState
+              compact
+              heading="No published releases yet"
+            />
           ) : (
             (releases ?? []).map((r) => (
               <article

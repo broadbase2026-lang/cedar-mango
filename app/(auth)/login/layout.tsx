@@ -6,8 +6,8 @@ export default function LoginLayout({ children }: { children: ReactNode }) {
   const env = getSupabasePublicEnv();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 p-6">
-      <div className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-surface-raised p-6">
+      <div className="w-full max-w-md rounded-card border border-border-default bg-surface-page p-8 shadow-sm">
         {!env ? <AuthEnvWarning /> : null}
         {children}
       </div>

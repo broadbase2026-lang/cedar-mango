@@ -19,6 +19,7 @@ import { PortalSidebarFeedbackLink } from '@/components/portal/portal-sidebar-fe
 import { PortalSidebarBrandMark } from '@/components/portal/portal-sidebar-brand-mark';
 import { useMobileScrollHeaderHidden } from '@/components/portal/use-mobile-scroll-header';
 import { logoutAction } from '@/lib/auth/logout';
+import { ButtonLink } from '@/components/ui/button';
 
 const PORTAL_SIDEBAR_ID = 'brand-portal-sidebar';
 
@@ -262,13 +263,14 @@ export function BrandPortalShell({
         </div>
 
         <div className="space-y-2 px-2 pb-4 sm:hidden">
-          <Link
+          <ButtonLink
             href="/brand/releases/new"
-            className="bb-btn-primary-md w-full no-underline sm:hidden"
+            size="md"
+            className="w-full sm:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           >
             Quick Upload
-          </Link>
+          </ButtonLink>
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}
@@ -294,12 +296,13 @@ export function BrandPortalShell({
             <h1 className="bb-portal-header-heading">{brandName}</h1>
           </div>
           <div className="bb-portal-header-actions">
-            <Link
+            <ButtonLink
               href="/brand/releases/new"
-              className="bb-btn-primary-md hidden no-underline sm:inline-flex"
+              size="md"
+              className="hidden sm:inline-flex"
             >
               Quick Upload
-            </Link>
+            </ButtonLink>
             <div className="bb-portal-profile" ref={menuRef}>
               <button
                 type="button"
@@ -311,7 +314,7 @@ export function BrandPortalShell({
                 {userAvatarUrl ? (
                   <Image
                     src={userAvatarUrl}
-                    alt=""
+                    alt={`${display} profile photo`}
                     width={32}
                     height={32}
                     sizes="32px"

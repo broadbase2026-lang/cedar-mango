@@ -16,7 +16,7 @@ import {
   subscriptionStatusLabel,
 } from '@/lib/stripe/labels';
 import { isBillableStripeCustomerId } from '@/lib/stripe/customer-id';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProfilePhotoUploader } from '@/components/profile/profile-photo-uploader';
 import { formatDateMedium } from '@/lib/utils/dates';
@@ -43,18 +43,6 @@ const card =
   'rounded-xl border border-brand-border bg-white p-6 shadow-sm space-y-4';
 const inputFrame = 'space-y-1';
 const help = 'text-xs text-brand-muted';
-
-const btnPrimarySm =
-  'inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-brand-primary px-3 text-sm font-medium ' +
-  'text-white shadow-media-soft transition-colors hover:bg-brand-primary-700 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ' +
-  'focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface';
-
-const btnSecondarySm =
-  'inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-white px-3 text-sm font-medium ' +
-  'text-brand-ink ring-1 ring-inset ring-brand-border transition-colors hover:bg-brand-surface-2 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ' +
-  'focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface';
 
 type BrandSettingsViewProps = {
   snapshot: BrandSettingsSnapshot;
@@ -363,30 +351,21 @@ export function BrandSettingsView({ snapshot, betaTrialOnly = false }: BrandSett
 
             <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:flex-wrap">
               {canManagePortal ? (
-                <a href="/api/stripe/billing-portal" className={btnPrimarySm}>
+                <ButtonLink href="/api/stripe/billing-portal" size="sm">
                   Manage billing in Stripe
-                </a>
+                </ButtonLink>
               ) : null}
               {showSubscribePlans ? (
                 <>
-                  <a
-                    href="/pricing"
-                    className={btnSecondarySm}
-                  >
+                  <ButtonLink href="/pricing" variant="ghost" size="sm">
                     Subscribe — Solo
-                  </a>
-                  <a
-                    href="/pricing"
-                    className={btnSecondarySm}
-                  >
+                  </ButtonLink>
+                  <ButtonLink href="/pricing" variant="ghost" size="sm">
                     Subscribe — Growth
-                  </a>
-                  <a
-                    href="/pricing"
-                    className={btnSecondarySm}
-                  >
+                  </ButtonLink>
+                  <ButtonLink href="/pricing" variant="ghost" size="sm">
                     Subscribe — Enterprise
-                  </a>
+                  </ButtonLink>
                 </>
               ) : null}
             </div>

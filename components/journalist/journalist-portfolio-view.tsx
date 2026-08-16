@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
 import { LogPublicationModal } from '@/components/journalist/LogPublicationModal';
 import { PortfolioSettingsForm } from '@/components/journalist/portfolio-settings-form';
@@ -48,6 +49,7 @@ export function JournalistPortfolioView({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [togglingPublic, setTogglingPublic] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -67,8 +69,9 @@ export function JournalistPortfolioView({
     new Set(live.map((p) => p.publication_name))
   );
 
-  async function handleRemove(id: string) {
-    if (!window.confirm('Remove this article from your portfolio?')) return;
+  async function confirmRemove() {
+    if (!pendingRemoveId) return;
+    const id = pendingRemoveId;
     setBusyId(id);
     setActionError(null);
     try {
@@ -82,6 +85,7 @@ export function JournalistPortfolioView({
         setActionError(data?.error ?? 'Something went wrong. Please try again.');
         return;
       }
+      setPendingRemoveId(null);
       router.refresh();
     } finally {
       setBusyId(null);
@@ -166,9 +170,11 @@ export function JournalistPortfolioView({
                 {appBaseUrl}/journalist/{settings.slug}
               </a>
             ) : (
-              <p className="mt-1 text-sm text-text-secondary">
-                Not set up yet — open settings to choose your URL.
-              </p>
+              <EmptyState
+                compact
+                heading="Not set up yet"
+                body="Open settings to choose your public URL."
+              />
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -220,7 +226,16 @@ export function JournalistPortfolioView({
       {/* Article list */}
       <section className="mt-8 space-y-4">
         {publications.length === 0 ? (
-          <p className="text-text-secondary">No articles published yet.</p>
+          <EmptyState
+            compact
+            heading="No articles published yet"
+            body="Add an article to start building your public portfolio."
+            action={
+              <Button variant="accent" size="sm" onClick={() => setModalState({ mode: 'create' })}>
+                Add article
+              </Button>
+            }
+          />
         ) : (
           publications.map((article) => {
             const removed = Boolean(article.deleted_at);
@@ -279,7 +294,7 @@ export function JournalistPortfolioView({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemove(article.id)}
+                          onClick={() => setPendingRemoveId(article.id)}
                           disabled={busyId === article.id}
                         >
                           Remove
@@ -304,16 +319,54 @@ export function JournalistPortfolioView({
         onSaved={() => router.refresh()}
       />
 
-      <Modal open={settingsOpen}>
+      <Modal
+        open={pendingRemoveId !== null}
+        onClose={() => setPendingRemoveId(null)}
+        titleId="remove-article-title"
+      >
         <div className="p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-text-primary">
+          <h2
+            id="remove-article-title"
+            className="pr-8 font-heading text-lg text-text-primary"
+          >
+            Remove this article?
+          </h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            It will be removed from your public portfolio. You can restore it later.
+          </p>
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPendingRemoveId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              loading={busyId === pendingRemoveId}
+              onClick={() => void confirmRemove()}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        titleId="portfolio-settings-title"
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between pr-8">
+            <h2
+              id="portfolio-settings-title"
+              className="font-heading text-lg text-text-primary"
+            >
               Portfolio settings
             </h2>
             <button
               type="button"
               onClick={() => setSettingsOpen(false)}
-              className="text-sm text-text-secondary hover:text-text-primary"
+              className="rounded-lg px-2 py-1 text-sm text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               Close
             </button>

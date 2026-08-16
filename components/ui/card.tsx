@@ -13,7 +13,7 @@ export function Card(props: CardProps) {
   return (
     <div
       className={cn(
-        'rounded-lg border border-border-default bg-surface-page p-6 shadow-sm',
+        'rounded-card border border-border-default bg-surface-page p-6 shadow-sm',
         highlighted && 'border-primary-active',
         className
       )}

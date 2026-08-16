@@ -17,7 +17,7 @@ function cn(...parts: Array<string | undefined | false | null>) {
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} size="md" className="mt-1 w-full rounded-xl">
+    <Button type="submit" size="md" loading={pending} className="mt-1 w-full">
       {pending ? 'Please wait…' : label}
     </Button>
   );

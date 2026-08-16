@@ -6,7 +6,6 @@ import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { TestimonialCarousel } from '@/components/home/testimonial-carousel';
 
 const TO_EMAIL = 'broadbase2026@gmail.com';
 
@@ -189,10 +188,6 @@ export default function ContactPage() {
               </div>
             </div>
           </form>
-        </div>
-
-        <div className="mt-12 md:mt-16">
-          <TestimonialCarousel heading="What teams are saying" />
         </div>
       </section>
 

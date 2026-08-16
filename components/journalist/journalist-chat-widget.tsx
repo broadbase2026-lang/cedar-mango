@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GeminiChatHistory, ResearchAssistantMessage } from '@/lib/ai/types';
+import { Button } from '@/components/ui/button';
 
 type ChatSource = {
   title: string;
@@ -117,7 +118,7 @@ export function JournalistChatWidget() {
                 const textPart = m.parts.find((p) => p.type === 'text');
                 const bubble =
                   m.role === 'user'
-                    ? 'ml-auto bg-teal-50 text-teal-900 ring-1 ring-inset ring-teal-700'
+                    ? 'ml-auto bg-accent-subtle text-accent-hover ring-1 ring-inset ring-accent'
                     : 'mr-auto bg-white text-brand-ink ring-1 ring-inset ring-brand-border';
                 return (
                   <div key={m.id} className="space-y-1.5">
@@ -139,7 +140,7 @@ export function JournalistChatWidget() {
                             <li key={s.slug}>
                               <Link
                                 href={`/journalist/release/${s.slug}`}
-                                className="block truncate text-xs text-teal-800 hover:underline"
+                                className="block truncate text-xs text-accent-hover hover:underline"
                                 title={s.brand_name ? `${s.title} · ${s.brand_name}` : s.title}
                               >
                                 {s.brand_name ? `${s.brand_name}: ${s.title}` : s.title}
@@ -178,16 +179,16 @@ export function JournalistChatWidget() {
                   }
                 }}
                 placeholder="Ask about a brand, venue, or angle…"
-                className="h-10 flex-1 rounded-lg border border-brand-border bg-white px-3 text-sm outline-none focus:border-teal-700 focus:ring-1"
+                className="h-10 flex-1 rounded-lg border border-border-default bg-white px-3 text-sm outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent"
               />
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => void send()}
                 disabled={!canSend}
-                className="bb-btn-primary-sm disabled:opacity-60"
               >
                 Send
-              </button>
+              </Button>
             </div>
             <div className="mt-2 text-[11px] text-brand-muted">
               Tip: ask about a brand, category, or venue in the archive.
@@ -198,7 +199,8 @@ export function JournalistChatWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-full bg-brand-dark px-4 py-3 text-sm font-medium text-white shadow-media-soft"
+          aria-label="Open research assistant chat"
+          className="rounded-full bg-brand-dark px-4 py-3 text-sm font-medium text-white shadow-media-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           Chat
         </button>

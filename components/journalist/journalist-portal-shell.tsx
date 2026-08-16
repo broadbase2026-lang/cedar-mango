@@ -245,11 +245,12 @@ export function JournalistPortalShell({
                 router.push(q ? `/journalist/discover?q=${encodeURIComponent(q)}` : '/journalist/discover');
               }}
             >
-              <div className="flex items-center rounded-lg border border-brand-border bg-white px-3 shadow-sm">
+              <div className="flex items-center rounded-lg border border-brand-border bg-white px-3 shadow-sm focus-within:ring-2 focus-within:ring-accent">
                 <input
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Search releases…"
+                  aria-label="Search releases"
                   className="h-10 w-[260px] bg-transparent text-sm outline-none placeholder:text-brand-muted/80"
                 />
                 <button type="submit" className="text-xs font-medium text-brand-primary-700 hover:underline">
@@ -268,7 +269,7 @@ export function JournalistPortalShell({
                 {userAvatarUrl ? (
                   <Image
                     src={userAvatarUrl}
-                    alt=""
+                    alt={`${display} profile photo`}
                     width={32}
                     height={32}
                     sizes="32px"

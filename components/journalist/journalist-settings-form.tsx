@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { JournalistSettingsSnapshot } from '@/lib/journalist/settings-data';
 import {
   updateJournalistAvatar,
@@ -13,13 +16,14 @@ import { ProfilePhotoUploader } from '@/components/profile/profile-photo-uploade
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
+    <Button
       type="submit"
-      className="bb-btn-primary-md w-full sm:w-auto disabled:opacity-60"
-      disabled={pending}
+      size="md"
+      loading={pending}
+      className="w-full sm:w-auto"
     >
       {pending ? 'Saving…' : 'Save settings'}
-    </button>
+    </Button>
   );
 }
 
@@ -32,26 +36,26 @@ const INITIAL_STATE: JournalistSettingsActionState = { ok: false };
 export function JournalistSettingsForm({ snapshot }: Props) {
   const [state, formAction] = useFormState(updateJournalistSettings, INITIAL_STATE);
   const [avatarState, avatarAction] = useFormState(updateJournalistAvatar, INITIAL_STATE);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (avatarState.ok) {
-      setFlash('Saved.');
+      setFlash({ kind: 'success', text: 'Saved.' });
       const t = window.setTimeout(() => setFlash(null), 2500);
       return () => window.clearTimeout(t);
     }
     if (state.ok) {
-      setFlash('Saved.');
+      setFlash({ kind: 'success', text: 'Saved.' });
       const t = window.setTimeout(() => setFlash(null), 2500);
       return () => window.clearTimeout(t);
     }
     if (avatarState.message) {
-      setFlash(avatarState.message);
+      setFlash({ kind: 'error', text: avatarState.message });
       const t = window.setTimeout(() => setFlash(null), 4500);
       return () => window.clearTimeout(t);
     }
     if (state.message) {
-      setFlash(state.message);
+      setFlash({ kind: 'error', text: state.message });
       const t = window.setTimeout(() => setFlash(null), 4500);
       return () => window.clearTimeout(t);
     }
@@ -63,8 +67,15 @@ export function JournalistSettingsForm({ snapshot }: Props) {
       className="mt-6 rounded-xl border border-brand-border bg-white p-5 shadow-sm"
     >
       {flash ? (
-        <div className="mb-4 rounded-lg border border-brand-border/70 bg-brand-surface-2 px-3 py-2 text-sm text-brand-ink">
-          {flash}
+        <div
+          className={
+            flash.kind === 'success'
+              ? 'mb-4 rounded-control border border-accent/30 bg-accent-subtle px-3 py-2 text-sm text-accent-hover'
+              : 'mb-4 rounded-control border border-error/30 bg-error-subtle px-3 py-2 text-sm text-error'
+          }
+          role={flash.kind === 'error' ? 'alert' : 'status'}
+        >
+          {flash.text}
         </div>
       ) : null}
 
@@ -78,56 +89,61 @@ export function JournalistSettingsForm({ snapshot }: Props) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-brand-muted">Full name</label>
-          <input
+          <label htmlFor="journalist-full-name" className="text-xs font-medium text-brand-muted">Full name</label>
+          <Input
+            id="journalist-full-name"
             name="fullName"
             defaultValue={snapshot.fullName ?? ''}
-            className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+            className="mt-1.5"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-brand-muted">Publication</label>
-          <input
+          <label htmlFor="journalist-publication" className="text-xs font-medium text-brand-muted">Publication</label>
+          <Input
+            id="journalist-publication"
             name="publication"
             defaultValue={snapshot.publication ?? ''}
-            className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+            className="mt-1.5"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-brand-muted">Beats (comma-separated)</label>
-          <input
+          <label htmlFor="journalist-beats" className="text-xs font-medium text-brand-muted">Beats (comma-separated)</label>
+          <Input
+            id="journalist-beats"
             name="beats"
             defaultValue={snapshot.beats.join(', ')}
             placeholder="F&B, Travel, Culture"
-            className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+            className="mt-1.5"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-brand-muted">LinkedIn URL</label>
-          <input
+          <label htmlFor="journalist-linkedin" className="text-xs font-medium text-brand-muted">LinkedIn URL</label>
+          <Input
+            id="journalist-linkedin"
             name="linkedinUrl"
             defaultValue={snapshot.linkedinUrl ?? ''}
             placeholder="https://www.linkedin.com/in/…"
-            className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+            className="mt-1.5"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-brand-muted">Bio</label>
-          <textarea
+          <label htmlFor="journalist-bio" className="text-xs font-medium text-brand-muted">Bio</label>
+          <Textarea
+            id="journalist-bio"
             name="bio"
             defaultValue={snapshot.bio ?? ''}
             rows={5}
-            className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+            className="mt-1.5"
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-brand-muted">Digest frequency</label>
-          <select name="digestFrequency" defaultValue={snapshot.digestFrequency} className="bb-dash-select">
+          <label htmlFor="journalist-digest" className="text-xs font-medium text-brand-muted">Digest frequency</label>
+          <select id="journalist-digest" name="digestFrequency" defaultValue={snapshot.digestFrequency} className="bb-dash-select">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="never">Never</option>

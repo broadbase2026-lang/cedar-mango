@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import type { PortalFeedbackActionState } from '@/lib/portal/feedback-state';
+import { Button } from '@/components/ui/button';
 
 type PortalFeedbackFormProps = {
   action: (
@@ -15,9 +16,9 @@ type PortalFeedbackFormProps = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="bb-btn-primary-sm" disabled={pending}>
+    <Button type="submit" size="sm" loading={pending}>
       {pending ? 'Sending…' : 'Send feedback'}
-    </button>
+    </Button>
   );
 }
 

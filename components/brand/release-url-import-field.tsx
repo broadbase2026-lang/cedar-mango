@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type Props = {
   pending: boolean;
@@ -13,27 +15,24 @@ export function ReleaseUrlImportField({ pending, disabled, onImport }: Props) {
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <input
+      <Input
         type="url"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={pending || disabled}
         placeholder="https://example.com/press-release"
-        className={
-          'min-w-0 flex-1 rounded-xl bg-white px-4 py-2.5 text-sm text-brand-ink ' +
-          'ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 ' +
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ' +
-          'disabled:cursor-not-allowed disabled:opacity-60'
-        }
+        className="min-w-0 flex-1"
       />
-      <button
+      <Button
         type="button"
-        disabled={pending || disabled || !url.trim()}
+        size="sm"
+        loading={pending}
+        disabled={disabled || !url.trim()}
         onClick={() => void onImport(url)}
-        className="bb-btn-primary-sm whitespace-nowrap disabled:opacity-60"
+        className="whitespace-nowrap"
       >
         {pending ? 'Importing…' : 'Import from URL'}
-      </button>
+      </Button>
     </div>
   );
 }

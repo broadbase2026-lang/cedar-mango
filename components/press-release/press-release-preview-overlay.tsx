@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import { RichTextRender } from '@/components/rich-text/rich-text-render';
 import { stripLeadingTitleFromHtml } from '@/lib/rich-text/strip-leading-title';
 import { useLenisScrollLock } from '@/components/smooth-scroll-provider';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export type PressReleasePreviewContent = {
   title: string;
@@ -112,7 +113,7 @@ export function PressReleasePreviewOverlay({
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={content.heroImageUrl}
-                            alt=""
+                            alt={content.title}
                             className="aspect-[4/3] w-full object-cover"
                           />
                         </div>
@@ -141,7 +142,7 @@ export function PressReleasePreviewOverlay({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={content.imageLink}
-                              alt=""
+                              alt={`${content.title} image`}
                               className="aspect-[4/3] w-full object-cover"
                             />
                           </div>
@@ -179,7 +180,7 @@ export function PressReleasePreviewOverlay({
                         </div>
                         <div className="mt-3 space-y-2">
                           {content.mediaAssets.length === 0 ? (
-                            <p className="text-sm text-brand-muted">No assets attached.</p>
+                            <EmptyState compact heading="No assets attached" />
                           ) : (
                             content.mediaAssets.map((a) => (
                               <a
@@ -207,9 +208,7 @@ export function PressReleasePreviewOverlay({
                       </div>
                     </>
                   ) : (
-                    <div className="rounded-2xl border border-brand-border bg-white p-4 text-sm text-brand-muted">
-                      Select a press release to preview.
-                    </div>
+                    <EmptyState compact heading="Select a press release to preview" />
                   )}
                 </div>
               </motion.div>

@@ -10,31 +10,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // brand-* names are migration aliases of the semantic tokens below.
         'brand-surface': 'rgb(var(--brand-surface) / <alpha-value>)',
         'brand-surface-2': 'rgb(var(--brand-surface-2) / <alpha-value>)',
         'brand-dark': 'rgb(var(--brand-dark) / <alpha-value>)',
-        'brand-primary': 'rgb(var(--brand-primary) / <alpha-value>)',
-        'brand-primary-600': 'rgb(var(--brand-primary-600) / <alpha-value>)',
-        'brand-primary-700': 'rgb(var(--brand-primary-700) / <alpha-value>)',
+        'brand-primary': 'rgb(var(--color-accent) / <alpha-value>)',
+        'brand-primary-600': 'rgb(var(--color-accent) / <alpha-value>)',
+        'brand-primary-700': 'rgb(var(--color-accent-hover) / <alpha-value>)',
         'brand-ink': 'rgb(var(--brand-ink) / <alpha-value>)',
         'brand-muted': 'rgb(var(--brand-muted) / <alpha-value>)',
         'brand-border': 'rgb(var(--brand-border) / <alpha-value>)',
-        'brand-ring': 'rgb(var(--brand-ring) / <alpha-value>)',
-        // Side-specific primaries — resolved via CSS variable
-        // so they switch between journalist and brand layouts.
+        'brand-ring': 'rgb(var(--color-accent) / <alpha-value>)',
+        // Side-specific identity (gold / coral) — not the action color.
         primary: {
           subtle: 'var(--color-primary-subtle)',
           base: 'var(--color-primary-base)',
           hover: 'var(--color-primary-hover)',
           active: 'var(--color-primary-active)',
         },
-        // Unified backbone — hardcoded, never switches.
+        // Single action color.
         accent: {
-          DEFAULT: '#0EA579',
-          hover: '#0C9068',
-          subtle: '#E6F7F2',
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          hover: 'rgb(var(--color-accent-hover) / <alpha-value>)',
+          subtle: 'rgb(var(--color-accent-subtle) / <alpha-value>)',
         },
-        // Semantic colours.
         success: {
           DEFAULT: '#10B981',
           subtle: '#ECFDF5',
@@ -51,7 +50,6 @@ const config: Config = {
           DEFAULT: '#3B82F6',
           subtle: '#EFF6FF',
         },
-        // Neutral greys.
         neutral: {
           50: '#F9FAFB',
           100: '#F3F4F6',
@@ -64,30 +62,29 @@ const config: Config = {
           800: '#1F2937',
           900: '#1A1A1A',
         },
-        // Semantic text aliases — use these in components,
-        // not raw neutral shades, so dark mode is easy to
-        // add later without touching every component.
         text: {
-          primary: '#1A1A1A',
-          secondary: '#6B7280',
+          primary: 'rgb(var(--brand-ink) / <alpha-value>)',
+          secondary: 'rgb(var(--brand-muted) / <alpha-value>)',
           disabled: '#9CA3AF',
           inverse: '#FFFFFF',
         },
-        // Surface and border aliases.
         surface: {
           page: '#FFFFFF',
-          raised: '#F9FAFB',
-          overlay: '#F3F4F6',
+          raised: 'rgb(var(--brand-surface) / <alpha-value>)',
+          overlay: 'rgb(var(--brand-surface-2) / <alpha-value>)',
         },
         border: {
-          default: '#E5E7EB',
+          default: 'rgb(var(--brand-border) / <alpha-value>)',
           strong: '#D1D5DB',
         },
       },
+      borderRadius: {
+        control: '0.5rem',
+        card: '0.75rem',
+        panel: '1rem',
+      },
       fontFamily: {
-        // Inter is loaded via next/font in the root layout.
         sans: ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui'],
-        // Radley — headings (h1–h6, .font-serif, .font-heading).
         serif: ['var(--font-radley)', 'Radley', 'ui-serif', 'Georgia', 'serif'],
         heading: ['var(--font-radley)', 'Radley', 'ui-serif', 'Georgia', 'serif'],
       },

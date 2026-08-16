@@ -9,6 +9,8 @@ import {
   minMaxBackdateDatetimeLocal,
   minMaxEmbargoDatetimeLocal,
 } from '@/lib/utils/datetime-local';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type PublishApiResponse = {
   success?: boolean;
@@ -61,10 +63,10 @@ export function ReleasePublishPanel(props: {
             optionally backdate it or set an embargo.
           </div>
         </div>
-        <button
+        <Button
           type="button"
-          className="bb-btn-primary-sm"
-          disabled={pending}
+          size="sm"
+          loading={pending}
           onClick={() => {
             setError(null);
             startTransition(async () => {
@@ -134,7 +136,7 @@ export function ReleasePublishPanel(props: {
               : embargoLocal && canUseEmbargo
                 ? 'Publish with embargo'
                 : 'Publish'}
-        </button>
+        </Button>
       </div>
 
       <div className="mt-4 space-y-2">

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ArchiveReleaseRow } from '@/lib/public/load-archive-releases';
 import { labelVertical } from '@/lib/seo/verticals';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type Props = {
   releases: ArchiveReleaseRow[];
@@ -12,7 +13,7 @@ export function PublicReleaseList({
   emptyMessage = 'No published releases found.',
 }: Props) {
   if (releases.length === 0) {
-    return <p className="text-text-secondary">{emptyMessage}</p>;
+    return <EmptyState compact heading={emptyMessage} />;
   }
 
   return (

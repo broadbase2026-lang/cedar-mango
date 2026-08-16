@@ -32,6 +32,9 @@ import {
 } from '@/lib/brand/release-editor-url';
 import { TRIAL_LIMIT_COPY } from '@/constants/copy';
 import { TRIAL_RELEASE_LIMIT_ERROR_CODE } from '@/lib/brand/trial-release-limit';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const STORAGE_KEY = 'bb_release_import_prefill_v1';
 
@@ -645,14 +648,13 @@ export function NewReleaseForm({
         >
           Title
         </label>
-        <input
+        <Input
           id="title"
           name="title"
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Acme Hotel opens in Singapore"
-          className="flex h-11 w-full rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
         />
       </div>
 
@@ -670,23 +672,24 @@ export function NewReleaseForm({
           >
             Summary (optional)
           </label>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onGenerateSummary}
-            disabled={summaryBusy}
-            className="bb-btn-primary-sm shrink-0 bg-white text-brand-ink ring-1 ring-inset ring-brand-border hover:bg-brand-surface-2 disabled:opacity-60"
+            loading={summaryBusy}
+            className="shrink-0"
           >
             {summaryBusy ? 'Generating…' : 'Summarize with AI'}
-          </button>
+          </Button>
         </div>
-        <textarea
+        <Textarea
           id="summary"
           name="summary"
           rows={3}
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           maxLength={280}
-          className="flex w-full rounded-xl bg-white px-4 py-3 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
           placeholder="280 chars max. Used in digests and previews."
         />
         <div className="flex justify-between text-xs text-brand-muted">
@@ -702,14 +705,13 @@ export function NewReleaseForm({
         >
           Image link (optional)
         </label>
-        <input
+        <Input
           id="image_link"
           name="image_link"
           type="url"
           value={imageLink}
           onChange={(e) => setImageLink(e.target.value)}
           placeholder="https://example.com/photo.jpg"
-          className="flex h-11 w-full rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
         />
         <p className="text-xs text-brand-muted">
           Optional external image URL for this release.
@@ -818,14 +820,16 @@ export function NewReleaseForm({
                 }
               }}
             />
-            <button
+            <Button
               type="button"
-              disabled={imageBusy || !imageUrl.trim()}
+              size="sm"
+              loading={imageBusy}
+              disabled={!imageUrl.trim()}
               onClick={() => void onUploadImageFromUrl()}
-              className="bb-btn-primary-sm whitespace-nowrap disabled:opacity-60"
+              className="whitespace-nowrap"
             >
               {imageBusy ? 'Uploading…' : 'Add from URL'}
-            </button>
+            </Button>
           </div>
         </div>
         {imageErr ? <p className="mt-2 text-xs text-red-600">{imageErr}</p> : null}
@@ -839,7 +843,7 @@ export function NewReleaseForm({
                 {/* eslint-disable-next-line @next/next/no-img-element -- dynamic Supabase public URLs */}
                 <img
                   src={a.publicUrl}
-                  alt=""
+                  alt={a.fileName}
                   className="h-14 w-14 shrink-0 rounded-md object-cover ring-1 ring-inset ring-brand-border"
                 />
                 <div className="min-w-0 flex-1">
@@ -891,29 +895,29 @@ export function NewReleaseForm({
           >
             Tags (optional)
           </label>
-          <input
+          <Input
             id="tags"
             name="tags"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="comma,separated,tags"
-            className="flex h-11 w-full rounded-xl bg-white px-4 text-sm text-brand-ink ring-1 ring-inset ring-brand-border shadow-sm placeholder:text-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
           />
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <button
+        <Button
           type="submit"
-          className="bb-btn-primary-sm no-underline"
-          disabled={deletePending || submitPending}
+          size="sm"
+          loading={submitPending}
+          disabled={deletePending}
         >
           {submitPending
             ? 'Saving…'
             : existing?.id
               ? 'Save changes'
               : 'Create draft'}
-        </button>
+        </Button>
         {savedNotice ? (
           <span
             className="text-sm font-medium text-emerald-700"

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import NextImage from 'next/image';
 import { MAX_IMAGE_UPLOAD_BYTES } from '@/lib/constants/uploads';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   label?: string;
@@ -260,7 +261,7 @@ export function ProfilePhotoUploader({
           {currentUrl ? (
             <NextImage
               src={currentUrl}
-              alt=""
+              alt="Current profile photo"
               width={44}
               height={44}
               sizes="44px"
@@ -271,14 +272,14 @@ export function ProfilePhotoUploader({
               {initials}
             </div>
           )}
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={openPicker}
-            className="bb-btn-primary-sm disabled:opacity-60"
             disabled={isPending}
           >
             {currentUrl ? 'Change' : 'Upload'}
-          </button>
+          </Button>
           <input
             ref={inputRef}
             type="file"
@@ -338,7 +339,7 @@ export function ProfilePhotoUploader({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={objectUrl}
-                      alt=""
+                      alt="Crop preview"
                       draggable={false}
                       className="absolute left-1/2 top-1/2 max-w-none max-h-none select-none"
                       style={{
@@ -382,22 +383,23 @@ export function ProfilePhotoUploader({
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-brand-border px-5 py-4">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={closeModal}
-                className="bb-btn-primary-sm bg-white text-brand-ink ring-1 ring-inset ring-brand-border hover:bg-brand-surface-2"
                 disabled={isPending}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                size="sm"
+                loading={isPending}
                 onClick={onSave}
-                className="bb-btn-primary-sm disabled:opacity-60"
-                disabled={isPending}
               >
                 {isPending ? 'Saving…' : 'Save photo'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

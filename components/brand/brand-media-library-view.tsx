@@ -17,14 +17,15 @@ import {
   setPressAssetHero,
   softDeletePressAsset,
 } from '@/app/(brand)/brand/upload/actions';
-import type {
-  MediaAssetRow,
-  MediaLibraryPayload,
-  MediaReleaseOption,
-} from '@/lib/brand/media-library-data';
-import { ASSETS_PAGE_SIZE } from '@/lib/brand/media-library-data';
 import { Button } from '@/components/ui/button';
+import {
+  ASSETS_PAGE_SIZE,
+  type MediaAssetRow,
+  type MediaLibraryPayload,
+  type MediaReleaseOption,
+} from '@/lib/brand/media-library-data';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ReleaseImportDropzone } from '@/components/brand/release-import-dropzone';
 
 const BUCKET = 'press-assets-public';
@@ -383,18 +384,14 @@ export function BrandMediaLibraryView({
             {error && <p className="text-sm text-red-600">{error}</p>}
             {message && <p className="text-sm text-emerald-700">{message}</p>}
 
-            <button
+            <Button
               type="button"
-              disabled={uploadBusy || pending}
+              size="sm"
+              loading={uploadBusy || pending}
               onClick={() => void onUpload()}
-              aria-busy={uploadBusy}
-              className={
-                'bb-btn-primary-sm no-underline ' +
-                (uploadBusy || pending ? 'opacity-60 cursor-not-allowed' : '')
-              }
             >
               {uploadBusy ? 'Uploading…' : 'Upload to library'}
-            </button>
+            </Button>
           </section>
         )}
 
@@ -408,9 +405,11 @@ export function BrandMediaLibraryView({
           </p>
 
           {assets.length === 0 ? (
-            <p className="py-8 text-center text-sm text-brand-muted">
-              No files yet. Upload above once you have a release.
-            </p>
+            <EmptyState
+              compact
+              heading="No files yet"
+              body="Upload above once you have a release."
+            />
           ) : (
             <div className="bb-dash-table-scroll mt-4">
               <table className="bb-dash-table min-w-[900px]">
@@ -433,7 +432,7 @@ export function BrandMediaLibraryView({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={row.file_url}
-                            alt=""
+                            alt={row.file_name}
                             className="h-10 w-10 rounded-md object-cover ring-1 ring-brand-border"
                           />
                         ) : (

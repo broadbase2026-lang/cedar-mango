@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { BrandRecentRelease } from '@/lib/journalist/release-data';
 import { formatMonthDayShort } from '@/lib/utils/dates';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type BrandPublisherProfileProps = {
   name: string;
@@ -28,7 +29,7 @@ export function BrandPublisherProfile({
         {logoUrl ? (
           <Image
             src={logoUrl}
-            alt=""
+            alt={`${name} logo`}
             width={48}
             height={48}
             sizes="48px"
@@ -69,7 +70,7 @@ export function BrandPublisherProfile({
           Recent releases
         </div>
         {recentReleases.length === 0 ? (
-          <p className="mt-2 text-sm text-brand-muted">No other releases from this brand yet.</p>
+          <EmptyState compact heading="No other releases from this brand yet" />
         ) : (
           <ul className="mt-2 space-y-2">
             {recentReleases.map((r) => (

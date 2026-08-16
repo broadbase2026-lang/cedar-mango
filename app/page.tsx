@@ -8,7 +8,6 @@ import { HomeSocialProofRow } from '@/components/home/home-social-proof';
 import { HomeEnterpriseModule } from '@/components/home/home-enterprise-module';
 import { HomeMarketingModule } from '@/components/home/home-marketing-module';
 import { CTASection, ProcessFlow } from '@/app/(public)/_components';
-import { TestimonialCarousel } from '@/components/home/testimonial-carousel';
 import { PublicSiteHeader } from '@/components/home/public-site-header';
 import { PublicSiteFooter } from '@/components/home/public-site-footer';
 
@@ -109,7 +108,7 @@ export default function HomePage() {
               >
                 Your brand assets, found by journalists
                 <br />
-                <em>and</em> AI agents.
+                and AI agents.
               </h2>
 
               <p className="mt-4 max-w-xl text-base text-white/70">
@@ -193,12 +192,6 @@ export default function HomePage() {
       />
 
       <HomeMarketingModule />
-
-      <div className="border-t border-brand-border/70 bg-brand-surface">
-        <div className="py-8 md:py-10">
-          <TestimonialCarousel />
-        </div>
-      </div>
 
       <ProcessFlow />
       <CTASection />

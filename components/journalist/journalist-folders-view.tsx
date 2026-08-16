@@ -2,6 +2,9 @@ import Link from 'next/link';
 import type { FolderListRow } from '@/lib/journalist/folders-data';
 import { createFolder, deleteFolder, renameFolder } from '@/app/(journalist)/journalist/folders/actions';
 import { formatMonthDayShort } from '@/lib/utils/dates';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type JournalistFoldersViewProps = {
   folders: FolderListRow[];
@@ -26,16 +29,17 @@ export function JournalistFoldersView({ folders }: JournalistFoldersViewProps) {
           <h3 className="text-sm font-semibold text-brand-ink">Create folder</h3>
           <form action={createFolder} className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <label className="text-xs font-medium text-brand-muted">Name</label>
-              <input
+              <label htmlFor="folder-name" className="text-xs font-medium text-brand-muted">Name</label>
+              <Input
+                id="folder-name"
                 name="name"
                 placeholder="e.g. Hotel openings"
-                className="mt-1.5 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
-            <button type="submit" className="bb-btn-primary-md sm:w-auto">
+            <Button type="submit" size="md" className="sm:w-auto">
               Create
-            </button>
+            </Button>
           </form>
         </section>
 
@@ -43,7 +47,11 @@ export function JournalistFoldersView({ folders }: JournalistFoldersViewProps) {
           <h3 className="text-base font-semibold text-brand-ink">Your folders</h3>
           <div className="mt-4 space-y-4">
             {folders.length === 0 ? (
-              <p className="text-sm text-brand-muted">No folders yet.</p>
+              <EmptyState
+                compact
+                heading="No folders yet"
+                body="Create a folder above to start saving releases."
+              />
             ) : (
               folders.map((f) => (
                 <div key={f.id} className="rounded-lg border border-brand-border/70 p-4">
@@ -72,14 +80,15 @@ export function JournalistFoldersView({ folders }: JournalistFoldersViewProps) {
                     </summary>
                     <form action={renameFolder} className="mt-3 flex gap-2">
                       <input type="hidden" name="folderId" value={f.id} />
-                      <input
+                      <Input
+                        id={`rename-folder-${f.id}`}
                         name="name"
                         defaultValue={f.name}
-                        className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm"
+                        aria-label={`Rename ${f.name}`}
                       />
-                      <button type="submit" className="bb-btn-primary-sm">
+                      <Button type="submit" size="sm">
                         Save
-                      </button>
+                      </Button>
                     </form>
                   </details>
                 </div>

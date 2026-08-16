@@ -29,6 +29,7 @@ import type {
 import { editReleaseHref } from '@/lib/brand/release-editor-url';
 import type { PressReleaseReadinessResult } from '@/lib/ai';
 import { TIER_FEATURES } from '@/constants/copy';
+import { Button, ButtonLink } from '@/components/ui/button';
 
 type BrandDashboardViewProps = {
   hasBrand: boolean;
@@ -684,12 +685,9 @@ export function BrandDashboardView({
               Your free trial has ended. Upgrade to continue publishing press releases and adding brands.
             </div>
           </div>
-          <Link
-            href="/pricing"
-            className="bb-btn-primary-sm no-underline"
-          >
+          <ButtonLink href="/pricing" size="sm">
             See pricing
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     ) : null;
@@ -710,12 +708,13 @@ export function BrandDashboardView({
             Add your brand profile to unlock the vault, journalist analytics, and
             draft readiness scoring — everything stays scoped to your account.
           </p>
-          <Link
+          <ButtonLink
             href="/brand/settings"
-            className="bb-dash-empty-cta bb-btn-primary-sm no-underline"
+            size="sm"
+            className="bb-dash-empty-cta"
           >
             Brand settings
-          </Link>
+          </ButtonLink>
         </div>
       </main>
     );
@@ -749,12 +748,13 @@ export function BrandDashboardView({
                 You&apos;ll see views, downloads, and engagement here as editors
                 interact with your content.
               </p>
-              <Link
+              <ButtonLink
                 href="/brand/releases/new"
-                className="bb-dash-empty-cta bb-btn-primary-sm no-underline"
+                size="sm"
+                className="bb-dash-empty-cta"
               >
                 Create your first release
-              </Link>
+              </ButtonLink>
             </div>
           </div>
         </div>
@@ -1102,9 +1102,9 @@ export function BrandDashboardView({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       type="button"
-                      className="bb-btn-primary-sm"
+                      size="sm"
                       disabled={pending || embargoBusyId === embargoEdit.id}
                       onClick={() => {
                         void (async () => {
@@ -1139,15 +1139,16 @@ export function BrandDashboardView({
                       }}
                     >
                       Save embargo
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="bb-btn-secondary-sm"
+                      variant="ghost"
+                      size="sm"
                       disabled={pending}
                       onClick={() => setEmbargoEdit(null)}
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -1191,12 +1192,9 @@ export function BrandDashboardView({
                     generate an AI readiness score here.
                   </p>
                   <div className="mt-4">
-                    <Link
-                      href="/brand/releases/new"
-                      className="bb-btn-primary-sm no-underline"
-                    >
+                    <ButtonLink href="/brand/releases/new" size="sm">
                       Create a draft release
-                    </Link>
+                    </ButtonLink>
                   </div>
                 </div>
               ) : (
@@ -1250,14 +1248,15 @@ export function BrandDashboardView({
                     <div className="bb-dash-critique-title">Critique</div>
                     {canUseAiReadiness ? (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button
+                        <Button
                           type="button"
-                          className="bb-btn-primary-sm"
-                          disabled={aiPending || pending}
+                          size="sm"
+                          loading={aiPending}
+                          disabled={pending}
                           onClick={onGenerateAiReadiness}
                         >
                           {aiPending ? 'Generating…' : 'Generate score'}
-                        </button>
+                        </Button>
                         {aiError && (
                           <span className="bb-dash-muted-p" role="status">
                             {aiError}
