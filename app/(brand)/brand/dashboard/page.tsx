@@ -31,13 +31,21 @@ function parseReleasesPage(
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+function parseSearchQuery(
+  raw: string | string[] | undefined
+): string {
+  const value = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
+  return (value ?? '').trim();
+}
+
 type PageProps = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const dynamic = 'force-dynamic';
 
-export default async function BrandDashboardPage({ searchParams }: PageProps) {
+export default async function BrandDashboardPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const session = await getBrandPortalSession();
   if (!session.ok) {
     redirect('/login');
@@ -61,15 +69,20 @@ export default async function BrandDashboardPage({ searchParams }: PageProps) {
         ? sectionRaw[0]
         : undefined;
   const releasesPage = parseReleasesPage(searchParams.page);
+  const releasesSearch = parseSearchQuery(searchParams.q);
 
   const data = brand
-    ? await loadBrandDashboardData(session.supabase, brand.id, { releasesPage })
+    ? await loadBrandDashboardData(session.supabase, brand.id, {
+        releasesPage,
+        releasesSearch,
+      })
     : EMPTY_DATA;
 
   return (
     <BrandDashboardView
       hasBrand={brand != null}
       data={data}
+      releasesSearchQuery={releasesSearch}
       scrollToReleasesSection={section === 'releases'}
       preserveSectionInLinks={section === 'releases'}
       accessState={{

@@ -624,6 +624,26 @@
     @apply flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between;
   }
 
+  .bb-dash-releases-search {
+    @apply mb-4 mt-4;
+  }
+
+  .bb-dash-releases-search-row {
+    @apply flex items-center rounded-control border border-brand-border bg-white px-3 shadow-sm focus-within:ring-2 focus-within:ring-brand-ring;
+  }
+
+  .bb-dash-releases-search-input {
+    @apply h-11 min-w-0 flex-1 bg-transparent text-sm text-brand-ink outline-none placeholder:text-brand-muted;
+  }
+
+  .bb-dash-releases-search-clear {
+    @apply mr-3 shrink-0 text-sm text-brand-muted hover:text-brand-ink hover:underline;
+  }
+
+  .bb-dash-releases-search-submit {
+    @apply shrink-0 text-sm font-medium text-brand-primary-700 hover:underline;
+  }
+
   .bb-dash-pagination {
     @apply flex flex-col gap-3 border-t border-brand-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between;
   }

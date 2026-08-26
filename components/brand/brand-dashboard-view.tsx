@@ -34,6 +34,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 type BrandDashboardViewProps = {
   hasBrand: boolean;
   data: BrandDashboardData;
+  releasesSearchQuery?: string;
   scrollToReleasesSection?: boolean;
   preserveSectionInLinks?: boolean;
   accessState: {
@@ -140,11 +141,16 @@ function critiqueForScore(score: number | null): string[] {
 
 function dashboardReleasesHref(
   page: number,
-  preserveSectionInLinks: boolean
+  preserveSectionInLinks: boolean,
+  searchQuery?: string
 ): string {
   const params = new URLSearchParams();
   if (preserveSectionInLinks) {
     params.set('section', 'releases');
+  }
+  const q = searchQuery?.trim();
+  if (q) {
+    params.set('q', q);
   }
   if (page > 1) {
     params.set('page', String(page));
@@ -157,10 +163,12 @@ function DashboardReleasesPagination({
   pagination,
   rowCount,
   preserveSectionInLinks,
+  searchQuery,
 }: {
   pagination: BrandDashboardData['releasesPagination'];
   rowCount: number;
   preserveSectionInLinks: boolean;
+  searchQuery: string;
 }) {
   const router = useRouter();
   const { page, pageSize, total } = pagination;
@@ -188,7 +196,7 @@ function DashboardReleasesPagination({
     const next = Math.min(totalPages, Math.max(1, parsed));
     setPageInput(String(next));
     if (next === page) return;
-    router.push(dashboardReleasesHref(next, preserveSectionInLinks));
+    router.push(dashboardReleasesHref(next, preserveSectionInLinks, searchQuery));
   }
 
   return (
@@ -202,7 +210,7 @@ function DashboardReleasesPagination({
       <div className="bb-dash-pagination-controls">
         {page > 1 ? (
           <Link
-            href={dashboardReleasesHref(page - 1, preserveSectionInLinks)}
+            href={dashboardReleasesHref(page - 1, preserveSectionInLinks, searchQuery)}
             className="bb-dash-pagination-btn"
           >
             Previous
@@ -239,7 +247,7 @@ function DashboardReleasesPagination({
         </span>
         {page < totalPages ? (
           <Link
-            href={dashboardReleasesHref(page + 1, preserveSectionInLinks)}
+            href={dashboardReleasesHref(page + 1, preserveSectionInLinks, searchQuery)}
             className="bb-dash-pagination-btn"
           >
             Next
@@ -257,6 +265,7 @@ function DashboardReleasesPagination({
 export function BrandDashboardView({
   hasBrand,
   data,
+  releasesSearchQuery = '',
   scrollToReleasesSection = false,
   preserveSectionInLinks = false,
   accessState,
@@ -283,7 +292,16 @@ export function BrandDashboardView({
   const [selectedReleaseIds, setSelectedReleaseIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [searchText, setSearchText] = useState(releasesSearchQuery);
   const selectAllRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSearchText(releasesSearchQuery);
+  }, [releasesSearchQuery]);
+
+  function applyReleasesSearch(q: string) {
+    router.replace(dashboardReleasesHref(1, preserveSectionInLinks, q));
+  }
 
   const releasePageKey = useMemo(
     () =>
@@ -554,7 +572,10 @@ export function BrandDashboardView({
 
   const emptyNoBrand = !hasBrand;
   const emptyNoReleases =
-    hasBrand && data.releasesPagination.total === 0 && !data.loadError;
+    hasBrand &&
+    data.releasesPagination.total === 0 &&
+    !releasesSearchQuery &&
+    !data.loadError;
 
   async function onGenerateAiReadiness() {
     if (!selectedDraft?.id) return;
@@ -836,6 +857,52 @@ export function BrandDashboardView({
               </Link>
             </div>
 
+            <form
+              method="get"
+              action="/brand/dashboard"
+              className="bb-dash-releases-search"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applyReleasesSearch(searchText);
+              }}
+            >
+              {preserveSectionInLinks ? (
+                <input type="hidden" name="section" value="releases" />
+              ) : null}
+              <div className="bb-dash-releases-search-row">
+                <input
+                  type="search"
+                  name="q"
+                  value={searchText}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchText(value);
+                    if (value === '' && releasesSearchQuery) {
+                      applyReleasesSearch('');
+                    }
+                  }}
+                  placeholder="Search your releases…"
+                  aria-label="Search your press releases"
+                  className="bb-dash-releases-search-input"
+                />
+                {searchText.trim() ? (
+                  <button
+                    type="button"
+                    className="bb-dash-releases-search-clear"
+                    onClick={() => {
+                      setSearchText('');
+                      applyReleasesSearch('');
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                <button type="submit" className="bb-dash-releases-search-submit">
+                  Search
+                </button>
+              </div>
+            </form>
+
             {selectedReleases.length > 0 ? (
               <div className="bb-dash-bulk-bar" role="toolbar" aria-label="Bulk actions">
                 <span className="bb-dash-bulk-summary">
@@ -901,6 +968,15 @@ export function BrandDashboardView({
                     </tr>
                   </thead>
                   <tbody className="bb-dash-tbody">
+                    {data.releases.length === 0 ? (
+                      <tr className="bb-dash-tr">
+                        <td className="bb-dash-td-muted" colSpan={7}>
+                          {releasesSearchQuery
+                            ? `No releases matched “${releasesSearchQuery}”.`
+                            : 'No releases to show.'}
+                        </td>
+                      </tr>
+                    ) : null}
                     {data.releases.map((row) => (
                       <tr key={row.id} className="bb-dash-tr">
                         <td className="bb-dash-td-select">
@@ -975,7 +1051,8 @@ export function BrandDashboardView({
                                 href={editReleaseHref(row.id, {
                                   next: dashboardReleasesHref(
                                     data.releasesPagination.page,
-                                    preserveSectionInLinks
+                                    preserveSectionInLinks,
+                                    releasesSearchQuery
                                   ),
                                 })}
                                 className="bb-dash-link-sm"
@@ -1089,6 +1166,7 @@ export function BrandDashboardView({
                 pagination={data.releasesPagination}
                 rowCount={data.releases.length}
                 preserveSectionInLinks={preserveSectionInLinks}
+                searchQuery={releasesSearchQuery}
               />
             </div>
 

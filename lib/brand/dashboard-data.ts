@@ -75,15 +75,42 @@ async function loadDashboardDrafts(
   }));
 }
 
+/** Split a dashboard search into AND-ed terms; strips ILIKE / PostgREST metacharacters. */
+export function parseDashboardReleaseSearchTerms(raw: string | undefined): string[] {
+  const trimmed = raw?.trim() ?? '';
+  if (!trimmed) return [];
+  return trimmed
+    .slice(0, 200)
+    .split(/\s+/)
+    .map((term) => term.replace(/[%_*,()"\\]/g, '').trim())
+    .filter((term) => term.length > 0)
+    .slice(0, 8);
+}
+
+function applyDashboardReleaseFilters(
+  query: any,
+  brandId: string,
+  search?: string
+) {
+  let next = query.eq('brand_id', brandId).is('deleted_at', null);
+  for (const term of parseDashboardReleaseSearchTerms(search)) {
+    next = next.or(
+      `title.ilike.%${term}%,summary.ilike.%${term}%,body.ilike.%${term}%`
+    );
+  }
+  return next;
+}
+
 async function loadDashboardReleasesCount(
   supabase: SupabaseClient,
-  brandId: string
+  brandId: string,
+  search?: string
 ): Promise<number> {
-  const { count, error } = await supabase
-    .from('press_releases')
-    .select('id', { count: 'exact', head: true })
-    .eq('brand_id', brandId)
-    .is('deleted_at', null);
+  const { count, error } = await applyDashboardReleaseFilters(
+    supabase.from('press_releases').select('id', { count: 'exact', head: true }),
+    brandId,
+    search
+  );
 
   if (error) {
     console.error('[loadBrandDashboardData] releases count failed', error);
@@ -96,22 +123,25 @@ async function loadDashboardReleasesCount(
 async function loadDashboardReleases(
   supabase: SupabaseClient,
   brandId: string,
-  page: number
+  page: number,
+  search?: string
 ): Promise<{ rows: ReleaseListRow[]; total: number; error: string | null }> {
   const from = (page - 1) * RELEASES_PAGE_SIZE;
   const to = from + RELEASES_PAGE_SIZE - 1;
 
-  const listWithGeo = supabase
-    .from('press_releases')
-    .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`)
-    .eq('brand_id', brandId)
-    .is('deleted_at', null)
+  const listWithGeo = applyDashboardReleaseFilters(
+    supabase
+      .from('press_releases')
+      .select(`${RELEASE_LIST_COLUMNS}, geo_readiness_score`),
+    brandId,
+    search
+  )
     .order('created_at', { ascending: false })
     .range(from, to);
 
   const [withGeo, total] = await Promise.all([
     listWithGeo,
-    loadDashboardReleasesCount(supabase, brandId),
+    loadDashboardReleasesCount(supabase, brandId, search),
   ]);
 
   if (!withGeo.error) {
@@ -124,11 +154,11 @@ async function loadDashboardReleases(
 
   console.error('[loadBrandDashboardData] releases query failed', withGeo.error);
 
-  const fallback = await supabase
-    .from('press_releases')
-    .select(RELEASE_LIST_COLUMNS)
-    .eq('brand_id', brandId)
-    .is('deleted_at', null)
+  const fallback = await applyDashboardReleaseFilters(
+    supabase.from('press_releases').select(RELEASE_LIST_COLUMNS),
+    brandId,
+    search
+  )
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -217,13 +247,19 @@ function bucketSparklines(
 export async function loadBrandDashboardData(
   supabase: SupabaseClient,
   brandId: string,
-  options?: { releasesPage?: number }
+  options?: { releasesPage?: number; releasesSearch?: string }
 ): Promise<BrandDashboardData> {
   const monthStart = startOfMonthIso();
   const weekStart = lastNDaysStart(7);
   const requestedPage = Math.max(1, options?.releasesPage ?? 1);
+  const releasesSearch = options?.releasesSearch?.trim() || undefined;
 
-  const releasesPromise = loadDashboardReleases(supabase, brandId, requestedPage);
+  const releasesPromise = loadDashboardReleases(
+    supabase,
+    brandId,
+    requestedPage,
+    releasesSearch
+  );
   const draftsPromise = loadDashboardDrafts(supabase, brandId);
 
   const [
@@ -281,7 +317,7 @@ export async function loadBrandDashboardData(
     requestedPage > totalPages && releasesTotal > 0 ? totalPages : requestedPage;
   const pageReleases =
     page !== requestedPage
-      ? await loadDashboardReleases(supabase, brandId, page)
+      ? await loadDashboardReleases(supabase, brandId, page, releasesSearch)
       : { rows: rawReleases, total: releasesTotal, error: releasesError };
   const finalReleases = pageReleases.rows;
   const finalTotal = pageReleases.total;
